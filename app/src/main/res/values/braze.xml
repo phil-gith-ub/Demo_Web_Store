@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string translatable="false" name="com_braze_api_key">fe11c5a5-07fb-4ae5-aad5-9100cd14e9eb</string>
+  <string translatable="false" name="com_braze_custom_endpoint">sondheim.braze.com</string>
+</resources>

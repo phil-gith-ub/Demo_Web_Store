@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import com.braze.BrazeActivityLifecycleCallbackListener
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
@@ -47,6 +48,7 @@ import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        registerActivityLifecycleCallbacks(BrazeActivityLifecycleCallbackListener())
         enableEdgeToEdge()
         setContent {
             Phil_Android_StoreApp()
