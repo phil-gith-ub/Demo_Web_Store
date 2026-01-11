@@ -1,5 +1,7 @@
 package com.example.phil_android_store
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,15 +52,41 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         registerActivityLifecycleCallbacks(BrazeActivityLifecycleCallbackListener())
         enableEdgeToEdge()
+        
+        // Handle deep link
+        val initialDestination = handleDeepLink(intent)
+        
         setContent {
-            Phil_Android_StoreApp()
+            Phil_Android_StoreApp(initialDestination = initialDestination)
         }
+    }
+    
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Handle deep link when app is already running
+        val destination = handleDeepLink(intent)
+        if (destination != null) {
+            // Update the destination in the composable
+            // This will be handled by the composable state
+        }
+    }
+    
+    fun handleDeepLink(intent: Intent?): AppDestinations? {
+        val data: Uri? = intent?.data
+        if (data != null && "philstore" == data.scheme) {
+            val host = data.host
+            if (host == "login" || host == "profile") {
+                return AppDestinations.PROFILE
+            }
+        }
+        return null
     }
 }
 
 @PreviewScreenSizes
 @Composable
-fun Phil_Android_StoreApp() {
+fun Phil_Android_StoreApp(initialDestination: AppDestinations? = null) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
     
@@ -69,7 +97,20 @@ fun Phil_Android_StoreApp() {
         )
     }
     
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var currentDestination by rememberSaveable { 
+        mutableStateOf(initialDestination ?: AppDestinations.HOME) 
+    }
+    
+    // Handle deep link updates when app is already running
+    LaunchedEffect(Unit) {
+        val activity = context as? MainActivity
+        activity?.let {
+            val destination = it.handleDeepLink(it.intent)
+            if (destination != null) {
+                currentDestination = destination
+            }
+        }
+    }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
