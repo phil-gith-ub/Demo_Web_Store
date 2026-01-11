@@ -58,4 +58,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("com.braze:android-sdk-ui:40.1.1")
+    implementation("com.braze:android-sdk-location:40.1.1")
 }
