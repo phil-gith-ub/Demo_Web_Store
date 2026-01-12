@@ -9,7 +9,8 @@ import com.braze.configuration.BrazeConfig
  */
 object BrazeUserSync {
     /**
-     * Sync user profile to Braze attributes
+     * Sync user profile to Braze attributes and start a new session.
+     * Reinitializes the SDK to start fresh, then identifies the user and sets attributes.
      * Maps:
      * - userId -> external_id
      * - firstName -> first_name
@@ -17,11 +18,18 @@ object BrazeUserSync {
      * - email -> email
      * - mobile -> phone
      * - favoriteProductCategory -> favorite_product_category (custom attribute)
+     * - active_member -> true
      */
     fun syncUserToBraze(context: Context, profile: UserProfile) {
+        // Reinitialize Braze SDK to start a new session
+        val brazeConfig = BrazeConfig.Builder()
+            .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
+            .build()
+        Braze.configure(context.applicationContext, brazeConfig)
+        
         val brazeInstance = Braze.getInstance(context)
         
-        // Change user to identify them in Braze (this merges anonymous data with identified user)
+        // Change user to identify them in Braze (this starts a new session for this user)
         brazeInstance.changeUser(profile.userId)
         
         // Use a null-safe call with ?.let to execute code only if currentUser is not null

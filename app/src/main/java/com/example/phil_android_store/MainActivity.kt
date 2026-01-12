@@ -275,7 +275,7 @@ fun TopBanner() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Phil's Store",
+                    text = "Demo Store",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -289,7 +289,7 @@ enum class AppDestinations(
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
-    HOME("Home", Icons.Default.Home),
+    HOME("Store", Icons.Default.Home),
     CART("Cart", Icons.Default.ShoppingCart),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
