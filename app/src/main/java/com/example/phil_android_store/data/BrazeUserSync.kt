@@ -10,7 +10,7 @@ import com.braze.configuration.BrazeConfig
 object BrazeUserSync {
     /**
      * Sync user profile to Braze attributes and start a new session.
-     * Reinitializes the SDK to start fresh, then identifies the user and sets attributes.
+     * Identifies the user and sets attributes.
      * Maps:
      * - userId -> external_id
      * - firstName -> first_name
@@ -21,12 +21,6 @@ object BrazeUserSync {
      * - active_member -> true
      */
     fun syncUserToBraze(context: Context, profile: UserProfile) {
-        // Reinitialize Braze SDK to start a new session
-        val brazeConfig = BrazeConfig.Builder()
-            .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
-            .build()
-        Braze.configure(context.applicationContext, brazeConfig)
-        
         val brazeInstance = Braze.getInstance(context)
         
         // Change user to identify them in Braze (this starts a new session for this user)
@@ -63,23 +57,21 @@ object BrazeUserSync {
     
     /**
      * Reset Braze to a completely anonymous state on logout.
-     * Wipes all Braze data and reinitializes the SDK to start fresh with no external user ID.
+     * Changes to a new anonymous user and sets active_member to false.
      * 
      * Note: This only affects Braze's local data. Your internal UserProfileManager
      * uses SharedPreferences which is separate and unaffected by this operation.
      */
     fun onUserLogout(context: Context) {
-        // Reinitialize Braze SDK with the same configuration
-        // This will reset the SDK to a fresh state with no external user ID
-        // Note: If wipeData() method exists in your SDK version, you can add it before this line:
-        // Braze.wipeData(context.applicationContext)
-        val brazeConfig = BrazeConfig.Builder()
-            .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
-            .build()
-        Braze.configure(context.applicationContext, brazeConfig)
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Change to a new anonymous user ID to start a fresh anonymous session
+        // Using a random UUID ensures a new anonymous user profile
+        val anonymousUserId = java.util.UUID.randomUUID().toString()
+        brazeInstance.changeUser(anonymousUserId)
         
         // Set active_member to false for the new anonymous session
-        Braze.getInstance(context).currentUser?.let { user ->
+        brazeInstance.currentUser?.let { user ->
             user.setCustomUserAttribute("active_member", false)
         }
     }
