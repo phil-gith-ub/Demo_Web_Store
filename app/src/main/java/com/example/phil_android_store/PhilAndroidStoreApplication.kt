@@ -12,7 +12,6 @@ class PhilAndroidStoreApplication : Application() {
         // Configure Braze
         val brazeConfig = BrazeConfig.Builder()
             .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
-            .setIsInAppMessagePushAccelerationEnabled(true)
             .build()
         
         // Initialize Braze
