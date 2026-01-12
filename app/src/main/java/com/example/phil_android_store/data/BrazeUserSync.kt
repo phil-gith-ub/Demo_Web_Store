@@ -2,7 +2,6 @@ package com.example.phil_android_store.data
 
 import android.content.Context
 import com.braze.Braze
-import java.util.UUID
 
 /**
  * Utility class to sync user profile data to Braze attributes
@@ -51,14 +50,25 @@ object BrazeUserSync {
     }
     
     /**
-     * Switch to anonymous user (logout)
-     * Note: Once a user is identified in Braze, you cannot revert to true anonymous.
-     * This creates a new anonymous user session.
+     * Clear user attributes and let Braze handle anonymous users automatically
+     * This clears all user attributes we've set, allowing Braze to track as anonymous
      */
     fun switchToAnonymousUser(context: Context) {
         val brazeInstance = Braze.getInstance(context)
-        // Generate a unique anonymous user ID for this session
-        val anonymousUserId = "anonymous_${UUID.randomUUID()}"
-        brazeInstance.changeUser(anonymousUserId)
+        
+        // Clear all user attributes we've set
+        brazeInstance.currentUser?.let { user ->
+            // Clear standard attributes by setting them to null/empty
+            user.setFirstName(null)
+            user.setLastName(null)
+            user.setEmail(null)
+            user.setPhoneNumber(null)
+            
+            // Clear custom attribute
+            user.unsetCustomUserAttribute("favorite_product_category")
+            
+            // Clear external user ID - this allows Braze to handle anonymous users automatically
+            user.setExternalUserId(null)
+        }
     }
 }
