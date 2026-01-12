@@ -40,7 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import com.braze.BrazeActivityLifecycleCallbackListener
+import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
@@ -50,8 +50,10 @@ import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        registerActivityLifecycleCallbacks(BrazeActivityLifecycleCallbackListener())
         enableEdgeToEdge()
+        
+        // Ensure in-app message manager is subscribed to events
+        BrazeInAppMessageManager.getInstance().ensureSubscribedToInAppMessageEvents(this)
         
         // Handle deep link
         val initialDestination = handleDeepLink(intent)
@@ -59,6 +61,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             Phil_Android_StoreApp(initialDestination = initialDestination)
         }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Register in-app message manager to display messages
+        BrazeInAppMessageManager.getInstance().registerInAppMessageManager(this)
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Unregister in-app message manager to prevent memory leaks
+        BrazeInAppMessageManager.getInstance().unregisterInAppMessageManager(this)
     }
     
     override fun onNewIntent(intent: Intent?) {
