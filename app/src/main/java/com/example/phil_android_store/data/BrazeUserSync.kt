@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.braze.Braze
 import com.braze.configuration.BrazeConfig
+import com.braze.models.outgoing.BrazeProperties
 import org.json.JSONObject
 
 /**
@@ -230,5 +231,60 @@ object BrazeUserSync {
             // Flush data to ensure attributes are sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
+    }
+    
+    /**
+     * Log custom event: added_item_to_cart
+     * Includes product properties: product_name (lowercase with underscores), product_category, product_price
+     */
+    fun logAddedItemToCart(context: Context, product: Product) {
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Convert product name to lowercase with underscores (e.g., "Wireless Headphones" -> "wireless_headphones")
+        val productNameFormatted = product.name
+            .lowercase()
+            .replace(" ", "_")
+            .replace("-", "_")
+            .replace("'", "")
+            .replace(".", "")
+            .replace(",", "")
+        
+        val properties = BrazeProperties().apply {
+            addProperty("product_name", productNameFormatted)
+            addProperty("product_category", product.category)
+            addProperty("product_price", product.price)
+        }
+        
+        brazeInstance.logCustomEvent("added_item_to_cart", properties)
+    }
+    
+    /**
+     * Log custom event: viewed_vip_products
+     * Triggered when user clicks on VIP products tab
+     */
+    fun logViewedVipProducts(context: Context) {
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.logCustomEvent("viewed_vip_products")
+    }
+    
+    /**
+     * Log custom event: logged_in
+     * Triggered when user clicks login button (only if userId is populated)
+     */
+    fun logLoggedIn(context: Context, userId: String) {
+        if (userId.isNotBlank()) {
+            val brazeInstance = Braze.getInstance(context)
+            brazeInstance.logCustomEvent("logged_in")
+        }
+    }
+    
+    /**
+     * Log custom event: logged_out
+     * Triggered when user clicks logout button
+     * Should be called BEFORE switching to anonymous user
+     */
+    fun logLoggedOut(context: Context) {
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.logCustomEvent("logged_out")
     }
 }

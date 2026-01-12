@@ -30,11 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.FeatureFlags
 import com.example.phil_android_store.data.MockData
 import com.example.phil_android_store.data.Product
-import com.example.phil_android_store.ui.components.NotificationBanner
 import com.example.phil_android_store.ui.components.NotificationBanner
 
 enum class ProductCategory {
@@ -49,6 +51,7 @@ fun StoreScreen(
     onShowBannerMessage: (String) -> Unit,  // Callback to show banner message
     initialCategory: String? = null  // Optional initial category to select (e.g., "VIP")
 ) {
+    val context = LocalContext.current
     val allProducts = MockData.products
     var selectedCategory by remember { 
         mutableStateOf(
@@ -85,7 +88,13 @@ fun StoreScreen(
                 categories.forEach { category ->
                     Tab(
                         selected = selectedCategory == category,
-                        onClick = { selectedCategory = category },
+                        onClick = { 
+                            selectedCategory = category
+                            // Log event every time VIP products tab is clicked
+                            if (category == ProductCategory.VIP) {
+                                BrazeUserSync.logViewedVipProducts(context)
+                            }
+                        },
                         text = {
                             Text(
                                 text = when (category) {
@@ -116,6 +125,8 @@ fun StoreScreen(
                         product = product,
                         onBuyClick = {
                             CartManager.addToCart(product)
+                            // Log event when item is added to cart
+                            BrazeUserSync.logAddedItemToCart(context, product)
                             notificationMessage = "${product.name} added to cart!"
                         }
                     )

@@ -118,6 +118,9 @@ fun ProfileScreen(
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
                                 
+                                // Log login event (only if userId is populated)
+                                BrazeUserSync.logLoggedIn(context, userId)
+                                
                                 // Sync user profile to Braze
                                 BrazeUserSync.syncUserToBraze(context, profile)
                             }
@@ -188,6 +191,9 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
+                            // Log logout event BEFORE switching to anonymous user
+                            BrazeUserSync.logLoggedOut(context)
+                            
                             profileManager.clearCurrentUser()
                             isLoggedIn = false
                             userId = ""
@@ -199,7 +205,7 @@ fun ProfileScreen(
                             isDarkMode = false
                             onDarkModeChanged(false)
                             
-                            // Clear user attributes in Braze on logout
+                            // Clear user attributes in Braze on logout (switches to anonymous)
                             BrazeUserSync.onUserLogout(context)
                         },
                         modifier = Modifier.fillMaxWidth()
