@@ -24,28 +24,29 @@ object BrazeUserSync {
         // Change user to identify them in Braze (this merges anonymous data with identified user)
         brazeInstance.changeUser(profile.userId)
         
-        val user = brazeInstance.currentUser
-        
-        // Set standard attributes
-        if (profile.firstName.isNotBlank()) {
-            user.setFirstName(profile.firstName)
-        }
-        
-        if (profile.lastName.isNotBlank()) {
-            user.setLastName(profile.lastName)
-        }
-        
-        if (profile.email.isNotBlank()) {
-            user.setEmail(profile.email)
-        }
-        
-        if (profile.mobile.isNotBlank()) {
-            user.setPhoneNumber(profile.mobile)
-        }
-        
-        // Set custom attribute for favorite product category
-        if (profile.favoriteProductCategory.isNotBlank()) {
-            user.setCustomUserAttribute("favorite_product_category", profile.favoriteProductCategory)
+        // Use a null-safe call with ?.let to execute code only if currentUser is not null
+        brazeInstance.currentUser?.let { user ->
+            // Set standard attributes
+            if (profile.firstName.isNotBlank()) {
+                user.setFirstName(profile.firstName)
+            }
+            
+            if (profile.lastName.isNotBlank()) {
+                user.setLastName(profile.lastName)
+            }
+            
+            if (profile.email.isNotBlank()) {
+                user.setEmail(profile.email)
+            }
+            
+            if (profile.mobile.isNotBlank()) {
+                user.setPhoneNumber(profile.mobile)
+            }
+            
+            // Set custom attribute for favorite product category
+            if (profile.favoriteProductCategory.isNotBlank()) {
+                user.setCustomUserAttribute("favorite_product_category", profile.favoriteProductCategory)
+            }
         }
     }
     
