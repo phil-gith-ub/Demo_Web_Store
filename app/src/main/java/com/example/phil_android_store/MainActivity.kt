@@ -51,6 +51,7 @@ import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 
 class MainActivity : ComponentActivity() {
     private var navigationCallback: ((AppDestinations) -> Unit)? = null
+    private var vipTabCallback: ((Boolean) -> Unit)? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,12 +62,17 @@ class MainActivity : ComponentActivity() {
         
         // Handle deep link
         val initialDestination = handleDeepLink(intent)
+        val initialVipCategory = getDeepLinkCategory(intent)
         
         setContent {
             Phil_Android_StoreApp(
                 initialDestination = initialDestination,
+                initialVipCategory = initialVipCategory,
                 onNavigationCallback = { callback ->
                     navigationCallback = callback
+                },
+                onVipTabCallback = { callback ->
+                    vipTabCallback = callback
                 }
             )
         }
@@ -100,8 +106,17 @@ class MainActivity : ComponentActivity() {
             // Use post to ensure callback is set if called during activity creation
             window.decorView.post {
                 navigationCallback?.invoke(destination)
+                // Check if deep link is for VIP tab
+                val category = getDeepLinkCategory(intent)
+                if (category == "VIP") {
+                    vipTabCallback?.invoke(true)
+                }
             }
         }
+    }
+    
+    fun getDeepLinkCategoryForComposable(intent: Intent?): String? {
+        return getDeepLinkCategory(intent)
     }
     
     fun handleDeepLink(intent: Intent?): AppDestinations? {
@@ -110,6 +125,20 @@ class MainActivity : ComponentActivity() {
             val host = data.host
             if (host == "login" || host == "profile") {
                 return AppDestinations.PROFILE
+            }
+            if (host == "vip") {
+                return AppDestinations.HOME
+            }
+        }
+        return null
+    }
+    
+    fun getDeepLinkCategory(intent: Intent?): String? {
+        val data: Uri? = intent?.data
+        if (data != null && "philstore" == data.scheme) {
+            val host = data.host
+            if (host == "vip") {
+                return "VIP"
             }
         }
         return null
@@ -120,7 +149,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Phil_Android_StoreApp(
     initialDestination: AppDestinations? = null,
-    onNavigationCallback: ((AppDestinations) -> Unit) -> Unit = {}
+    initialVipCategory: String? = null,
+    onNavigationCallback: ((AppDestinations) -> Unit) -> Unit = {},
+    onVipTabCallback: ((Boolean) -> Unit) -> Unit = {}
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
@@ -136,32 +167,34 @@ fun Phil_Android_StoreApp(
         mutableStateOf(initialDestination ?: AppDestinations.HOME) 
     }
     
+    // Track if we should show VIP tab on home screen
+    var showVipTab by remember { mutableStateOf(initialVipCategory == "VIP") }
+    
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
         onNavigationCallback { destination ->
             currentDestination = destination
         }
+        onVipTabCallback { shouldShow ->
+            showVipTab = shouldShow
+        }
         onDispose { }
     }
     
     // Observe intent changes to handle deep links
-    DisposableEffect(Unit) {
+    LaunchedEffect(Unit) {
         val activity = context as? MainActivity
-        val checkIntent = {
-            activity?.let {
-                val destination = it.handleDeepLink(it.intent)
-                if (destination != null) {
-                    currentDestination = destination
-                }
+        activity?.let {
+            val destination = it.handleDeepLink(it.intent)
+            if (destination != null) {
+                currentDestination = destination
+            }
+            // Check if deep link is for VIP tab
+            val category = it.getDeepLinkCategory(it.intent)
+            if (category == "VIP") {
+                showVipTab = true
             }
         }
-        
-        // Check immediately
-        checkIntent()
-        
-        // Set up a way to check when activity resumes
-        // This will be handled by the activity's onResume callback
-        onDispose { }
     }
     
     // Sync user profile to Braze on app startup if user is already logged in
@@ -199,7 +232,8 @@ fun Phil_Android_StoreApp(
                     when (currentDestination) {
                         AppDestinations.HOME -> StoreScreen(
                             bannerContent = bannerContent,
-                            onShowBannerMessage = { } // No longer needed, handled internally
+                            onShowBannerMessage = { }, // No longer needed, handled internally
+                            initialCategory = if (showVipTab) "VIP" else null
                         )
                         AppDestinations.CART -> CartScreen()
                         AppDestinations.PROFILE -> ProfileScreen(

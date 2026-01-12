@@ -46,10 +46,19 @@ enum class ProductCategory {
 @Composable
 fun StoreScreen(
     bannerContent: String? = null,  // Can be set to null to collapse, or a string to display
-    onShowBannerMessage: (String) -> Unit  // Callback to show banner message
+    onShowBannerMessage: (String) -> Unit,  // Callback to show banner message
+    initialCategory: String? = null  // Optional initial category to select (e.g., "VIP")
 ) {
     val allProducts = MockData.products
-    var selectedCategory by remember { mutableStateOf(ProductCategory.ALL) }
+    var selectedCategory by remember { 
+        mutableStateOf(
+            when (initialCategory) {
+                "VIP" -> ProductCategory.VIP
+                "ELECTRONICS" -> ProductCategory.ELECTRONICS
+                else -> ProductCategory.ALL
+            }
+        )
+    }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
     // Determine which tabs to show based on feature flag
