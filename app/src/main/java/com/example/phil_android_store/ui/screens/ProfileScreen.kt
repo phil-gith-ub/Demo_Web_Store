@@ -20,8 +20,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +41,7 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
+    val coroutineScope = rememberCoroutineScope()
     
     // Check if user is already logged in
     val currentUserId = profileManager.getCurrentUserId()
@@ -121,8 +125,12 @@ fun ProfileScreen(
                                 // Sync user profile to Braze (this calls changeUser first)
                                 BrazeUserSync.syncUserToBraze(context, profile)
                                 
-                                // Log login event AFTER changeUser is called (only if userId is populated)
-                                BrazeUserSync.logLoggedIn(context, userId)
+                                // Log login event AFTER changeUser is called with a 2 second delay
+                                // This ensures the user identification is fully processed before the event is sent
+                                coroutineScope.launch {
+                                    delay(2000) // 2 second delay
+                                    BrazeUserSync.logLoggedIn(context, userId)
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
