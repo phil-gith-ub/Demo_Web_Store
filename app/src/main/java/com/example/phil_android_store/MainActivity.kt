@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,8 @@ import com.example.phil_android_store.ui.screens.StoreScreen
 import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 
 class MainActivity : ComponentActivity() {
+    private var navigationCallback: ((AppDestinations) -> Unit)? = null
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,7 +62,12 @@ class MainActivity : ComponentActivity() {
         val initialDestination = handleDeepLink(intent)
         
         setContent {
-            Phil_Android_StoreApp(initialDestination = initialDestination)
+            Phil_Android_StoreApp(
+                initialDestination = initialDestination,
+                onNavigationCallback = { callback ->
+                    navigationCallback = callback
+                }
+            )
         }
     }
     
@@ -67,6 +75,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Register in-app message manager to display messages
         BrazeInAppMessageManager.getInstance().registerInAppMessageManager(this)
+        
+        // Check for deep link in current intent (handles case when app resumes after deep link)
+        handleDeepLinkNavigation(intent)
     }
     
     override fun onPause() {
@@ -79,10 +90,16 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         // Handle deep link when app is already running
+        handleDeepLinkNavigation(intent)
+    }
+    
+    private fun handleDeepLinkNavigation(intent: Intent?) {
         val destination = handleDeepLink(intent)
         if (destination != null) {
-            // Update the destination in the composable
-            // This will be handled by the composable state
+            // Use post to ensure callback is set if called during activity creation
+            window.decorView.post {
+                navigationCallback?.invoke(destination)
+            }
         }
     }
     
@@ -100,7 +117,10 @@ class MainActivity : ComponentActivity() {
 
 @PreviewScreenSizes
 @Composable
-fun Phil_Android_StoreApp(initialDestination: AppDestinations? = null) {
+fun Phil_Android_StoreApp(
+    initialDestination: AppDestinations? = null,
+    onNavigationCallback: ((AppDestinations) -> Unit) -> Unit = {}
+) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
     
@@ -115,15 +135,32 @@ fun Phil_Android_StoreApp(initialDestination: AppDestinations? = null) {
         mutableStateOf(initialDestination ?: AppDestinations.HOME) 
     }
     
-    // Handle deep link updates when app is already running
-    LaunchedEffect(Unit) {
+    // Register navigation callback with activity so it can trigger navigation updates
+    DisposableEffect(Unit) {
+        onNavigationCallback { destination ->
+            currentDestination = destination
+        }
+        onDispose { }
+    }
+    
+    // Observe intent changes to handle deep links
+    DisposableEffect(Unit) {
         val activity = context as? MainActivity
-        activity?.let {
-            val destination = it.handleDeepLink(it.intent)
-            if (destination != null) {
-                currentDestination = destination
+        val checkIntent = {
+            activity?.let {
+                val destination = it.handleDeepLink(it.intent)
+                if (destination != null) {
+                    currentDestination = destination
+                }
             }
         }
+        
+        // Check immediately
+        checkIntent()
+        
+        // Set up a way to check when activity resumes
+        // This will be handled by the activity's onResume callback
+        onDispose { }
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
 
