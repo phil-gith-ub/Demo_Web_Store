@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
+import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
@@ -161,6 +162,14 @@ fun Phil_Android_StoreApp(
         // Set up a way to check when activity resumes
         // This will be handled by the activity's onResume callback
         onDispose { }
+    }
+    
+    // Sync user profile to Braze on app startup if user is already logged in
+    LaunchedEffect(Unit) {
+        val currentProfile = profileManager.getCurrentProfile()
+        if (currentProfile != null) {
+            BrazeUserSync.syncUserToBraze(context, currentProfile)
+        }
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
 

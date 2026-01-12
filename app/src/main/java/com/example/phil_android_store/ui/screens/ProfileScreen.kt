@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.FeatureFlags
 import com.example.phil_android_store.data.UserProfile
 import com.example.phil_android_store.data.UserProfileManager
@@ -116,6 +117,9 @@ fun ProfileScreen(
                                 favoriteCategory = profile.favoriteProductCategory
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
+                                
+                                // Sync user profile to Braze
+                                BrazeUserSync.syncUserToBraze(context, profile)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -173,6 +177,9 @@ fun ProfileScreen(
                                 isDarkModeEnabled = isDarkMode
                             )
                             profileManager.saveProfile(profile)
+                            
+                            // Sync updated profile to Braze
+                            BrazeUserSync.syncUserToBraze(context, profile)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -191,6 +198,9 @@ fun ProfileScreen(
                             favoriteCategory = ""
                             isDarkMode = false
                             onDarkModeChanged(false)
+                            
+                            // Switch to anonymous user in Braze
+                            BrazeUserSync.switchToAnonymousUser(context)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
