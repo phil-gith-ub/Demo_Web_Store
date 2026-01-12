@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.braze.Braze
 import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
+import com.braze.models.FeatureFlag
 import org.json.JSONObject
 
 /**
@@ -304,5 +305,20 @@ object BrazeUserSync {
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
         }
+    }
+    
+    /**
+     * Check if VIP products feature flag is enabled.
+     * Logs feature flag impression for analytics.
+     * Returns false by default if feature flag is not found.
+     */
+    fun isVipProductsEnabled(context: Context): Boolean {
+        val brazeInstance = Braze.getInstance(context)
+        val featureFlag = brazeInstance.getFeatureFlag("enable_vip_products")
+        
+        // Log feature flag impression for analytics
+        brazeInstance.logFeatureFlagImpression("enable_vip_products")
+        
+        return featureFlag?.enabled == true
     }
 }

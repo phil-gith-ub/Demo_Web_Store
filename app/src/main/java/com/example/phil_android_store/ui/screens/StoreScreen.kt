@@ -34,10 +34,10 @@ import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
-import com.example.phil_android_store.data.FeatureFlags
 import com.example.phil_android_store.data.MockData
 import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.ui.components.NotificationBanner
+import androidx.compose.runtime.LaunchedEffect
 
 enum class ProductCategory {
     ALL,
@@ -53,6 +53,15 @@ fun StoreScreen(
 ) {
     val context = LocalContext.current
     val allProducts = MockData.products
+    
+    // Check Braze feature flag for VIP products (defaults to false - disabled)
+    var isVipEnabled by remember { mutableStateOf(false) }
+    
+    // Refresh feature flag on screen load
+    LaunchedEffect(Unit) {
+        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    }
+    
     var selectedCategory by remember { 
         mutableStateOf(
             when (initialCategory) {
@@ -65,15 +74,23 @@ fun StoreScreen(
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
     // Determine which tabs to show based on feature flag
-    val categories = if (FeatureFlags.isVipProductsEnabled) {
+    val categories = if (isVipEnabled) {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS, ProductCategory.VIP)
     } else {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS)
     }
     
     // Filter products based on selected category
+    // When VIP is disabled, filter out VIP products from ALL products list
     val filteredProducts = when (selectedCategory) {
-        ProductCategory.ALL -> allProducts
+        ProductCategory.ALL -> {
+            if (isVipEnabled) {
+                allProducts
+            } else {
+                // Hide VIP products when feature is disabled
+                allProducts.filter { !it.isVip }
+            }
+        }
         ProductCategory.ELECTRONICS -> allProducts.filter { it.category == "Electronics" }
         ProductCategory.VIP -> allProducts.filter { it.isVip }
     }

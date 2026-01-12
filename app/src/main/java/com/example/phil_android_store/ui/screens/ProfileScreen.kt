@@ -25,6 +25,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,6 +44,14 @@ fun ProfileScreen(
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    
+    // Check Braze feature flag for VIP products
+    var isVipEnabled by remember { mutableStateOf(false) }
+    
+    // Refresh feature flag on screen load
+    LaunchedEffect(Unit) {
+        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    }
     
     // Check if user is already logged in
     val currentUserId = profileManager.getCurrentUserId()
@@ -219,13 +229,36 @@ fun ProfileScreen(
                     }
                 }
 
-                Text(
-                    text = "Member Status: ${if (isLoggedIn) "Member" else "Guest"}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Member Status: ${if (isLoggedIn) "Member" else "Guest"}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    // Show VIP tag if feature is enabled
+                    if (isVipEnabled) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "VIP",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
         
