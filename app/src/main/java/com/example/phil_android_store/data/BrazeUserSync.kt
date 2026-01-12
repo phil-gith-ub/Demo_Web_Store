@@ -2,6 +2,7 @@ package com.example.phil_android_store.data
 
 import android.content.Context
 import com.braze.Braze
+import java.util.UUID
 
 /**
  * Utility class to sync user profile data to Braze attributes
@@ -50,26 +51,24 @@ object BrazeUserSync {
     }
     
     /**
-     * Clear user attributes on logout.
-     * This clears all user attributes we've set.
-     * The user ID remains, but the associated personal data is cleared from the local profile.
+     * Reset Braze to a completely anonymous state on logout.
+     * This uses the "Wipe & Re-ID" sequence to create a clean slate.
+     * 
+     * Note: This only affects Braze's local data. Your internal UserProfileManager
+     * uses SharedPreferences which is separate and unaffected by this operation.
      */
     fun onUserLogout(context: Context) {
         val brazeInstance = Braze.getInstance(context)
         
-        // Clear all user attributes we've set
-        brazeInstance.currentUser?.let { user ->
-            // Clear standard attributes by setting them to null/empty
-            user.setFirstName(null)
-            user.setLastName(null)
-            user.setEmail(null)
-            user.setPhoneNumber(null)
-            
-            // Clear custom attribute
-            user.unsetCustomUserAttribute("favorite_product_category")
-        }
-
-        // It's also recommended to flush data to ensure these changes are sent to Braze immediately.
-        brazeInstance.requestImmediateDataFlush()
+        // THE "CLEAN SLATE" SEQUENCE
+        // 1. Delete all local cookies, cache, and ID data
+        brazeInstance.wipeData()
+        
+        // 2. Turn the engine back on
+        brazeInstance.enableSDK()
+        
+        // 3. Give them a NEW random ID to simulate a new person
+        // If you don't do this, the SDK stays in a "paused" anonymous state.
+        brazeInstance.changeUser(UUID.randomUUID().toString())
     }
 }
