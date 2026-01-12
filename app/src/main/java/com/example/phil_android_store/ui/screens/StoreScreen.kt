@@ -98,39 +98,57 @@ fun StoreScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Category Tabs
-            // When VIP is disabled (2 tabs), add left padding to center them
-            ScrollableTabRow(
-                selectedTabIndex = categories.indexOf(selectedCategory),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (categories.size == 2) {
-                            Modifier.padding(start = 100.dp) // Add padding to center 2 tabs
-                        } else {
-                            Modifier
-                        }
-                    )
-            ) {
-                categories.forEach { category ->
-                    Tab(
-                        selected = selectedCategory == category,
-                        onClick = { 
-                            selectedCategory = category
-                            // Log event every time VIP products tab is clicked
-                            if (category == ProductCategory.VIP) {
-                                BrazeUserSync.logViewedVipProducts(context)
+            if (categories.size == 2) {
+                // When 2 tabs: divide row into two equal parts, one tab left, one tab right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    categories.forEach { category ->
+                        Tab(
+                            selected = selectedCategory == category,
+                            onClick = { 
+                                selectedCategory = category
+                            },
+                            text = {
+                                Text(
+                                    text = when (category) {
+                                        ProductCategory.ALL -> "All Products"
+                                        ProductCategory.ELECTRONICS -> "Electronics"
+                                        ProductCategory.VIP -> "VIP Products"
+                                    }
+                                )
                             }
-                        },
-                        text = {
-                            Text(
-                                text = when (category) {
-                                    ProductCategory.ALL -> "All Products"
-                                    ProductCategory.ELECTRONICS -> "Electronics"
-                                    ProductCategory.VIP -> "VIP Products"
+                        )
+                    }
+                }
+            } else {
+                // When 3 tabs: original ScrollableTabRow layout
+                ScrollableTabRow(
+                    selectedTabIndex = categories.indexOf(selectedCategory),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    categories.forEach { category ->
+                        Tab(
+                            selected = selectedCategory == category,
+                            onClick = { 
+                                selectedCategory = category
+                                // Log event every time VIP products tab is clicked
+                                if (category == ProductCategory.VIP) {
+                                    BrazeUserSync.logViewedVipProducts(context)
                                 }
-                            )
-                        }
-                    )
+                            },
+                            text = {
+                                Text(
+                                    text = when (category) {
+                                        ProductCategory.ALL -> "All Products"
+                                        ProductCategory.ELECTRONICS -> "Electronics"
+                                        ProductCategory.VIP -> "VIP Products"
+                                    }
+                                )
+                            }
+                        )
+                    }
                 }
             }
             
