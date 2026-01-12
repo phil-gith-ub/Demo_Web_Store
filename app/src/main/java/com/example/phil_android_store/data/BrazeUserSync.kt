@@ -202,8 +202,10 @@ object BrazeUserSync {
     
     /**
      * Reset Braze to a completely anonymous state on logout.
-     * Changes to anonymous_user and sets active_member to false.
-     * Only sends if active_member has changed.
+     * Wipes all cached data in the SDK without calling changeUser.
+     * 
+     * Note: The logged_out event should be logged BEFORE calling this method.
+     * This method will flush the event to Braze servers, then wipe all local cache.
      * 
      * Note: This only affects Braze's local data. Your internal UserProfileManager
      * uses SharedPreferences which is separate and unaffected by this operation.
@@ -211,26 +213,11 @@ object BrazeUserSync {
     fun onUserLogout(context: Context) {
         val brazeInstance = Braze.getInstance(context)
         
-        // Change to anonymous user to start a fresh anonymous session
-        brazeInstance.changeUser(ANONYMOUS_USER_ID)
+        // Flush data to ensure logged_out event and any pending data is sent to Braze servers
+        brazeInstance.requestImmediateDataFlush()
         
-        // Check if active_member needs to be updated
-        val lastSent = loadLastSentValues(context, ANONYMOUS_USER_ID)
-        if (lastSent.activeMember != false) {
-            brazeInstance.currentUser?.let { user ->
-                user.setCustomUserAttribute("active_member", false)
-            }
-            
-            // Update last sent values
-            saveLastSentValues(
-                context,
-                ANONYMOUS_USER_ID,
-                LastSentValues(activeMember = false)
-            )
-            
-            // Flush data to ensure attributes are sent to Braze immediately
-            brazeInstance.requestImmediateDataFlush()
-        }
+        // Wipe all cached data in the Braze SDK (does not call changeUser)
+        Braze.wipeData(context)
     }
     
     /**

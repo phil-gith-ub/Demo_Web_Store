@@ -191,7 +191,7 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
-                            // Log logout event BEFORE switching to anonymous user
+                            // Log logout event BEFORE wiping cache
                             BrazeUserSync.logLoggedOut(context)
                             
                             profileManager.clearCurrentUser()
@@ -205,7 +205,7 @@ fun ProfileScreen(
                             isDarkMode = false
                             onDarkModeChanged(false)
                             
-                            // Clear user attributes in Braze on logout (switches to anonymous)
+                            // Wipe Braze SDK cache (flushes logged_out event first, then wipes cache)
                             BrazeUserSync.onUserLogout(context)
                         },
                         modifier = Modifier.fillMaxWidth()
