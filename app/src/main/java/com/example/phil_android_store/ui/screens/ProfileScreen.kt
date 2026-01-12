@@ -122,8 +122,8 @@ fun ProfileScreen(
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
                                 
-                                // Sync user profile to Braze (this calls changeUser first)
-                                BrazeUserSync.syncUserToBraze(context, profile)
+                                // Login user to Braze (calls changeUser, sets active_member=true)
+                                BrazeUserSync.loginUserToBraze(context, userId)
                                 
                                 // Log login event AFTER changeUser is called with a 2 second delay
                                 // This ensures the user identification is fully processed before the event is sent
@@ -199,8 +199,8 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
-                            // Log logout event BEFORE wiping cache
-                            BrazeUserSync.logLoggedOut(context)
+                            // Set active_member=false and log logged_out event (no changeUser, no wipeData)
+                            BrazeUserSync.onUserLogout(context, userId)
                             
                             profileManager.clearCurrentUser()
                             isLoggedIn = false
@@ -212,9 +212,6 @@ fun ProfileScreen(
                             favoriteCategory = ""
                             isDarkMode = false
                             onDarkModeChanged(false)
-                            
-                            // Wipe Braze SDK cache (flushes logged_out event first, then wipes cache)
-                            BrazeUserSync.onUserLogout(context)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {

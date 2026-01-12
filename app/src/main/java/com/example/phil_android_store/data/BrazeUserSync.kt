@@ -78,22 +78,51 @@ object BrazeUserSync {
         prefs.edit().putString("${LAST_SENT_PREFIX}$userId", json.toString()).apply()
     }
     /**
-     * Sync user profile to Braze attributes and start a new session.
+     * Login user to Braze.
+     * Calls changeUser to identify the user, sets active_member=true, and logs logged_in event.
+     * Does NOT send any other profile attributes (those are only sent when Save Profile is clicked).
+     */
+    fun loginUserToBraze(context: Context, userId: String) {
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Change user to identify them in Braze (this starts a new session for this user)
+        brazeInstance.changeUser(userId)
+        
+        // Load last sent values to check if active_member needs to be updated
+        val lastSent = loadLastSentValues(context, userId)
+        
+        // Set active_member to true (only if it changed)
+        if (lastSent.activeMember != true) {
+            brazeInstance.currentUser?.let { user ->
+                user.setCustomUserAttribute("active_member", true)
+                
+                // Update last sent values
+                saveLastSentValues(
+                    context,
+                    userId,
+                    LastSentValues(activeMember = true)
+                )
+                
+                // Flush data to ensure attribute is sent to Braze immediately
+                brazeInstance.requestImmediateDataFlush()
+            }
+        }
+    }
+    
+    /**
+     * Sync user profile to Braze attributes.
      * Only sends deltas (changed attributes) to minimize data transfer.
+     * Does NOT call changeUser (user should already be identified).
      * Maps:
-     * - userId -> external_id
      * - firstName -> first_name
      * - lastName -> last_name
      * - email -> email
      * - mobile -> phone
      * - favoriteProductCategory -> favorite_product_category (custom attribute)
-     * - active_member -> true
+     * This should only be called when "Save Profile" is clicked and changes have been made.
      */
     fun syncUserToBraze(context: Context, profile: UserProfile) {
         val brazeInstance = Braze.getInstance(context)
-        
-        // Change user to identify them in Braze (this starts a new session for this user)
-        brazeInstance.changeUser(profile.userId)
         
         // Load last sent values to compare
         val lastSent = loadLastSentValues(context, profile.userId)
@@ -141,12 +170,6 @@ object BrazeUserSync {
                 }
                 hasChanges = true
             }
-            
-            // Always check active_member - set to true for identified users
-            if (lastSent.activeMember != true) {
-                user.setCustomUserAttribute("active_member", true)
-                hasChanges = true
-            }
         }
         
         // Update last sent values if there were changes
@@ -160,7 +183,7 @@ object BrazeUserSync {
                     email = currentEmail,
                     mobile = currentMobile,
                     favoriteProductCategory = currentCategory,
-                    activeMember = true
+                    activeMember = lastSent.activeMember // Preserve activeMember value
                 )
             )
             
@@ -201,23 +224,35 @@ object BrazeUserSync {
     }
     
     /**
-     * Reset Braze to a completely anonymous state on logout.
-     * Wipes all cached data in the SDK without calling changeUser.
-     * 
-     * Note: The logged_out event should be logged BEFORE calling this method.
-     * This method will flush the event to Braze servers, then wipe all local cache.
-     * 
-     * Note: This only affects Braze's local data. Your internal UserProfileManager
-     * uses SharedPreferences which is separate and unaffected by this operation.
+     * Handle user logout.
+     * Sets active_member to false and logs logged_out event.
+     * Does NOT call changeUser or wipeData - user remains identified in Braze.
      */
-    fun onUserLogout(context: Context) {
+    fun onUserLogout(context: Context, userId: String) {
         val brazeInstance = Braze.getInstance(context)
         
-        // Flush data to ensure logged_out event and any pending data is sent to Braze servers
-        brazeInstance.requestImmediateDataFlush()
+        // Load last sent values to check if active_member needs to be updated
+        val lastSent = loadLastSentValues(context, userId)
         
-        // Wipe all cached data in the Braze SDK (does not call changeUser)
-        Braze.wipeData(context)
+        // Set active_member to false (only if it changed)
+        if (lastSent.activeMember != false) {
+            brazeInstance.currentUser?.let { user ->
+                user.setCustomUserAttribute("active_member", false)
+                
+                // Update last sent values
+                saveLastSentValues(
+                    context,
+                    userId,
+                    LastSentValues(activeMember = false)
+                )
+            }
+        }
+        
+        // Log logged_out event
+        brazeInstance.logCustomEvent("logged_out")
+        
+        // Flush data to ensure attributes and event are sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
     }
     
     /**
@@ -257,7 +292,7 @@ object BrazeUserSync {
     /**
      * Log custom event: logged_in
      * Triggered when user clicks login button (only if userId is populated)
-     * IMPORTANT: This should be called AFTER changeUser() is called in syncUserToBraze()
+     * IMPORTANT: This should be called AFTER changeUser() is called in loginUserToBraze()
      * to ensure the event is associated with the correct user profile.
      * The event is flushed immediately to ensure in-app messages can be triggered.
      */
@@ -269,15 +304,5 @@ object BrazeUserSync {
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
         }
-    }
-    
-    /**
-     * Log custom event: logged_out
-     * Triggered when user clicks logout button
-     * Should be called BEFORE switching to anonymous user
-     */
-    fun logLoggedOut(context: Context) {
-        val brazeInstance = Braze.getInstance(context)
-        brazeInstance.logCustomEvent("logged_out")
     }
 }

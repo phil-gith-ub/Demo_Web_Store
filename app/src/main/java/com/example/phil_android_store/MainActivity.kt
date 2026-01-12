@@ -201,8 +201,9 @@ fun Phil_Android_StoreApp(
     LaunchedEffect(Unit) {
         val currentProfile = profileManager.getCurrentProfile()
         if (currentProfile != null) {
-            // User is logged in - sync their profile and start a new session
-            BrazeUserSync.syncUserToBraze(context, currentProfile)
+            // User is logged in - identify them and set active_member=true
+            // Do NOT send profile attributes (those are only sent when Save Profile is clicked)
+            BrazeUserSync.loginUserToBraze(context, currentProfile.userId)
         } else {
             // No user logged in - initialize anonymous session
             BrazeUserSync.initializeAnonymousSession(context)
