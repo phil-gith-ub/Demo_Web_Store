@@ -52,7 +52,7 @@ object BrazeUserSync {
     
     /**
      * Reset Braze to a completely anonymous state on logout.
-     * This uses the "Wipe & Re-ID" sequence to create a clean slate.
+     * Changes to a new anonymous user ID and clears all user attributes.
      * 
      * Note: This only affects Braze's local data. Your internal UserProfileManager
      * uses SharedPreferences which is separate and unaffected by this operation.
@@ -60,15 +60,23 @@ object BrazeUserSync {
     fun onUserLogout(context: Context) {
         val brazeInstance = Braze.getInstance(context)
         
-        // THE "CLEAN SLATE" SEQUENCE
-        // 1. Delete all local cookies, cache, and ID data
-        brazeInstance.wipeData()
-        
-        // 2. Turn the engine back on
-        brazeInstance.enableSDK()
-        
-        // 3. Give them a NEW random ID to simulate a new person
-        // If you don't do this, the SDK stays in a "paused" anonymous state.
+        // Change to a new anonymous user ID to create a clean slate
+        // This effectively creates a new anonymous user session
         brazeInstance.changeUser(UUID.randomUUID().toString())
+        
+        // Clear all user attributes we've set
+        brazeInstance.currentUser?.let { user ->
+            // Clear standard attributes by setting them to null
+            user.setFirstName(null)
+            user.setLastName(null)
+            user.setEmail(null)
+            user.setPhoneNumber(null)
+            
+            // Clear custom attribute
+            user.unsetCustomUserAttribute("favorite_product_category")
+        }
+        
+        // Flush data to ensure changes are sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
     }
 }
