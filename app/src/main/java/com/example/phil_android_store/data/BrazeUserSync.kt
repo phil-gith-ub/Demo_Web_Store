@@ -47,6 +47,9 @@ object BrazeUserSync {
             if (profile.favoriteProductCategory.isNotBlank()) {
                 user.setCustomUserAttribute("favorite_product_category", profile.favoriteProductCategory)
             }
+            
+            // Set active_member to true when user is logged in
+            user.setCustomUserAttribute("active_member", true)
         }
     }
     
@@ -66,5 +69,10 @@ object BrazeUserSync {
             .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
             .build()
         Braze.configure(context.applicationContext, brazeConfig)
+        
+        // Set active_member to false for the new anonymous session
+        Braze.getInstance(context).currentUser?.let { user ->
+            user.setCustomUserAttribute("active_member", false)
+        }
     }
 }
