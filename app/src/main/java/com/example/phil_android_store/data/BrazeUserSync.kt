@@ -50,10 +50,11 @@ object BrazeUserSync {
     }
     
     /**
-     * Clear user attributes and let Braze handle anonymous users automatically
-     * This clears all user attributes we've set, allowing Braze to track as anonymous
+     * Clear user attributes on logout.
+     * This clears all user attributes we've set.
+     * The user ID remains, but the associated personal data is cleared from the local profile.
      */
-    fun switchToAnonymousUser(context: Context) {
+    fun onUserLogout(context: Context) {
         val brazeInstance = Braze.getInstance(context)
         
         // Clear all user attributes we've set
@@ -66,9 +67,9 @@ object BrazeUserSync {
             
             // Clear custom attribute
             user.unsetCustomUserAttribute("favorite_product_category")
-            
-            // Clear external user ID - this allows Braze to handle anonymous users automatically
-            user.setExternalUserId(null)
         }
+
+        // It's also recommended to flush data to ensure these changes are sent to Braze immediately.
+        brazeInstance.requestImmediateDataFlush()
     }
 }

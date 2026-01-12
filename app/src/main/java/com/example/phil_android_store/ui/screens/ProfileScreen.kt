@@ -199,8 +199,8 @@ fun ProfileScreen(
                             isDarkMode = false
                             onDarkModeChanged(false)
                             
-                            // Switch to anonymous user in Braze
-                            BrazeUserSync.switchToAnonymousUser(context)
+                            // Clear user attributes in Braze on logout
+                            BrazeUserSync.onUserLogout(context)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
