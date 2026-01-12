@@ -118,11 +118,11 @@ fun ProfileScreen(
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
                                 
-                                // Log login event (only if userId is populated)
-                                BrazeUserSync.logLoggedIn(context, userId)
-                                
-                                // Sync user profile to Braze
+                                // Sync user profile to Braze (this calls changeUser first)
                                 BrazeUserSync.syncUserToBraze(context, profile)
+                                
+                                // Log login event AFTER changeUser is called (only if userId is populated)
+                                BrazeUserSync.logLoggedIn(context, userId)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
