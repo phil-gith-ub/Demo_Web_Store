@@ -8,6 +8,7 @@ import com.braze.configuration.BrazeConfig
  * Utility class to sync user profile data to Braze attributes
  */
 object BrazeUserSync {
+    private const val ANONYMOUS_USER_ID = "anonymous_user"
     /**
      * Sync user profile to Braze attributes and start a new session.
      * Identifies the user and sets attributes.
@@ -56,8 +57,25 @@ object BrazeUserSync {
     }
     
     /**
+     * Initialize anonymous user session.
+     * Sets the user to anonymous_user and active_member to false.
+     * This should be called on app startup if no user is logged in.
+     */
+    fun initializeAnonymousSession(context: Context) {
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Change to anonymous user to start a session
+        brazeInstance.changeUser(ANONYMOUS_USER_ID)
+        
+        // Set active_member to false for anonymous session
+        brazeInstance.currentUser?.let { user ->
+            user.setCustomUserAttribute("active_member", false)
+        }
+    }
+    
+    /**
      * Reset Braze to a completely anonymous state on logout.
-     * Changes to a new anonymous user and sets active_member to false.
+     * Changes to anonymous_user and sets active_member to false.
      * 
      * Note: This only affects Braze's local data. Your internal UserProfileManager
      * uses SharedPreferences which is separate and unaffected by this operation.
@@ -65,12 +83,10 @@ object BrazeUserSync {
     fun onUserLogout(context: Context) {
         val brazeInstance = Braze.getInstance(context)
         
-        // Change to a new anonymous user ID to start a fresh anonymous session
-        // Using a random UUID ensures a new anonymous user profile
-        val anonymousUserId = java.util.UUID.randomUUID().toString()
-        brazeInstance.changeUser(anonymousUserId)
+        // Change to anonymous user to start a fresh anonymous session
+        brazeInstance.changeUser(ANONYMOUS_USER_ID)
         
-        // Set active_member to false for the new anonymous session
+        // Set active_member to false for the anonymous session
         brazeInstance.currentUser?.let { user ->
             user.setCustomUserAttribute("active_member", false)
         }

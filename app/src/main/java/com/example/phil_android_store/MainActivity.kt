@@ -197,11 +197,15 @@ fun Phil_Android_StoreApp(
         }
     }
     
-    // Sync user profile to Braze on app startup if user is already logged in
+    // Initialize Braze session on app startup
     LaunchedEffect(Unit) {
         val currentProfile = profileManager.getCurrentProfile()
         if (currentProfile != null) {
+            // User is logged in - sync their profile and start a new session
             BrazeUserSync.syncUserToBraze(context, currentProfile)
+        } else {
+            // No user logged in - initialize anonymous session
+            BrazeUserSync.initializeAnonymousSession(context)
         }
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
