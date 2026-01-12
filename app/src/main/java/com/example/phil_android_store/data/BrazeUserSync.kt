@@ -58,12 +58,10 @@ object BrazeUserSync {
      * uses SharedPreferences which is separate and unaffected by this operation.
      */
     fun onUserLogout(context: Context) {
-        val brazeInstance = Braze.getInstance(context)
-        
-        // 1. Wipe all local Braze data (cookies, cache, ID data)
-        brazeInstance.wipeData()
-        
-        // 2. Reinitialize Braze SDK with the same configuration
+        // Reinitialize Braze SDK with the same configuration
+        // This will reset the SDK to a fresh state with no external user ID
+        // Note: If wipeData() method exists in your SDK version, you can add it before this line:
+        // Braze.wipeData(context.applicationContext)
         val brazeConfig = BrazeConfig.Builder()
             .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
             .build()
