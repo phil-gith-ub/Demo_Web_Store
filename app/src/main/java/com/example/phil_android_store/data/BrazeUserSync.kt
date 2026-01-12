@@ -257,11 +257,17 @@ object BrazeUserSync {
     /**
      * Log custom event: logged_in
      * Triggered when user clicks login button (only if userId is populated)
+     * IMPORTANT: This should be called AFTER changeUser() is called in syncUserToBraze()
+     * to ensure the event is associated with the correct user profile.
+     * The event is flushed immediately to ensure in-app messages can be triggered.
      */
     fun logLoggedIn(context: Context, userId: String) {
         if (userId.isNotBlank()) {
             val brazeInstance = Braze.getInstance(context)
             brazeInstance.logCustomEvent("logged_in")
+            // Flush immediately to ensure event is sent to Braze servers right away
+            // This allows in-app messages triggered by logged_in to display promptly
+            brazeInstance.requestImmediateDataFlush()
         }
     }
     

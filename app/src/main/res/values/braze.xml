@@ -2,4 +2,7 @@
 <resources>
   <string translatable="false" name="com_braze_api_key">fe11c5a5-07fb-4ae5-aad5-9100cd14e9eb</string>
   <string translatable="false" name="com_braze_custom_endpoint">sondheim.braze.com</string>
+  <!-- Minimum time interval (in seconds) between in-app message triggers -->
+  <!-- Default is 30 seconds. Setting to 5 seconds allows messages to trigger more frequently -->
+  <integer name="com_braze_trigger_action_minimum_time_interval_seconds">5</integer>
 </resources>
