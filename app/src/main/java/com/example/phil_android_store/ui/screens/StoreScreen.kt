@@ -64,7 +64,7 @@ fun StoreScreen(
     // Check Braze feature flag for VIP products tab visibility
     var isVipFeatureEnabled by remember { mutableStateOf(false) }
     
-    // Check if user is VIP based on total purchases > $2000
+    // Check if user is VIP based on total purchases > $1000
     var isVipUser by remember { mutableStateOf(false) }
     
     // Refresh feature flag on screen load
@@ -97,15 +97,29 @@ fun StoreScreen(
     }
     
     var selectedCategory by remember { 
-        mutableStateOf(
-            when (initialCategory) {
-                "VIP" -> ProductCategory.VIP
-                "ELECTRONICS" -> ProductCategory.ELECTRONICS
-                else -> ProductCategory.ALL
-            }
-        )
+        mutableStateOf(ProductCategory.ALL)
     }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Update selectedCategory based on initialCategory and feature flag availability
+    LaunchedEffect(initialCategory, isVipFeatureEnabled) {
+        when (initialCategory) {
+            "VIP" -> {
+                // Only set to VIP if feature flag is enabled
+                if (isVipFeatureEnabled) {
+                    selectedCategory = ProductCategory.VIP
+                }
+                // If feature flag is disabled, keep current selection (ALL)
+            }
+            "ELECTRONICS" -> selectedCategory = ProductCategory.ELECTRONICS
+            else -> {
+                // Set to ALL if no initial category or if initial category is null
+                if (initialCategory == null) {
+                    selectedCategory = ProductCategory.ALL
+                }
+            }
+        }
+    }
     
     // Determine which tabs to show based on feature flag (not user VIP status)
     val categories = if (isVipFeatureEnabled) {
@@ -144,7 +158,7 @@ fun StoreScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // Category Tabs
             ScrollableTabRow(
-                selectedTabIndex = categories.indexOf(selectedCategory),
+                selectedTabIndex = categories.indexOf(selectedCategory).coerceAtLeast(0),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 categories.forEach { category ->

@@ -57,7 +57,7 @@ fun ProfileScreen(
     var userId by rememberSaveable { mutableStateOf(currentUserId ?: "") }
     var isLoggedIn by remember { mutableStateOf(profileManager.isLoggedIn()) }
     
-    // Check if user is VIP based on total purchases > $2000
+    // Check if user is VIP based on total purchases > $1000
     var isVip by remember { mutableStateOf(false) }
     
     // Refresh VIP status when login state changes or when user ID changes
@@ -261,7 +261,7 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     
-                    // Show VIP tag if user has spent more than $2000
+                    // Show VIP tag if user has spent more than $1000
                     if (isVip) {
                         Surface(
                             color = MaterialTheme.colorScheme.tertiary,

@@ -60,10 +60,10 @@ class PurchaseManager(private val context: Context) {
     }
     
     /**
-     * Check if user is VIP (total purchases > $2000)
+     * Check if user is VIP (total purchases > $1000)
      */
     fun isVip(userId: String): Boolean {
-        return getTotalSpent(userId) > 2000.0
+        return getTotalSpent(userId) > 1000.0
     }
     
     /**

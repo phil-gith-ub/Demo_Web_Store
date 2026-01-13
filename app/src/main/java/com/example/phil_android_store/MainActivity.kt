@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -43,6 +45,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
@@ -221,6 +224,14 @@ fun Phil_Android_StoreApp(
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     var showPurchaseHistory by remember { mutableStateOf(false) }
+    
+    // Observe cart item count for badge - update when destination changes
+    var cartItemCount by remember { mutableStateOf(CartManager.cartItemCount) }
+    
+    // Update cart count when destination changes or when refreshKey changes (login/logout)
+    LaunchedEffect(currentDestination, refreshKey) {
+        cartItemCount = CartManager.cartItemCount
+    }
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -232,10 +243,29 @@ fun Phil_Android_StoreApp(
                     AppDestinations.entries.forEach {
                         item(
                             icon = {
-                                Icon(
-                                    it.icon,
-                                    contentDescription = it.label
-                                )
+                                // Show badge on cart icon if there are items
+                                if (it == AppDestinations.CART && cartItemCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge {
+                                                Text(
+                                                    text = cartItemCount.toString(),
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            it.icon,
+                                            contentDescription = it.label
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        it.icon,
+                                        contentDescription = it.label
+                                    )
+                                }
                             },
                             label = { Text(it.label) },
                             selected = it == currentDestination && !showPurchaseHistory,
@@ -255,13 +285,25 @@ fun Phil_Android_StoreApp(
                         )
                     } else {
                         when (currentDestination) {
-                            AppDestinations.HOME -> StoreScreen(
-                                bannerContent = bannerContent,
-                                onShowBannerMessage = { }, // No longer needed, handled internally
-                                initialCategory = if (showVipTab) "VIP" else null,
-                                refreshKey = refreshKey
-                            )
-                            AppDestinations.CART -> CartScreen()
+                            AppDestinations.HOME -> {
+                                // Update cart count when viewing store (items might have been added)
+                                LaunchedEffect(Unit) {
+                                    cartItemCount = CartManager.cartItemCount
+                                }
+                                StoreScreen(
+                                    bannerContent = bannerContent,
+                                    onShowBannerMessage = { }, // No longer needed, handled internally
+                                    initialCategory = if (showVipTab) "VIP" else null,
+                                    refreshKey = refreshKey
+                                )
+                            }
+                            AppDestinations.CART -> {
+                                // Update cart count when viewing cart
+                                LaunchedEffect(Unit) {
+                                    cartItemCount = CartManager.cartItemCount
+                                }
+                                CartScreen()
+                            }
                             AppDestinations.PROFILE -> ProfileScreen(
                                 onDarkModeChanged = { enabled ->
                                     isDarkMode = enabled
