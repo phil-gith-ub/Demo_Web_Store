@@ -286,23 +286,24 @@ fun Phil_Android_StoreApp(
                     } else {
                         when (currentDestination) {
                             AppDestinations.HOME -> {
-                                // Update cart count when viewing store (items might have been added)
-                                LaunchedEffect(Unit) {
-                                    cartItemCount = CartManager.cartItemCount
-                                }
                                 StoreScreen(
                                     bannerContent = bannerContent,
                                     onShowBannerMessage = { }, // No longer needed, handled internally
                                     initialCategory = if (showVipTab) "VIP" else null,
-                                    refreshKey = refreshKey
+                                    refreshKey = refreshKey,
+                                    onCartUpdated = {
+                                        // Update cart count immediately when item is added
+                                        cartItemCount = CartManager.cartItemCount
+                                    }
                                 )
                             }
                             AppDestinations.CART -> {
-                                // Update cart count when viewing cart
-                                LaunchedEffect(Unit) {
-                                    cartItemCount = CartManager.cartItemCount
-                                }
-                                CartScreen()
+                                CartScreen(
+                                    onCartUpdated = {
+                                        // Update cart count immediately when cart changes
+                                        cartItemCount = CartManager.cartItemCount
+                                    }
+                                )
                             }
                             AppDestinations.PROFILE -> ProfileScreen(
                                 onDarkModeChanged = { enabled ->

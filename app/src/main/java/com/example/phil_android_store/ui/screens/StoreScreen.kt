@@ -54,7 +54,8 @@ fun StoreScreen(
     bannerContent: String? = null,  // Can be set to null to collapse, or a string to display
     onShowBannerMessage: (String) -> Unit,  // Callback to show banner message
     initialCategory: String? = null,  // Optional initial category to select (e.g., "VIP")
-    refreshKey: Int = 0  // Key that changes to trigger refresh
+    refreshKey: Int = 0,  // Key that changes to trigger refresh
+    onCartUpdated: () -> Unit = {}  // Callback when cart is updated
 ) {
     val context = LocalContext.current
     val allProducts = MockData.products
@@ -228,6 +229,8 @@ fun StoreScreen(
                             // Log event when item is added to cart
                             BrazeUserSync.logAddedItemToCart(context, product)
                             notificationMessage = "${product.name} added to cart!"
+                            // Notify parent that cart was updated
+                            onCartUpdated()
                         }
                     )
                 }

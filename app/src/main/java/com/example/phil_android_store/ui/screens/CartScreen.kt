@@ -33,7 +33,9 @@ import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 
 @Composable
-fun CartScreen() {
+fun CartScreen(
+    onCartUpdated: () -> Unit = {}  // Callback when cart is updated
+) {
     val context = LocalContext.current
     val cartItems = CartManager.cartItems
     val totalPrice = CartManager.getTotalPrice()
@@ -46,6 +48,8 @@ fun CartScreen() {
             onDismiss = {
                 showPurchaseDialog = false
                 CartManager.clearCart()
+                // Notify parent that cart was updated
+                onCartUpdated()
             }
         )
     }
