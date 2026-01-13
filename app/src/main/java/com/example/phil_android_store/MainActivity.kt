@@ -43,6 +43,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
@@ -208,6 +209,11 @@ fun Phil_Android_StoreApp(
             // User is logged in - identify them and set active_member=true
             // Do NOT send profile attributes (those are only sent when Save Profile is clicked)
             BrazeUserSync.loginUserToBraze(context, currentProfile.userId)
+            
+            // Sync VIP status on app startup
+            val purchaseManager = PurchaseManager(context)
+            val isVip = purchaseManager.isVip(currentProfile.userId)
+            BrazeUserSync.syncVipStatusToBraze(context, currentProfile.userId, isVip)
         } else {
             // No user logged in - initialize anonymous session
             BrazeUserSync.initializeAnonymousSession(context)
@@ -217,34 +223,37 @@ fun Phil_Android_StoreApp(
     var showPurchaseHistory by remember { mutableStateOf(false) }
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
-        if (showPurchaseHistory) {
-            // Show Purchase History screen
-            PurchaseHistoryScreen(
-                onBack = { showPurchaseHistory = false }
-            )
-        } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Persistent Top Banner
-                TopBanner()
-                
-                NavigationSuiteScaffold(
-                    navigationSuiteItems = {
-                        AppDestinations.entries.forEach {
-                            item(
-                                icon = {
-                                    Icon(
-                                        it.icon,
-                                        contentDescription = it.label
-                                    )
-                                },
-                                label = { Text(it.label) },
-                                selected = it == currentDestination,
-                                onClick = { currentDestination = it }
-                            )
-                        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Persistent Top Banner
+            TopBanner()
+            
+            NavigationSuiteScaffold(
+                navigationSuiteItems = {
+                    AppDestinations.entries.forEach {
+                        item(
+                            icon = {
+                                Icon(
+                                    it.icon,
+                                    contentDescription = it.label
+                                )
+                            },
+                            label = { Text(it.label) },
+                            selected = it == currentDestination && !showPurchaseHistory,
+                            onClick = { 
+                                currentDestination = it
+                                showPurchaseHistory = false // Close purchase history when navigating
+                            }
+                        )
                     }
-                ) {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                }
+            ) {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    if (showPurchaseHistory) {
+                        // Show Purchase History screen within the main UI
+                        PurchaseHistoryScreen(
+                            onBack = { showPurchaseHistory = false }
+                        )
+                    } else {
                         when (currentDestination) {
                             AppDestinations.HOME -> StoreScreen(
                                 bannerContent = bannerContent,

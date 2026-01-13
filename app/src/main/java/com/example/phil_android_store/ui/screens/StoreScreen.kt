@@ -36,6 +36,8 @@ import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.MockData
 import com.example.phil_android_store.data.Product
+import com.example.phil_android_store.data.PurchaseManager
+import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.components.NotificationBanner
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
@@ -55,20 +57,20 @@ fun StoreScreen(
 ) {
     val context = LocalContext.current
     val allProducts = MockData.products
+    val purchaseManager = remember { PurchaseManager(context) }
+    val profileManager = remember { UserProfileManager(context) }
     
-    // Check Braze feature flag for VIP products (defaults to false - disabled)
-    var isVipEnabled by remember { mutableStateOf(false) }
+    // Check if user is VIP based on total purchases > $2000
+    var isVipUser by remember { mutableStateOf(false) }
     
-    // Refresh feature flag on screen load
-    LaunchedEffect(Unit) {
-        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
-    }
-    
-    // Refresh feature flag when refreshKey changes (login/logout)
-    LaunchedEffect(refreshKey) {
-        // Small delay to allow Braze actions (changeUser, events) to complete
-        delay(500)
-        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    // Refresh VIP status on screen load and when refreshKey changes (login/logout)
+    LaunchedEffect(Unit, refreshKey) {
+        val currentUserId = profileManager.getCurrentUserId()
+        isVipUser = if (currentUserId != null) {
+            purchaseManager.isVip(currentUserId)
+        } else {
+            false
+        }
     }
     
     var selectedCategory by remember { 
@@ -82,26 +84,37 @@ fun StoreScreen(
     }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
-    // Determine which tabs to show based on feature flag
-    val categories = if (isVipEnabled) {
+    // Determine which tabs to show based on user VIP status
+    val categories = if (isVipUser) {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS, ProductCategory.VIP)
     } else {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS)
     }
     
     // Filter products based on selected category
-    // When VIP is disabled, filter out VIP products from ALL products list
+    // When user is not VIP, filter out VIP products from ALL products list
     val filteredProducts = when (selectedCategory) {
         ProductCategory.ALL -> {
-            if (isVipEnabled) {
+            if (isVipUser) {
                 allProducts
             } else {
-                // Hide VIP products when feature is disabled
+                // Hide VIP products when user is not VIP
                 allProducts.filter { !it.isVip }
             }
         }
-        ProductCategory.ELECTRONICS -> allProducts.filter { it.category == "Electronics" }
-        ProductCategory.VIP -> allProducts.filter { it.isVip }
+        ProductCategory.ELECTRONICS -> {
+            if (isVipUser) {
+                allProducts.filter { it.category == "Electronics" }
+            } else {
+                // Hide VIP products when user is not VIP
+                allProducts.filter { it.category == "Electronics" && !it.isVip }
+            }
+        }
+        ProductCategory.VIP -> if (isVipUser) {
+            allProducts.filter { it.isVip }
+        } else {
+            emptyList() // Hide VIP tab content if user is not VIP
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

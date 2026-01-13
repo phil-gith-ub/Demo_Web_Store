@@ -147,8 +147,10 @@ fun ProfileScreen(
                                 // Log login event immediately after changeUser
                                 BrazeUserSync.logLoggedIn(context, userId)
                                 
-                                // Refresh VIP status and notify MainActivity
+                                // Refresh VIP status and sync to Braze
                                 isVip = purchaseManager.isVip(userId)
+                                BrazeUserSync.syncVipStatusToBraze(context, userId, isVip)
+                                
                                 onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
                             }
                         },
@@ -218,6 +220,9 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
+                            // Set vip_member to false before logout
+                            BrazeUserSync.syncVipStatusToBraze(context, userId, false)
+                            
                             // Set active_member=false and log logged_out event (no changeUser, no wipeData)
                             BrazeUserSync.onUserLogout(context, userId)
                             

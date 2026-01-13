@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.data.PurchaseManager
@@ -108,6 +109,10 @@ fun CartScreen() {
                             val currentUserId = profileManager.getCurrentUserId()
                             if (currentUserId != null && cartItems.isNotEmpty()) {
                                 purchaseManager.recordPurchase(currentUserId, cartItems)
+                                
+                                // Check if user reached VIP status and sync to Braze
+                                val isVip = purchaseManager.isVip(currentUserId)
+                                BrazeUserSync.syncVipStatusToBraze(context, currentUserId, isVip)
                             }
                             showPurchaseDialog = true
                         },

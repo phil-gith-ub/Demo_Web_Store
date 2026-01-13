@@ -26,7 +26,8 @@ object BrazeUserSync {
         val email: String? = null,
         val mobile: String? = null,
         val favoriteProductCategory: String? = null,
-        val activeMember: Boolean? = null
+        val activeMember: Boolean? = null,
+        val vipMember: Boolean? = null
     )
     
     /**
@@ -55,7 +56,8 @@ object BrazeUserSync {
                 email = if (json.has("email")) json.getString("email") else null,
                 mobile = if (json.has("mobile")) json.getString("mobile") else null,
                 favoriteProductCategory = if (json.has("favoriteProductCategory")) json.getString("favoriteProductCategory") else null,
-                activeMember = if (json.has("activeMember")) json.getBoolean("activeMember") else null
+                activeMember = if (json.has("activeMember")) json.getBoolean("activeMember") else null,
+                vipMember = if (json.has("vipMember")) json.getBoolean("vipMember") else null
             )
         } catch (e: Exception) {
             LastSentValues()
@@ -75,12 +77,14 @@ object BrazeUserSync {
         values.mobile?.let { json.put("mobile", it) }
         values.favoriteProductCategory?.let { json.put("favoriteProductCategory", it) }
         values.activeMember?.let { json.put("activeMember", it) }
+        values.vipMember?.let { json.put("vipMember", it) }
         
         prefs.edit().putString("${LAST_SENT_PREFIX}$userId", json.toString()).apply()
     }
     /**
      * Login user to Braze.
      * Calls changeUser to identify the user, sets active_member=true, and logs logged_in event.
+     * Note: VIP status should be synced separately via syncVipStatusToBraze() after login.
      * Does NOT send any other profile attributes (those are only sent when Save Profile is clicked).
      */
     fun loginUserToBraze(context: Context, userId: String) {
@@ -97,11 +101,11 @@ object BrazeUserSync {
             brazeInstance.currentUser?.let { user ->
                 user.setCustomUserAttribute("active_member", true)
                 
-                // Update last sent values
+                // Update last sent values (preserve vipMember)
                 saveLastSentValues(
                     context,
                     userId,
-                    LastSentValues(activeMember = true)
+                    lastSent.copy(activeMember = true)
                 )
                 
                 // Flush data to ensure attribute is sent to Braze immediately
@@ -184,7 +188,8 @@ object BrazeUserSync {
                     email = currentEmail,
                     mobile = currentMobile,
                     favoriteProductCategory = currentCategory,
-                    activeMember = lastSent.activeMember // Preserve activeMember value
+                    activeMember = lastSent.activeMember, // Preserve activeMember value
+                    vipMember = lastSent.vipMember // Preserve vipMember value
                 )
             )
             
@@ -304,6 +309,36 @@ object BrazeUserSync {
             // Flush immediately to ensure event is sent to Braze servers right away
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
+        }
+    }
+    
+    /**
+     * Sync VIP member status to Braze.
+     * Only sends if the value has changed (delta tracking).
+     * Sets vip_member=true if user is VIP, false otherwise.
+     * This should be called:
+     * - After a purchase is made (to update if user reaches VIP status)
+     * - On login (to sync current VIP status)
+     * - On logout (to set to false)
+     */
+    fun syncVipStatusToBraze(context: Context, userId: String, isVip: Boolean) {
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Load last sent values to check if vip_member needs to be updated
+        val lastSent = loadLastSentValues(context, userId)
+        
+        // Only send if value has changed
+        if (lastSent.vipMember != isVip) {
+            brazeInstance.currentUser?.let { user ->
+                user.setCustomUserAttribute("vip_member", isVip)
+                
+                // Update last sent values
+                val updatedValues = lastSent.copy(vipMember = isVip)
+                saveLastSentValues(context, userId, updatedValues)
+                
+                // Flush data to ensure attribute is sent to Braze immediately
+                brazeInstance.requestImmediateDataFlush()
+            }
         }
     }
     
