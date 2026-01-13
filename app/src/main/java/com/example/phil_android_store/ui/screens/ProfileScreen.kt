@@ -35,16 +35,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.FeatureFlags
+import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfile
 import com.example.phil_android_store.data.UserProfileManager
 
 @Composable
 fun ProfileScreen(
     onDarkModeChanged: (Boolean) -> Unit,
-    onLoginStateChanged: () -> Unit = {}
+    onLoginStateChanged: () -> Unit = {},
+    onNavigateToPurchaseHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
+    val purchaseManager = remember { PurchaseManager(context) }
     val coroutineScope = rememberCoroutineScope()
     
     // Check if user is already logged in
@@ -54,19 +57,16 @@ fun ProfileScreen(
     var userId by rememberSaveable { mutableStateOf(currentUserId ?: "") }
     var isLoggedIn by remember { mutableStateOf(profileManager.isLoggedIn()) }
     
-    // Check Braze feature flag for VIP products
-    var isVipEnabled by remember { mutableStateOf(false) }
+    // Check if user is VIP based on total purchases > $2000
+    var isVip by remember { mutableStateOf(false) }
     
-    // Refresh feature flag on screen load
-    LaunchedEffect(Unit) {
-        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
-    }
-    
-    // Refresh feature flag when login state changes
-    LaunchedEffect(isLoggedIn) {
-        // Small delay to allow Braze actions (changeUser, events) to complete
-        delay(500)
-        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    // Refresh VIP status when login state changes or when user ID changes
+    LaunchedEffect(isLoggedIn, currentUserId) {
+        if (isLoggedIn && currentUserId != null) {
+            isVip = purchaseManager.isVip(currentUserId)
+        } else {
+            isVip = false
+        }
     }
     
     // Profile fields
@@ -147,12 +147,9 @@ fun ProfileScreen(
                                 // Log login event immediately after changeUser
                                 BrazeUserSync.logLoggedIn(context, userId)
                                 
-                                // Refresh feature flag after login actions complete
-                                coroutineScope.launch {
-                                    delay(500) // Small delay to allow Braze to process
-                                    isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
-                                    onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
-                                }
+                                // Refresh VIP status and notify MainActivity
+                                isVip = purchaseManager.isVip(userId)
+                                onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -235,12 +232,9 @@ fun ProfileScreen(
                             isDarkMode = false
                             onDarkModeChanged(false)
                             
-                            // Refresh feature flag after logout actions complete
-                            coroutineScope.launch {
-                                delay(500) // Small delay to allow Braze to process
-                                isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
-                                onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
-                            }
+                            // Refresh VIP status and notify MainActivity
+                            isVip = false
+                            onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -262,8 +256,8 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     
-                    // Show VIP tag if feature is enabled
-                    if (isVipEnabled) {
+                    // Show VIP tag if user has spent more than $2000
+                    if (isVip) {
                         Surface(
                             color = MaterialTheme.colorScheme.tertiary,
                             shape = RoundedCornerShape(4.dp)
@@ -274,8 +268,29 @@ fun ProfileScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                            )
                         }
+                    }
+                }
+            }
+        }
+        
+        // Purchase History button (only shown if logged in)
+        if (isLoggedIn) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Button(
+                        onClick = onNavigateToPurchaseHistory,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("View Purchase History")
                     }
                 }
             }

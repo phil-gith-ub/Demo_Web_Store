@@ -46,6 +46,7 @@ import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
+import com.example.phil_android_store.ui.screens.PurchaseHistoryScreen
 import com.example.phil_android_store.ui.screens.StoreScreen
 import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 
@@ -213,46 +214,57 @@ fun Phil_Android_StoreApp(
         }
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
+    var showPurchaseHistory by remember { mutableStateOf(false) }
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Persistent Top Banner
-            TopBanner()
-            
-            NavigationSuiteScaffold(
-                navigationSuiteItems = {
-                    AppDestinations.entries.forEach {
-                        item(
-                            icon = {
-                                Icon(
-                                    it.icon,
-                                    contentDescription = it.label
-                                )
-                            },
-                            label = { Text(it.label) },
-                            selected = it == currentDestination,
-                            onClick = { currentDestination = it }
-                        )
+        if (showPurchaseHistory) {
+            // Show Purchase History screen
+            PurchaseHistoryScreen(
+                onBack = { showPurchaseHistory = false }
+            )
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Persistent Top Banner
+                TopBanner()
+                
+                NavigationSuiteScaffold(
+                    navigationSuiteItems = {
+                        AppDestinations.entries.forEach {
+                            item(
+                                icon = {
+                                    Icon(
+                                        it.icon,
+                                        contentDescription = it.label
+                                    )
+                                },
+                                label = { Text(it.label) },
+                                selected = it == currentDestination,
+                                onClick = { currentDestination = it }
+                            )
+                        }
                     }
-                }
-            ) {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    when (currentDestination) {
-                        AppDestinations.HOME -> StoreScreen(
-                            bannerContent = bannerContent,
-                            onShowBannerMessage = { }, // No longer needed, handled internally
-                            initialCategory = if (showVipTab) "VIP" else null,
-                            refreshKey = refreshKey
-                        )
-                        AppDestinations.CART -> CartScreen()
-                        AppDestinations.PROFILE -> ProfileScreen(
-                            onDarkModeChanged = { enabled ->
-                                isDarkMode = enabled
-                            },
-                            onLoginStateChanged = {
-                                refreshKey++ // Trigger refresh in StoreScreen
-                            }
-                        )
+                ) {
+                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                        when (currentDestination) {
+                            AppDestinations.HOME -> StoreScreen(
+                                bannerContent = bannerContent,
+                                onShowBannerMessage = { }, // No longer needed, handled internally
+                                initialCategory = if (showVipTab) "VIP" else null,
+                                refreshKey = refreshKey
+                            )
+                            AppDestinations.CART -> CartScreen()
+                            AppDestinations.PROFILE -> ProfileScreen(
+                                onDarkModeChanged = { enabled ->
+                                    isDarkMode = enabled
+                                },
+                                onLoginStateChanged = {
+                                    refreshKey++ // Trigger refresh in StoreScreen
+                                },
+                                onNavigateToPurchaseHistory = {
+                                    showPurchaseHistory = true
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -23,16 +23,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.Product
+import com.example.phil_android_store.data.PurchaseManager
+import com.example.phil_android_store.data.UserProfileManager
 
 @Composable
 fun CartScreen() {
+    val context = LocalContext.current
     val cartItems = CartManager.cartItems
     val totalPrice = CartManager.getTotalPrice()
     var showPurchaseDialog by remember { mutableStateOf(false) }
+    val purchaseManager = remember { PurchaseManager(context) }
+    val profileManager = remember { UserProfileManager(context) }
 
     if (showPurchaseDialog) {
         PurchaseSuccessDialog(
@@ -97,7 +103,14 @@ fun CartScreen() {
                     )
 
                     Button(
-                        onClick = { showPurchaseDialog = true },
+                        onClick = {
+                            // Record purchase if user is logged in
+                            val currentUserId = profileManager.getCurrentUserId()
+                            if (currentUserId != null && cartItems.isNotEmpty()) {
+                                purchaseManager.recordPurchase(currentUserId, cartItems)
+                            }
+                            showPurchaseDialog = true
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Checkout")
