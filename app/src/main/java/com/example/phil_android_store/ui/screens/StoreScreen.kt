@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import android.content.Context
@@ -60,11 +61,33 @@ fun StoreScreen(
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
     
+    // Check Braze feature flag for VIP products tab visibility
+    var isVipFeatureEnabled by remember { mutableStateOf(false) }
+    
     // Check if user is VIP based on total purchases > $2000
     var isVipUser by remember { mutableStateOf(false) }
     
-    // Refresh VIP status on screen load and when refreshKey changes (login/logout)
-    LaunchedEffect(Unit, refreshKey) {
+    // Refresh feature flag on screen load
+    LaunchedEffect(Unit) {
+        isVipFeatureEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    }
+    
+    // Refresh feature flag and VIP status when refreshKey changes (login/logout)
+    LaunchedEffect(refreshKey) {
+        // Small delay to allow Braze actions (changeUser, events) to complete
+        delay(500)
+        isVipFeatureEnabled = BrazeUserSync.isVipProductsEnabled(context)
+        
+        val currentUserId = profileManager.getCurrentUserId()
+        isVipUser = if (currentUserId != null) {
+            purchaseManager.isVip(currentUserId)
+        } else {
+            false
+        }
+    }
+    
+    // Refresh VIP status on screen load
+    LaunchedEffect(Unit) {
         val currentUserId = profileManager.getCurrentUserId()
         isVipUser = if (currentUserId != null) {
             purchaseManager.isVip(currentUserId)
@@ -84,8 +107,8 @@ fun StoreScreen(
     }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
-    // Determine which tabs to show based on user VIP status
-    val categories = if (isVipUser) {
+    // Determine which tabs to show based on feature flag (not user VIP status)
+    val categories = if (isVipFeatureEnabled) {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS, ProductCategory.VIP)
     } else {
         listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS)
@@ -113,7 +136,7 @@ fun StoreScreen(
         ProductCategory.VIP -> if (isVipUser) {
             allProducts.filter { it.isVip }
         } else {
-            emptyList() // Hide VIP tab content if user is not VIP
+            emptyList() // Hide products if user is not VIP (will show message instead)
         }
     }
 
@@ -156,6 +179,30 @@ fun StoreScreen(
                 if (bannerContent != null) {
                     item {
                         BannerCard(content = bannerContent)
+                    }
+                }
+                
+                // Show message if user is viewing VIP tab but is not VIP
+                if (selectedCategory == ProductCategory.VIP && !isVipUser) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "You have not reached VIP member status",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 }
                 
