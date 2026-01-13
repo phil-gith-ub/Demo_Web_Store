@@ -40,11 +40,19 @@ import com.example.phil_android_store.data.UserProfileManager
 
 @Composable
 fun ProfileScreen(
-    onDarkModeChanged: (Boolean) -> Unit
+    onDarkModeChanged: (Boolean) -> Unit,
+    onLoginStateChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    
+    // Check if user is already logged in
+    val currentUserId = profileManager.getCurrentUserId()
+    val currentProfile = currentUserId?.let { profileManager.getProfile(it) }
+    
+    var userId by rememberSaveable { mutableStateOf(currentUserId ?: "") }
+    var isLoggedIn by remember { mutableStateOf(profileManager.isLoggedIn()) }
     
     // Check Braze feature flag for VIP products
     var isVipEnabled by remember { mutableStateOf(false) }
@@ -54,12 +62,12 @@ fun ProfileScreen(
         isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
     }
     
-    // Check if user is already logged in
-    val currentUserId = profileManager.getCurrentUserId()
-    val currentProfile = currentUserId?.let { profileManager.getProfile(it) }
-    
-    var userId by rememberSaveable { mutableStateOf(currentUserId ?: "") }
-    var isLoggedIn by remember { mutableStateOf(profileManager.isLoggedIn()) }
+    // Refresh feature flag when login state changes
+    LaunchedEffect(isLoggedIn) {
+        // Small delay to allow Braze actions (changeUser, events) to complete
+        delay(500)
+        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    }
     
     // Profile fields
     var firstName by rememberSaveable { mutableStateOf(currentProfile?.firstName ?: "") }
@@ -136,11 +144,14 @@ fun ProfileScreen(
                                 // Login user to Braze (calls changeUser, sets active_member=true)
                                 BrazeUserSync.loginUserToBraze(context, userId)
                                 
-                                // Log login event AFTER changeUser is called with a 2 second delay
-                                // This ensures the user identification is fully processed before the event is sent
+                                // Log login event immediately after changeUser
+                                BrazeUserSync.logLoggedIn(context, userId)
+                                
+                                // Refresh feature flag after login actions complete
                                 coroutineScope.launch {
-                                    delay(2000) // 2 second delay
-                                    BrazeUserSync.logLoggedIn(context, userId)
+                                    delay(500) // Small delay to allow Braze to process
+                                    isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+                                    onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
                                 }
                             }
                         },
@@ -223,6 +234,13 @@ fun ProfileScreen(
                             favoriteCategory = ""
                             isDarkMode = false
                             onDarkModeChanged(false)
+                            
+                            // Refresh feature flag after logout actions complete
+                            coroutineScope.launch {
+                                delay(500) // Small delay to allow Braze to process
+                                isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+                                onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -237,10 +255,10 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Member Status: ${if (isLoggedIn) "Member" else "Guest"}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                Text(
+                    text = "Member Status: ${if (isLoggedIn) "Member" else "Guest"}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     
@@ -256,7 +274,7 @@ fun ProfileScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                )
                         }
                     }
                 }

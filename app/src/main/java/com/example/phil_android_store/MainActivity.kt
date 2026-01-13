@@ -170,6 +170,9 @@ fun Phil_Android_StoreApp(
     // Track if we should show VIP tab on home screen
     var showVipTab by remember { mutableStateOf(initialVipCategory == "VIP") }
     
+    // Refresh key that changes when login/logout happens to trigger UI refresh
+    var refreshKey by remember { mutableStateOf(0) }
+    
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
         onNavigationCallback { destination ->
@@ -238,12 +241,16 @@ fun Phil_Android_StoreApp(
                         AppDestinations.HOME -> StoreScreen(
                             bannerContent = bannerContent,
                             onShowBannerMessage = { }, // No longer needed, handled internally
-                            initialCategory = if (showVipTab) "VIP" else null
+                            initialCategory = if (showVipTab) "VIP" else null,
+                            refreshKey = refreshKey
                         )
                         AppDestinations.CART -> CartScreen()
                         AppDestinations.PROFILE -> ProfileScreen(
                             onDarkModeChanged = { enabled ->
                                 isDarkMode = enabled
+                            },
+                            onLoginStateChanged = {
+                                refreshKey++ // Trigger refresh in StoreScreen
                             }
                         )
                     }

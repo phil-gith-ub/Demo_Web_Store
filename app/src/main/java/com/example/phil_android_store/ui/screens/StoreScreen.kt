@@ -38,6 +38,7 @@ import com.example.phil_android_store.data.MockData
 import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.ui.components.NotificationBanner
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 
 enum class ProductCategory {
     ALL,
@@ -49,7 +50,8 @@ enum class ProductCategory {
 fun StoreScreen(
     bannerContent: String? = null,  // Can be set to null to collapse, or a string to display
     onShowBannerMessage: (String) -> Unit,  // Callback to show banner message
-    initialCategory: String? = null  // Optional initial category to select (e.g., "VIP")
+    initialCategory: String? = null,  // Optional initial category to select (e.g., "VIP")
+    refreshKey: Int = 0  // Key that changes to trigger refresh
 ) {
     val context = LocalContext.current
     val allProducts = MockData.products
@@ -59,6 +61,13 @@ fun StoreScreen(
     
     // Refresh feature flag on screen load
     LaunchedEffect(Unit) {
+        isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
+    }
+    
+    // Refresh feature flag when refreshKey changes (login/logout)
+    LaunchedEffect(refreshKey) {
+        // Small delay to allow Braze actions (changeUser, events) to complete
+        delay(500)
         isVipEnabled = BrazeUserSync.isVipProductsEnabled(context)
     }
     
