@@ -37,8 +37,9 @@ fun CartScreen(
     onCartUpdated: () -> Unit = {}  // Callback when cart is updated
 ) {
     val context = LocalContext.current
-    val cartItems = CartManager.cartItems
-    val totalPrice = CartManager.getTotalPrice()
+    val cartManager = remember { CartManager(context) }
+    val cartItems = cartManager.cartItems
+    val totalPrice = cartManager.getTotalPrice()
     var showPurchaseDialog by remember { mutableStateOf(false) }
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
@@ -47,7 +48,7 @@ fun CartScreen(
         PurchaseSuccessDialog(
             onDismiss = {
                 showPurchaseDialog = false
-                CartManager.clearCart()
+                cartManager.clearCart()
                 // Notify parent that cart was updated
                 onCartUpdated()
             }

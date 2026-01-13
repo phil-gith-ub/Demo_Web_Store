@@ -61,6 +61,7 @@ fun StoreScreen(
     val allProducts = MockData.products
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
+    val cartManager = remember { CartManager(context) }
     
     // Check Braze feature flag for VIP products tab visibility
     var isVipFeatureEnabled by remember { mutableStateOf(false) }
@@ -225,7 +226,7 @@ fun StoreScreen(
                     ProductCard(
                         product = product,
                         onBuyClick = {
-                            CartManager.addToCart(product)
+                            cartManager.addToCart(product)
                             // Log event when item is added to cart
                             BrazeUserSync.logAddedItemToCart(context, product)
                             notificationMessage = "${product.name} added to cart!"

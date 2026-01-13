@@ -225,12 +225,15 @@ fun Phil_Android_StoreApp(
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     var showPurchaseHistory by remember { mutableStateOf(false) }
     
+    // Create cart manager instance
+    val cartManager = remember { CartManager(context) }
+    
     // Observe cart item count for badge - update when destination changes
-    var cartItemCount by remember { mutableStateOf(CartManager.cartItemCount) }
+    var cartItemCount by remember { mutableStateOf(cartManager.cartItemCount) }
     
     // Update cart count when destination changes or when refreshKey changes (login/logout)
     LaunchedEffect(currentDestination, refreshKey) {
-        cartItemCount = CartManager.cartItemCount
+        cartItemCount = cartManager.cartItemCount
     }
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
@@ -293,7 +296,7 @@ fun Phil_Android_StoreApp(
                                     refreshKey = refreshKey,
                                     onCartUpdated = {
                                         // Update cart count immediately when item is added
-                                        cartItemCount = CartManager.cartItemCount
+                                        cartItemCount = cartManager.cartItemCount
                                     }
                                 )
                             }
@@ -301,7 +304,7 @@ fun Phil_Android_StoreApp(
                                 CartScreen(
                                     onCartUpdated = {
                                         // Update cart count immediately when cart changes
-                                        cartItemCount = CartManager.cartItemCount
+                                        cartItemCount = cartManager.cartItemCount
                                     }
                                 )
                             }
