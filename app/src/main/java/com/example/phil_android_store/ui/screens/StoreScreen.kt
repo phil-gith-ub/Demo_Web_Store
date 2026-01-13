@@ -55,13 +55,13 @@ fun StoreScreen(
     onShowBannerMessage: (String) -> Unit,  // Callback to show banner message
     initialCategory: String? = null,  // Optional initial category to select (e.g., "VIP")
     refreshKey: Int = 0,  // Key that changes to trigger refresh
-    onCartUpdated: () -> Unit = {}  // Callback when cart is updated
+    onCartUpdated: () -> Unit = {},  // Callback when cart is updated
+    cartManager: CartManager  // Shared cart manager instance
 ) {
     val context = LocalContext.current
     val allProducts = MockData.products
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
-    val cartManager = remember { CartManager(context) }
     
     // Check Braze feature flag for VIP products tab visibility
     var isVipFeatureEnabled by remember { mutableStateOf(false) }

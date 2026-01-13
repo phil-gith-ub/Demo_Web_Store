@@ -34,10 +34,10 @@ import com.example.phil_android_store.data.UserProfileManager
 
 @Composable
 fun CartScreen(
-    onCartUpdated: () -> Unit = {}  // Callback when cart is updated
+    onCartUpdated: () -> Unit = {},  // Callback when cart is updated
+    cartManager: CartManager  // Shared cart manager instance
 ) {
     val context = LocalContext.current
-    val cartManager = remember { CartManager(context) }
     val cartItems = cartManager.cartItems
     val totalPrice = cartManager.getTotalPrice()
     var showPurchaseDialog by remember { mutableStateOf(false) }

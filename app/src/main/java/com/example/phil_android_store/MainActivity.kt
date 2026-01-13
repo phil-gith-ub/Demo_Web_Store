@@ -294,6 +294,7 @@ fun Phil_Android_StoreApp(
                                     onShowBannerMessage = { }, // No longer needed, handled internally
                                     initialCategory = if (showVipTab) "VIP" else null,
                                     refreshKey = refreshKey,
+                                    cartManager = cartManager,
                                     onCartUpdated = {
                                         // Update cart count immediately when item is added
                                         cartItemCount = cartManager.cartItemCount
@@ -302,6 +303,7 @@ fun Phil_Android_StoreApp(
                             }
                             AppDestinations.CART -> {
                                 CartScreen(
+                                    cartManager = cartManager,
                                     onCartUpdated = {
                                         // Update cart count immediately when cart changes
                                         cartItemCount = cartManager.cartItemCount
