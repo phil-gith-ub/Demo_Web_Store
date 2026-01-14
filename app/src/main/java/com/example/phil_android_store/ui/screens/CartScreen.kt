@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -18,7 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Clear
@@ -38,6 +37,7 @@ import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
+import com.example.phil_android_store.ui.components.NotificationBanner
 
 @Composable
 fun CartScreen(
@@ -48,7 +48,7 @@ fun CartScreen(
     // Use state to track cart items so UI updates immediately when cart changes
     var cartItems by remember { mutableStateOf(cartManager.cartItems) }
     var totalPrice by remember { mutableStateOf(cartManager.getTotalPrice()) }
-    var showPurchaseDialog by remember { mutableStateOf(false) }
+    var purchaseSuccessMessage by remember { mutableStateOf<String?>(null) }
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
     
@@ -58,21 +58,11 @@ fun CartScreen(
         totalPrice = cartManager.getTotalPrice()
     }
 
-    if (showPurchaseDialog) {
-        PurchaseSuccessDialog(
-            onDismiss = {
-                showPurchaseDialog = false
-                cartManager.clearCart()
-                // Notify parent that cart was updated
-                onCartUpdated()
-            }
-        )
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (cartItems.isEmpty()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (cartItems.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -167,7 +157,14 @@ fun CartScreen(
                                 val isVip = purchaseManager.isVip(currentUserId)
                                 BrazeUserSync.syncVipStatusToBraze(context, currentUserId, isVip)
                             }
-                            showPurchaseDialog = true
+                            
+                            // Show success message and clear cart
+                            purchaseSuccessMessage = "Purchase successful! Thank you for your order."
+                            cartManager.clearCart()
+                            // Update local state immediately
+                            cartItems = cartManager.cartItems
+                            totalPrice = cartManager.getTotalPrice()
+                            onCartUpdated()
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -175,6 +172,20 @@ fun CartScreen(
                     }
                 }
             }
+        }
+        
+        // Floating notification banner at the top
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .zIndex(1f)
+        ) {
+            NotificationBanner(
+                message = purchaseSuccessMessage,
+                onDismiss = { purchaseSuccessMessage = null },
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }
@@ -234,26 +245,3 @@ fun CartItemCard(
     }
 }
 
-@Composable
-fun PurchaseSuccessDialog(
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Purchase Successful!",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text("Thank you for your purchase. Your order has been processed successfully.")
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("OK")
-            }
-        }
-    )
-}
