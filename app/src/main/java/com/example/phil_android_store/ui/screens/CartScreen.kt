@@ -113,6 +113,9 @@ fun CartScreen(
                             // Record purchase if user is logged in
                             val currentUserId = profileManager.getCurrentUserId()
                             if (currentUserId != null && cartItems.isNotEmpty()) {
+                                // Log purchases to Braze (logs each product with properties)
+                                BrazeUserSync.logPurchases(context, cartItems)
+                                
                                 purchaseManager.recordPurchase(currentUserId, cartItems)
                                 
                                 // Check if user reached VIP status and sync to Braze

@@ -7,6 +7,7 @@ import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
 import com.braze.models.FeatureFlag
 import org.json.JSONObject
+import java.math.BigDecimal
 
 /**
  * Utility class to sync user profile data to Braze attributes
@@ -86,6 +87,8 @@ object BrazeUserSync {
      * Calls changeUser to identify the user, sets active_member=true, and logs logged_in event.
      * Note: VIP status should be synced separately via syncVipStatusToBraze() after login.
      * Does NOT send any other profile attributes (those are only sent when Save Profile is clicked).
+     * IMPORTANT: active_member is ALWAYS sent on login (not delta tracked) to signal to Braze
+     * that the user is logged in for the next session.
      */
     fun loginUserToBraze(context: Context, userId: String) {
         val brazeInstance = Braze.getInstance(context)
@@ -93,24 +96,23 @@ object BrazeUserSync {
         // Change user to identify them in Braze (this starts a new session for this user)
         brazeInstance.changeUser(userId)
         
-        // Load last sent values to check if active_member needs to be updated
+        // Load last sent values to preserve vipMember
         val lastSent = loadLastSentValues(context, userId)
         
-        // Set active_member to true (only if it changed)
-        if (lastSent.activeMember != true) {
-            brazeInstance.currentUser?.let { user ->
-                user.setCustomUserAttribute("active_member", true)
-                
-                // Update last sent values (preserve vipMember)
-                saveLastSentValues(
-                    context,
-                    userId,
-                    lastSent.copy(activeMember = true)
-                )
-                
-                // Flush data to ensure attribute is sent to Braze immediately
-                brazeInstance.requestImmediateDataFlush()
-            }
+        // ALWAYS set active_member to true on login (not delta tracked)
+        // This signals to Braze that the user is logged in for the next session
+        brazeInstance.currentUser?.let { user ->
+            user.setCustomUserAttribute("active_member", true)
+            
+            // Update last sent values (preserve vipMember)
+            saveLastSentValues(
+                context,
+                userId,
+                lastSent.copy(activeMember = true)
+            )
+            
+            // Flush data to ensure attribute is sent to Braze immediately
+            brazeInstance.requestImmediateDataFlush()
         }
     }
     
@@ -341,6 +343,71 @@ object BrazeUserSync {
                 // Flush data to ensure attribute is sent to Braze immediately
                 brazeInstance.requestImmediateDataFlush()
             }
+        }
+    }
+    
+    /**
+     * Log a purchase event to Braze.
+     * Logs a single product purchase with properties.
+     * According to Braze documentation: https://www.braze.com/docs/developer_guide/analytics/logging_purchases/?tab=android#logging-purchases-and-revenue
+     * 
+     * @param context Android context
+     * @param product The product being purchased
+     * @param quantity The quantity purchased (defaults to 1)
+     * @param currencyCode The currency code (defaults to "USD")
+     */
+    fun logPurchase(context: Context, product: Product, quantity: Int = 1, currencyCode: String = "USD") {
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Convert product name to lowercase with underscores for product_id (similar to added_item_to_cart event)
+        val productId = product.name
+            .lowercase()
+            .replace(" ", "_")
+            .replace("-", "_")
+            .replace("'", "")
+            .replace(".", "")
+            .replace(",", "")
+        
+        // Create purchase properties with product details
+        val purchaseProperties = BrazeProperties().apply {
+            addProperty("product_name", product.name)
+            addProperty("product_category", product.category)
+            addProperty("product_description", product.description)
+            if (product.isVip) {
+                addProperty("is_vip", true)
+            }
+        }
+        
+        // Log purchase to Braze
+        // Method signature: logPurchase(productId: String, currencyCode: String, price: BigDecimal, quantity: Int, purchaseProperties: BrazeProperties?)
+        brazeInstance.logPurchase(
+            productId,
+            currencyCode,
+            BigDecimal.valueOf(product.price),
+            quantity,
+            purchaseProperties
+        )
+        
+        // Flush data to ensure purchase is sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
+    }
+    
+    /**
+     * Log multiple purchases (for checkout with multiple items).
+     * Logs each product in the cart as a separate purchase event.
+     * 
+     * @param context Android context
+     * @param products List of products being purchased
+     * @param currencyCode The currency code (defaults to "USD")
+     */
+    fun logPurchases(context: Context, products: List<Product>, currencyCode: String = "USD") {
+        // Group products by ID and count quantities
+        val productQuantities = products.groupingBy { it.id }.eachCount()
+        
+        // Log each unique product with its quantity
+        productQuantities.forEach { (productId, quantity) ->
+            val product = products.first { it.id == productId }
+            logPurchase(context, product, quantity, currencyCode)
         }
     }
     
