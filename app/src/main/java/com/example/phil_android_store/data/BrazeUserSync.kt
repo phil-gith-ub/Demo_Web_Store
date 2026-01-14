@@ -284,6 +284,8 @@ object BrazeUserSync {
         }
         
         brazeInstance.logCustomEvent("added_item_to_cart", properties)
+        // Flush data to ensure event is sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
     }
     
     /**
