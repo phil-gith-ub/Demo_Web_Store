@@ -64,8 +64,22 @@ fun ProfileScreen(
     LaunchedEffect(isLoggedIn, currentUserId) {
         if (isLoggedIn && currentUserId != null) {
             isVip = purchaseManager.isVip(currentUserId)
+            // Sync VIP status to Braze whenever we check it
+            BrazeUserSync.syncVipStatusToBraze(context, currentUserId, isVip)
         } else {
             isVip = false
+        }
+    }
+    
+    // Refresh VIP status when screen becomes visible (in case purchases were made elsewhere)
+    LaunchedEffect(Unit) {
+        if (isLoggedIn && currentUserId != null) {
+            val newVipStatus = purchaseManager.isVip(currentUserId)
+            if (newVipStatus != isVip) {
+                isVip = newVipStatus
+                // Sync VIP status to Braze when it changes
+                BrazeUserSync.syncVipStatusToBraze(context, currentUserId, newVipStatus)
+            }
         }
     }
     

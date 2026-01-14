@@ -103,17 +103,33 @@ fun StoreScreen(
     }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
+    // Determine which tabs to show based on feature flag (not user VIP status)
+    val categories = if (isVipFeatureEnabled) {
+        listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS, ProductCategory.VIP)
+    } else {
+        listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS)
+    }
+    
     // Update selectedCategory based on initialCategory and feature flag availability
-    LaunchedEffect(initialCategory, isVipFeatureEnabled) {
+    // IMPORTANT: Only set VIP category if feature flag is enabled AND VIP is in categories list
+    LaunchedEffect(initialCategory, isVipFeatureEnabled, categories) {
         when (initialCategory) {
             "VIP" -> {
-                // Only set to VIP if feature flag is enabled
-                if (isVipFeatureEnabled) {
+                // Only set to VIP if feature flag is enabled AND VIP category exists in list
+                if (isVipFeatureEnabled && categories.contains(ProductCategory.VIP)) {
                     selectedCategory = ProductCategory.VIP
+                } else {
+                    // Fallback to ALL if VIP tab is not available
+                    selectedCategory = ProductCategory.ALL
                 }
-                // If feature flag is disabled, keep current selection (ALL)
             }
-            "ELECTRONICS" -> selectedCategory = ProductCategory.ELECTRONICS
+            "ELECTRONICS" -> {
+                if (categories.contains(ProductCategory.ELECTRONICS)) {
+                    selectedCategory = ProductCategory.ELECTRONICS
+                } else {
+                    selectedCategory = ProductCategory.ALL
+                }
+            }
             else -> {
                 // Set to ALL if no initial category or if initial category is null
                 if (initialCategory == null) {
@@ -121,13 +137,6 @@ fun StoreScreen(
                 }
             }
         }
-    }
-    
-    // Determine which tabs to show based on feature flag (not user VIP status)
-    val categories = if (isVipFeatureEnabled) {
-        listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS, ProductCategory.VIP)
-    } else {
-        listOf(ProductCategory.ALL, ProductCategory.ELECTRONICS)
     }
     
     // Filter products based on selected category
@@ -160,7 +169,7 @@ fun StoreScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // Category Tabs
             ScrollableTabRow(
-                selectedTabIndex = categories.indexOf(selectedCategory).coerceAtLeast(0),
+                selectedTabIndex = categories.indexOf(selectedCategory).coerceIn(0, categories.size - 1),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 categories.forEach { category ->
