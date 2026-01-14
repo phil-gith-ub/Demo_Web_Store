@@ -21,7 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.RemoveShoppingCart
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,7 +131,7 @@ fun CartScreen(
                             .padding(bottom = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.RemoveShoppingCart,
+                            imageVector = Icons.Default.Clear,
                             contentDescription = null,
                             modifier = Modifier.padding(end = 8.dp)
                         )
