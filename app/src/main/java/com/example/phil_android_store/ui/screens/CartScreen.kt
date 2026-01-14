@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,11 +45,18 @@ fun CartScreen(
     cartManager: CartManager  // Shared cart manager instance
 ) {
     val context = LocalContext.current
-    val cartItems = cartManager.cartItems
-    val totalPrice = cartManager.getTotalPrice()
+    // Use state to track cart items so UI updates immediately when cart changes
+    var cartItems by remember { mutableStateOf(cartManager.cartItems) }
+    var totalPrice by remember { mutableStateOf(cartManager.getTotalPrice()) }
     var showPurchaseDialog by remember { mutableStateOf(false) }
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
+    
+    // Update cart items and total price whenever cart changes
+    LaunchedEffect(cartManager.cartItemCount) {
+        cartItems = cartManager.cartItems
+        totalPrice = cartManager.getTotalPrice()
+    }
 
     if (showPurchaseDialog) {
         PurchaseSuccessDialog(
@@ -95,6 +103,9 @@ fun CartScreen(
                         product = product,
                         onRemoveClick = {
                             cartManager.removeFromCart(product)
+                            // Update local state immediately
+                            cartItems = cartManager.cartItems
+                            totalPrice = cartManager.getTotalPrice()
                             onCartUpdated()
                         }
                     )
@@ -124,6 +135,9 @@ fun CartScreen(
                     Button(
                         onClick = {
                             cartManager.clearCart()
+                            // Update local state immediately
+                            cartItems = cartManager.cartItems
+                            totalPrice = cartManager.getTotalPrice()
                             onCartUpdated()
                         },
                         modifier = Modifier
