@@ -234,10 +234,8 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
-                            // Set vip_member to false before logout
-                            BrazeUserSync.syncVipStatusToBraze(context, userId, false)
-                            
                             // Set active_member=false and log logged_out event (no changeUser, no wipeData)
+                            // Note: VIP status is NOT changed on logout - it persists based on purchase history
                             BrazeUserSync.onUserLogout(context, userId)
                             
                             profileManager.clearCurrentUser()
