@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,9 +14,14 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.RemoveShoppingCart
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,7 +91,13 @@ fun CartScreen(
                 }
 
                 items(cartItems) { product ->
-                    CartItemCard(product = product)
+                    CartItemCard(
+                        product = product,
+                        onRemoveClick = {
+                            cartManager.removeFromCart(product)
+                            onCartUpdated()
+                        }
+                    )
                 }
             }
 
@@ -108,6 +120,25 @@ fun CartScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
+                    // Clear Cart button
+                    Button(
+                        onClick = {
+                            cartManager.clearCart()
+                            onCartUpdated()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RemoveShoppingCart,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("Clear Cart")
+                    }
+
+                    // Checkout button
                     Button(
                         onClick = {
                             // Record purchase if user is logged in
@@ -135,36 +166,56 @@ fun CartScreen(
 }
 
 @Composable
-fun CartItemCard(product: Product) {
+fun CartItemCard(
+    product: Product,
+    onRemoveClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Text(
-                text = product.category,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+                Text(
+                    text = product.category,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
 
-            Text(
-                text = "$${String.format("%.2f", product.price)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+                Text(
+                    text = "$${String.format("%.2f", product.price)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            
+            IconButton(
+                onClick = onRemoveClick,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Remove item",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
