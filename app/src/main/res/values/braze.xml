@@ -5,4 +5,13 @@
   <!-- Minimum time interval (in seconds) between in-app message triggers -->
   <!-- Default is 30 seconds. Setting to 5 seconds allows messages to trigger more frequently -->
   <integer name="com_braze_trigger_action_minimum_time_interval_seconds">5</integer>
+  <bool translatable="false" name="com_braze_firebase_cloud_messaging_registration_enabled">true</bool>
+  <string translatable="false" name="com_braze_firebase_cloud_messaging_sender_id">768452686820</string>
+  
+  <!-- Notification icons - using app icon -->
+  <drawable name="com_braze_push_small_notification_icon">@mipmap/ic_launcher</drawable>
+  <drawable name="com_braze_push_large_notification_icon">@mipmap/ic_launcher</drawable>
+  
+  <!-- Enable automatic deep link opening -->
+  <bool name="com_braze_handle_push_deep_links_automatically">true</bool>
 </resources>
