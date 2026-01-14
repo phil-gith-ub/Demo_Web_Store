@@ -134,6 +134,9 @@ class MainActivity : ComponentActivity() {
             if (host == "vip") {
                 return AppDestinations.HOME
             }
+            if (host == "cart") {
+                return AppDestinations.CART
+            }
         }
         return null
     }
