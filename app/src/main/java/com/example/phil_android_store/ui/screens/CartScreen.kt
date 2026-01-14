@@ -63,17 +63,17 @@ fun CartScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             if (cartItems.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Your cart is empty",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Your cart is empty",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(16.dp),
@@ -172,14 +172,15 @@ fun CartScreen(
                     }
                 }
             }
+            }
         }
         
         // Floating notification banner at the top
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .zIndex(1f)
+                .zIndex(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
             NotificationBanner(
                 message = purchaseSuccessMessage,
