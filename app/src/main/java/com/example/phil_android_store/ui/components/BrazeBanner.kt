@@ -1,5 +1,7 @@
 package com.example.phil_android_store.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -76,7 +78,22 @@ fun BrazeBanner(
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
-                        webViewClient = WebViewClient()
+                        // Custom WebViewClient to intercept deep links
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                                // Check if the URL is a philstore deep link
+                                if (url != null && url.startsWith("philstore://")) {
+                                    // Create an intent to handle the deep link
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    ctx.startActivity(intent)
+                                    // Return true to indicate we handled the URL
+                                    return true
+                                }
+                                // For other URLs, let WebView handle them normally
+                                return false
+                            }
+                        }
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.loadWithOverviewMode = true
