@@ -98,6 +98,11 @@ fun SettingsScreen(
     var isEndpointEditable by remember { mutableStateOf(false) }
     var endpointEditValue by remember { mutableStateOf(endpoint) }
     
+    // Push Sender ID state
+    var pushSenderId by remember { mutableStateOf(settingsManager.getPushSenderId()) }
+    var isPushSenderIdEditable by remember { mutableStateOf(false) }
+    var pushSenderIdEditValue by remember { mutableStateOf(pushSenderId) }
+    
     // Deep link state
     var selectedDeepLink by remember { mutableStateOf<String?>(null) }
     var expandedDeepLink by remember { mutableStateOf(false) }
@@ -296,6 +301,57 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isEndpointEditable,
                         readOnly = !isEndpointEditable
+                    )
+                }
+            }
+            
+            // Push Sender ID
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Push Sender ID",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = {
+                                if (isPushSenderIdEditable) {
+                                    // Save
+                                    settingsManager.setPushSenderId(pushSenderIdEditValue)
+                                    pushSenderId = pushSenderIdEditValue
+                                }
+                                isPushSenderIdEditable = !isPushSenderIdEditable
+                                if (!isPushSenderIdEditable) {
+                                    pushSenderIdEditValue = pushSenderId
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = if (isPushSenderIdEditable) "Save" else "Edit",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = if (isPushSenderIdEditable) pushSenderIdEditValue else pushSenderId,
+                        onValueChange = { if (isPushSenderIdEditable) pushSenderIdEditValue = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isPushSenderIdEditable,
+                        readOnly = !isPushSenderIdEditable
                     )
                 }
             }

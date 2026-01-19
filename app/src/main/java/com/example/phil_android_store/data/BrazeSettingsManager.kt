@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Manager for Braze settings (API key and endpoint)
+ * Manager for Braze settings (API key, endpoint, and push sender ID)
  * Stores values in SharedPreferences for runtime modification
  */
 class BrazeSettingsManager(private val context: Context) {
@@ -12,6 +12,7 @@ class BrazeSettingsManager(private val context: Context) {
     
     private val KEY_API_KEY = "braze_api_key"
     private val KEY_ENDPOINT = "braze_endpoint"
+    private val KEY_PUSH_SENDER_ID = "braze_push_sender_id"
     
     /**
      * Get the Braze API key.
@@ -79,5 +80,39 @@ class BrazeSettingsManager(private val context: Context) {
      */
     fun setEndpoint(endpoint: String) {
         prefs.edit().putString(KEY_ENDPOINT, endpoint).apply()
+    }
+    
+    /**
+     * Get the Push Sender ID.
+     * First checks SharedPreferences, then falls back to braze.xml resource
+     */
+    fun getPushSenderId(): String {
+        val savedSenderId = prefs.getString(KEY_PUSH_SENDER_ID, null)
+        if (savedSenderId != null) {
+            return savedSenderId
+        }
+        
+        // Fall back to resource value
+        return try {
+            val resourceId = context.resources.getIdentifier(
+                "com_braze_firebase_cloud_messaging_sender_id",
+                "string",
+                context.packageName
+            )
+            if (resourceId != 0) {
+                context.getString(resourceId)
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
+    }
+    
+    /**
+     * Set the Push Sender ID (saves to SharedPreferences)
+     */
+    fun setPushSenderId(senderId: String) {
+        prefs.edit().putString(KEY_PUSH_SENDER_ID, senderId).apply()
     }
 }
