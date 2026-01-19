@@ -49,6 +49,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="philstore" android:host="cart" />
             </intent-filter>
+            <!-- Deep link for purchase history page -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="philstore" android:host="purchase-history" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="philstore" android:host="history" />
+            </intent-filter>
         </activity>
         
         <!-- Braze Firebase Messaging Service for push notifications -->

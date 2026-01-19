@@ -57,6 +57,7 @@ import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 class MainActivity : ComponentActivity() {
     private var navigationCallback: ((AppDestinations) -> Unit)? = null
     private var vipTabCallback: ((Boolean) -> Unit)? = null
+    private var purchaseHistoryCallback: ((Boolean) -> Unit)? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +79,9 @@ class MainActivity : ComponentActivity() {
                 },
                 onVipTabCallback = { callback ->
                     vipTabCallback = callback
+                },
+                onPurchaseHistoryCallback = { callback ->
+                    purchaseHistoryCallback = callback
                 }
             )
         }
@@ -111,10 +115,13 @@ class MainActivity : ComponentActivity() {
             // Use post to ensure callback is set if called during activity creation
             window.decorView.post {
                 navigationCallback?.invoke(destination)
-                // Check if deep link is for VIP tab
+                // Check if deep link is for VIP tab or purchase history
                 val category = getDeepLinkCategory(intent)
                 if (category == "VIP") {
                     vipTabCallback?.invoke(true)
+                }
+                if (category == "PURCHASE_HISTORY") {
+                    purchaseHistoryCallback?.invoke(true)
                 }
             }
         }
@@ -137,6 +144,9 @@ class MainActivity : ComponentActivity() {
             if (host == "cart") {
                 return AppDestinations.CART
             }
+            if (host == "purchase-history" || host == "history") {
+                return AppDestinations.PROFILE // Navigate to profile first, then show purchase history
+            }
         }
         return null
     }
@@ -147,6 +157,9 @@ class MainActivity : ComponentActivity() {
             val host = data.host
             if (host == "vip") {
                 return "VIP"
+            }
+            if (host == "purchase-history" || host == "history") {
+                return "PURCHASE_HISTORY"
             }
         }
         return null
@@ -159,7 +172,8 @@ fun Phil_Android_StoreApp(
     initialDestination: AppDestinations? = null,
     initialVipCategory: String? = null,
     onNavigationCallback: ((AppDestinations) -> Unit) -> Unit = {},
-    onVipTabCallback: ((Boolean) -> Unit) -> Unit = {}
+    onVipTabCallback: ((Boolean) -> Unit) -> Unit = {},
+    onPurchaseHistoryCallback: ((Boolean) -> Unit) -> Unit = {}
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
@@ -200,10 +214,13 @@ fun Phil_Android_StoreApp(
             if (destination != null) {
                 currentDestination = destination
             }
-            // Check if deep link is for VIP tab
+            // Check if deep link is for VIP tab or purchase history
             val category = it.getDeepLinkCategory(it.intent)
             if (category == "VIP") {
                 showVipTab = true
+            }
+            if (category == "PURCHASE_HISTORY") {
+                showPurchaseHistory = true
             }
         }
     }
@@ -230,6 +247,16 @@ fun Phil_Android_StoreApp(
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     var showPurchaseHistory by remember { mutableStateOf(false) }
+    
+    // Set up purchase history callback
+    LaunchedEffect(Unit) {
+        onPurchaseHistoryCallback { shouldShow ->
+            showPurchaseHistory = shouldShow
+            if (shouldShow) {
+                currentDestination = AppDestinations.PROFILE // Navigate to profile first
+            }
+        }
+    }
     
     // Create cart manager instance
     val cartManager = remember { CartManager(context) }
