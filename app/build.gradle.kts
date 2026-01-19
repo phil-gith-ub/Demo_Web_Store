@@ -62,4 +62,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("com.braze:android-sdk-ui:40.1.1")
     implementation("com.braze:android-sdk-location:40.1.1")
+    
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }

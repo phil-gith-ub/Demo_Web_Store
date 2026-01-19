@@ -88,6 +88,25 @@ fun CartScreen(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
+                
+                // Banner or Content Card at the top of the list
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        BrazeBannerOrContentCard(
+                            bannerPlacementId = "cart_banner",
+                            contentCardPositionId = "cart_content_card",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
 
                 items(cartItems) { product ->
                     CartItemCard(
@@ -188,32 +207,6 @@ fun CartScreen(
                 onDismiss = { purchaseSuccessMessage = null },
                 modifier = Modifier.padding(top = 8.dp)
             )
-        }
-        
-        // Floating Braze banner at the bottom, above main menu tabs
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .zIndex(1f)
-                .padding(bottom = 80.dp), // Position above bottom navigation (typically ~56-64dp)
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.95f)
-                    .padding(horizontal = 8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                BrazeBannerOrContentCard(
-                    bannerPlacementId = "cart_banner",
-                    contentCardPositionId = "cart_content_card",
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
         }
     }
 }
