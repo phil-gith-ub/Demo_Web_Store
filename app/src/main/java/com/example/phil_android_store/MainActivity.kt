@@ -134,16 +134,22 @@ class MainActivity : ComponentActivity() {
         val data: Uri? = intent?.data
         if (data != null && "philstore" == data.scheme) {
             val host = data.host
-            if (host == "login" || host == "profile") {
+            android.util.Log.d("MainActivity", "Deep link detected - scheme: ${data.scheme}, host: $host")
+            
+            // Handle host with or without dash (in case of URL encoding issues)
+            val normalizedHost = host?.lowercase()?.replace("%2d", "-")?.replace("%2D", "-")
+            
+            if (normalizedHost == "login" || normalizedHost == "profile") {
                 return AppDestinations.PROFILE
             }
-            if (host == "vip") {
+            if (normalizedHost == "vip") {
                 return AppDestinations.HOME
             }
-            if (host == "cart") {
+            if (normalizedHost == "cart") {
                 return AppDestinations.CART
             }
-            if (host == "purchase-history" || host == "history") {
+            if (normalizedHost == "purchase-history" || normalizedHost == "history") {
+                android.util.Log.d("MainActivity", "Purchase history deep link detected")
                 return AppDestinations.PROFILE // Navigate to profile first, then show purchase history
             }
         }
@@ -154,10 +160,14 @@ class MainActivity : ComponentActivity() {
         val data: Uri? = intent?.data
         if (data != null && "philstore" == data.scheme) {
             val host = data.host
-            if (host == "vip") {
+            // Handle host with or without dash (in case of URL encoding issues)
+            val normalizedHost = host?.lowercase()?.replace("%2d", "-")?.replace("%2D", "-")
+            
+            if (normalizedHost == "vip") {
                 return "VIP"
             }
-            if (host == "purchase-history" || host == "history") {
+            if (normalizedHost == "purchase-history" || normalizedHost == "history") {
+                android.util.Log.d("MainActivity", "Purchase history category detected")
                 return "PURCHASE_HISTORY"
             }
         }
