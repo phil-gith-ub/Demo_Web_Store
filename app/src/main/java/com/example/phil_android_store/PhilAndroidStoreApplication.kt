@@ -7,10 +7,6 @@ import android.util.Log
 import com.braze.Braze
 import com.braze.BrazeActivityLifecycleCallbackListener
 import com.braze.configuration.BrazeConfig
-import com.braze.deeplink.BrazeDeeplinkHandler
-import com.braze.deeplink.IBrazeDeeplinkHandler
-import com.braze.models.outgoing.BrazeProperties
-import com.braze.models.outgoing.UriAction
 
 class PhilAndroidStoreApplication : Application() {
     override fun onCreate() {
@@ -24,38 +20,60 @@ class PhilAndroidStoreApplication : Application() {
         // Initialize Braze
         Braze.configure(this, brazeConfig)
         
-        // Set custom deep link handler for banners, content cards, and in-app messages
-        BrazeDeeplinkHandler.setBrazeDeeplinkHandler(object : IBrazeDeeplinkHandler {
-            override fun gotoUri(context: android.content.Context, uriAction: UriAction) {
-                val uri = uriAction.uri
-                val uriString = uri.toString()
-                
-                Log.d("BrazeDeeplinkHandler", "Handling deep link: $uriString")
-                
-                // Check if it's a philstore:// deep link
-                if (uriString.startsWith("philstore://")) {
+        // Try to set custom deep link handler using reflection (in case classes aren't available)
+        try {
+            val handlerClass = Class.forName("com.braze.deeplink.IBrazeDeeplinkHandler")
+            val handlerSetMethod = Class.forName("com.braze.deeplink.BrazeDeeplinkHandler")
+                .getMethod("setBrazeDeeplinkHandler", handlerClass)
+            
+            val handlerInstance = java.lang.reflect.Proxy.newProxyInstance(
+                handlerClass.classLoader,
+                arrayOf(handlerClass)
+            ) { _, method, args ->
+                if (method.name == "gotoUri" && args != null && args.size >= 2) {
                     try {
-                        // Create intent to open MainActivity with the deep link
-                        val intent = Intent(Intent.ACTION_VIEW, uri)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                        intent.setPackage(context.packageName)
+                        val context = args[0] as android.content.Context
+                        val uriAction = args[1]
                         
-                        // Check if MainActivity can handle this intent
-                        if (intent.resolveActivity(context.packageManager) != null) {
-                            context.startActivity(intent)
-                            Log.d("BrazeDeeplinkHandler", "Started MainActivity with deep link: $uriString")
+                        // Get URI from UriAction using reflection
+                        val getUriMethod = uriAction.javaClass.getMethod("getUri")
+                        val uri = getUriMethod.invoke(uriAction) as? Uri
+                        val uriString = uri?.toString() ?: ""
+                        
+                        Log.d("BrazeDeeplinkHandler", "Handling deep link: $uriString")
+                        
+                        // Check if it's a philstore:// deep link
+                        if (uriString.startsWith("philstore://")) {
+                            // Create intent to open MainActivity with the deep link
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            intent.setPackage(context.packageName)
+                            
+                            // Check if MainActivity can handle this intent
+                            if (intent.resolveActivity(context.packageManager) != null) {
+                                context.startActivity(intent)
+                                Log.d("BrazeDeeplinkHandler", "Started MainActivity with deep link: $uriString")
+                            } else {
+                                Log.w("BrazeDeeplinkHandler", "Could not resolve activity for deep link: $uriString")
+                            }
                         } else {
-                            Log.w("BrazeDeeplinkHandler", "Could not resolve activity for deep link: $uriString")
+                            // For non-philstore URLs, use default Braze behavior
+                            val executeMethod = uriAction.javaClass.getMethod("execute", android.content.Context::class.java)
+                            executeMethod.invoke(uriAction, context)
                         }
                     } catch (e: Exception) {
                         Log.e("BrazeDeeplinkHandler", "Error handling deep link: ${e.message}", e)
                     }
-                } else {
-                    // For non-philstore URLs, use default Braze behavior
-                    uriAction.execute(context)
                 }
+                null
             }
-        })
+            
+            handlerSetMethod.invoke(null, handlerInstance)
+            Log.d("BrazeDeeplinkHandler", "Custom deep link handler registered successfully")
+        } catch (e: Exception) {
+            Log.w("BrazeDeeplinkHandler", "Could not register custom deep link handler (may not be available in this SDK version): ${e.message}")
+            // Deep links will be handled by WebViewClient in BrazeBanner instead
+        }
         
         // Register activity lifecycle callback for in-app messages
         registerActivityLifecycleCallbacks(BrazeActivityLifecycleCallbackListener())
