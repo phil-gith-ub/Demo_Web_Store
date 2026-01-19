@@ -2,9 +2,11 @@ package com.example.phil_android_store.ui.components
 
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,52 +67,86 @@ fun BrazeBanner(
     
     // Only render if banner is available and not a control variant
     if (shouldRender && banner != null) {
-        AndroidView(
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    webViewClient = WebViewClient()
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                }
-            },
-            update = { webView ->
-                // Get the current banner
-                val currentBanner = BrazeUserSync.getBanner(context, placementId)
-                if (currentBanner != null) {
-                    try {
-                        // Try to use insertBanner method (Braze SDK method)
-                        val brazeInstance = Braze.getInstance(context)
-                        val insertMethod = brazeInstance.javaClass.getMethod(
-                            "insertBanner", 
-                            currentBanner.javaClass,
-                            android.view.View::class.java
-                        )
-                        insertMethod.invoke(brazeInstance, currentBanner, webView)
-                    } catch (e: Exception) {
-                        // If insertBanner doesn't work, try to get HTML content
-                        try {
-                            val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
-                            val htmlContent = htmlMethod.invoke(currentBanner) as? String
-                            if (htmlContent != null) {
-                                webView.loadDataWithBaseURL(
-                                    null,
-                                    htmlContent,
-                                    "text/html",
-                                    "UTF-8",
-                                    null
-                                )
-                            }
-                        } catch (e2: Exception) {
-                            // Both methods failed - banner might not be renderable
-                        }
-                    }
-                }
-            },
+        Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(120.dp)
-        )
+                .wrapContentHeight(),
+            contentAlignment = Alignment.Center
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        webViewClient = WebViewClient()
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        // Center content horizontally
+                        settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                    }
+                },
+                update = { webView ->
+                    // Get the current banner
+                    val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                    if (currentBanner != null) {
+                        try {
+                            // Try to use insertBanner method (Braze SDK method)
+                            val brazeInstance = Braze.getInstance(context)
+                            val insertMethod = brazeInstance.javaClass.getMethod(
+                                "insertBanner", 
+                                currentBanner.javaClass,
+                                android.view.View::class.java
+                            )
+                            insertMethod.invoke(brazeInstance, currentBanner, webView)
+                        } catch (e: Exception) {
+                            // If insertBanner doesn't work, try to get HTML content
+                            try {
+                                val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
+                                val htmlContent = htmlMethod.invoke(currentBanner) as? String
+                                if (htmlContent != null) {
+                                    // Wrap HTML to center content and allow dynamic height
+                                    val wrappedHtml = """
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                            <style>
+                                                body {
+                                                    margin: 0;
+                                                    padding: 0;
+                                                    display: flex;
+                                                    justify-content: center;
+                                                    align-items: center;
+                                                    min-height: 100%;
+                                                }
+                                                * {
+                                                    max-width: 100%;
+                                                }
+                                            </style>
+                                        </head>
+                                        <body>
+                                            $htmlContent
+                                        </body>
+                                        </html>
+                                    """.trimIndent()
+                                    webView.loadDataWithBaseURL(
+                                        null,
+                                        wrappedHtml,
+                                        "text/html",
+                                        "UTF-8",
+                                        null
+                                    )
+                                }
+                            } catch (e2: Exception) {
+                                // Both methods failed - banner might not be renderable
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            )
+        }
     }
 }
