@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
@@ -32,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
@@ -127,10 +126,6 @@ class MainActivity : ComponentActivity() {
         }
     }
     
-    fun getDeepLinkCategoryForComposable(intent: Intent?): String? {
-        return getDeepLinkCategory(intent)
-    }
-    
     fun handleDeepLink(intent: Intent?): AppDestinations? {
         val data: Uri? = intent?.data
         if (data != null && "philstore" == data.scheme) {
@@ -193,7 +188,7 @@ fun Phil_Android_StoreApp(
     var showVipTab by remember { mutableStateOf(initialVipCategory == "VIP") }
     
     // Refresh key that changes when login/logout happens to trigger UI refresh
-    var refreshKey by remember { mutableStateOf(0) }
+    var refreshKey by remember { mutableIntStateOf(0) }
     var showPurchaseHistory by remember { mutableStateOf(false) }
     
     // Register navigation callback with activity so it can trigger navigation updates
@@ -262,7 +257,7 @@ fun Phil_Android_StoreApp(
     val cartManager = remember { CartManager(context) }
     
     // Observe cart item count for badge - update when destination changes
-    var cartItemCount by remember { mutableStateOf(cartManager.cartItemCount) }
+    var cartItemCount by remember { mutableIntStateOf(cartManager.cartItemCount) }
     
     // Update cart count when destination changes or when refreshKey changes (login/logout)
     LaunchedEffect(currentDestination, refreshKey) {
@@ -297,10 +292,10 @@ fun Phil_Android_StoreApp(
                                         )
                                     }
                                 } else {
-                                    Icon(
-                                        it.icon,
-                                        contentDescription = it.label
-                                    )
+                                Icon(
+                                    it.icon,
+                                    contentDescription = it.label
+                                )
                                 }
                             },
                             label = { Text(it.label) },
@@ -313,7 +308,7 @@ fun Phil_Android_StoreApp(
                     }
                 }
             ) {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(modifier = Modifier.fillMaxSize()) {
                     if (showPurchaseHistory) {
                         // Show Purchase History screen within the main UI
                         PurchaseHistoryScreen(
@@ -343,9 +338,9 @@ fun Phil_Android_StoreApp(
                                     }
                                 )
                             }
-                            AppDestinations.PROFILE -> ProfileScreen(
-                                onDarkModeChanged = { enabled ->
-                                    isDarkMode = enabled
+                        AppDestinations.PROFILE -> ProfileScreen(
+                            onDarkModeChanged = { enabled ->
+                                isDarkMode = enabled
                                 },
                                 onLoginStateChanged = {
                                     refreshKey++ // Trigger refresh in StoreScreen
