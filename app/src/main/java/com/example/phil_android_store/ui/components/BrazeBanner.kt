@@ -83,9 +83,8 @@ fun BrazeBanner(
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
-                        // Set background to match theme surface color to prevent flash
-                        val surfaceColorInt = backgroundColor.toArgb()
-                        setBackgroundColor(surfaceColorInt)
+                        // Set background to transparent to prevent any color flash
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         
                         // Custom WebViewClient to intercept deep links
                         webViewClient = object : WebViewClient() {
@@ -203,28 +202,20 @@ fun BrazeBanner(
                             )
                             insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
-                            // IMPORTANT: Set background color and WebViewClient AFTER Braze inserts the banner
-                            // Use multiple post delays to ensure it's set after Braze's operations complete
+                            // IMPORTANT: Set WebViewClient AFTER Braze inserts the banner
+                            // Keep background transparent to prevent any color flash
                             webView.post {
-                                // Re-apply background color after Braze inserts (in case it was changed)
-                                val surfaceColorInt = backgroundColor.toArgb()
-                                webView.setBackgroundColor(surfaceColorInt)
+                                // Ensure background stays transparent
+                                webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 
                                 webView.webViewClient = customWebViewClient
                                 Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner (first post)")
                                 
-                                // Also inject JavaScript to intercept clicks and set background
+                                // Also inject JavaScript to intercept clicks
                                 webView.postDelayed({
                                     try {
-                                        val bgColorHex = String.format("#%08X", (0xFFFFFF and backgroundColor.toArgb()))
                                         val jsCode = """
                                             (function() {
-                                                // Set body background to match theme
-                                                document.body.style.backgroundColor = '$bgColorHex';
-                                                if (document.documentElement) {
-                                                    document.documentElement.style.backgroundColor = '$bgColorHex';
-                                                }
-                                                
                                                 // Deep link interception
                                                 document.addEventListener('click', function(e) {
                                                     var target = e.target;
@@ -252,7 +243,7 @@ fun BrazeBanner(
                                             })();
                                         """.trimIndent()
                                         webView.evaluateJavascript(jsCode, null)
-                                        Log.d("BrazeBanner", "Injected JavaScript click interceptor and background color")
+                                        Log.d("BrazeBanner", "Injected JavaScript click interceptor")
                                     } catch (e: Exception) {
                                         Log.e("BrazeBanner", "Error injecting JavaScript: ${e.message}", e)
                                     }
@@ -267,9 +258,7 @@ fun BrazeBanner(
                                     // Set WebViewClient before loading HTML
                                     webView.webViewClient = customWebViewClient
                                     
-                                    // Set background color to match theme
-                                    val bgColorHex = String.format("#%08X", backgroundColor.toArgb())
-                                    
+                                    // Keep background transparent - let the HTML content handle its own background
                                     // Wrap HTML to center content and allow dynamic height
                                     val wrappedHtml = """
                                         <!DOCTYPE html>
@@ -284,7 +273,10 @@ fun BrazeBanner(
                                                     justify-content: center;
                                                     align-items: center;
                                                     min-height: 100%;
-                                                    background-color: $bgColorHex;
+                                                    background-color: transparent;
+                                                }
+                                                html {
+                                                    background-color: transparent;
                                                 }
                                                 * {
                                                     max-width: 100%;
