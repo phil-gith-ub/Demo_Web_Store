@@ -34,15 +34,15 @@ fun BrazeContentCard(
     var contentCard by remember(positionId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(positionId) { mutableStateOf(false) }
     
-    // Request Content Cards refresh when this composable is first displayed
+    // Subscribe to Content Cards updates (recommended approach per Braze docs)
     LaunchedEffect(positionId) {
-        // Request refresh for Content Cards
+        // Request initial refresh
         BrazeUserSync.requestContentCardsRefresh(context)
         
-        // Small delay to allow cards to be fetched
+        // Small delay to allow initial cards to be fetched
         kotlinx.coroutines.delay(500)
         
-        // Get the Content Card by position_id
+        // Get initial Content Card
         contentCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
         
         // Check if card exists and is not a control variant
@@ -60,6 +60,32 @@ fun BrazeContentCard(
         }
         
         onCardUpdate?.invoke(contentCard)
+        
+        // Subscribe to Content Cards updates - this will notify us when cards change
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // This callback is called whenever Content Cards are updated
+            // Re-fetch the card by position_id
+            val updatedCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
+            contentCard = updatedCard
+            
+            // Check if card exists and is not a control variant
+            if (updatedCard != null) {
+                try {
+                    val isControlMethod = updatedCard.javaClass.getMethod("isControlCard")
+                    val isControl = isControlMethod.invoke(updatedCard) as? Boolean ?: false
+                    shouldRender = !isControl
+                } catch (e: Exception) {
+                    shouldRender = true
+                }
+            } else {
+                shouldRender = false
+            }
+            
+            onCardUpdate?.invoke(updatedCard)
+        }
+        
+        // Note: Braze SDK manages subscription lifecycle automatically
+        // The subscription will remain active until the composable is disposed
     }
     
     // Only render if card is available and not a control variant

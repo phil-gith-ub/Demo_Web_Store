@@ -33,7 +33,7 @@ fun BrazeBannerOrContentCard(
     var hasBanner by remember(bannerPlacementId) { mutableStateOf(false) }
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
     
-    // Check for banner and content card availability
+    // Check for banner and content card availability, and subscribe to updates
     LaunchedEffect(bannerPlacementId, contentCardPositionId) {
         // Request refresh for both
         BrazeUserSync.requestBannerRefresh(context, listOf(bannerPlacementId))
@@ -42,7 +42,7 @@ fun BrazeBannerOrContentCard(
         // Small delay to allow content to be fetched
         kotlinx.coroutines.delay(500)
         
-        // Check if banner exists and is not control
+        // Initial check for banner
         val banner = BrazeUserSync.getBanner(context, bannerPlacementId)
         if (banner != null) {
             try {
@@ -56,7 +56,7 @@ fun BrazeBannerOrContentCard(
             hasBanner = false
         }
         
-        // Check if content card exists and is not control
+        // Initial check for content card
         val contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
         if (contentCard != null) {
             try {
@@ -69,38 +69,27 @@ fun BrazeBannerOrContentCard(
         } else {
             hasContentCard = false
         }
-    }
-    
-    // Subscribe to Content Cards updates (if available)
-    LaunchedEffect(contentCardPositionId) {
-        try {
-            val brazeInstance = Braze.getInstance(context)
-            val subscribeMethod = brazeInstance.javaClass.getMethod(
-                "subscribeToContentCardsUpdates",
-                java.util.function.Consumer::class.java
-            )
-            subscribeMethod.invoke(
-                brazeInstance,
-                java.util.function.Consumer<Any> {
-                    // Re-check for content card when cards are updated
-                    val updatedCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
-                    if (updatedCard != null) {
-                        try {
-                            val isControlMethod = updatedCard.javaClass.getMethod("isControlCard")
-                            val isControl = isControlMethod.invoke(updatedCard) as? Boolean ?: false
-                            hasContentCard = !isControl
-                        } catch (e: Exception) {
-                            hasContentCard = true
-                        }
-                    } else {
-                        hasContentCard = false
-                    }
+        
+        // Subscribe to Content Cards updates (recommended approach per Braze docs)
+        // This will notify us whenever Content Cards are updated
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Re-check for content card when cards are updated
+            val updatedCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
+            if (updatedCard != null) {
+                try {
+                    val isControlMethod = updatedCard.javaClass.getMethod("isControlCard")
+                    val isControl = isControlMethod.invoke(updatedCard) as? Boolean ?: false
+                    hasContentCard = !isControl
+                } catch (e: Exception) {
+                    hasContentCard = true
                 }
-            )
-        } catch (e: Exception) {
-            // Subscription method might not be available
-            android.util.Log.d("BrazeBannerOrContentCard", "Could not subscribe to Content Cards updates: ${e.message}")
+            } else {
+                hasContentCard = false
+            }
         }
+        
+        // Note: Braze SDK manages subscription lifecycle automatically
+        // The subscription will remain active until the composable is disposed
     }
     
     // Show banner if available, otherwise show content card

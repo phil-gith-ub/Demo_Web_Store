@@ -524,4 +524,51 @@ object BrazeUserSync {
         }
         return null
     }
+    
+    /**
+     * Subscribe to Content Cards updates from Braze.
+     * This is the recommended approach per Braze documentation - listening for updates
+     * rather than just fetching on demand.
+     * 
+     * @param context Android context
+     * @param callback Function to call when Content Cards are updated (receives list of cards)
+     * @return A disposable/cancellable object, or null if subscription fails
+     */
+    fun subscribeToContentCardsUpdates(
+        context: Context,
+        callback: (List<Any>) -> Unit
+    ): Any? {
+        val brazeInstance = Braze.getInstance(context)
+        return try {
+            // Use reflection to call subscribeToContentCardsUpdates
+            // The method signature: subscribeToContentCardsUpdates(Consumer<List<ContentCard>>)
+            val consumerClass = Class.forName("java.util.function.Consumer")
+            val consumer = java.lang.reflect.Proxy.newProxyInstance(
+                consumerClass.classLoader,
+                arrayOf(consumerClass)
+            ) { _, method, args ->
+                if (method.name == "accept" && args != null && args.isNotEmpty()) {
+                    val cards = args[0]
+                    if (cards is List<*>) {
+                        @Suppress("UNCHECKED_CAST")
+                        val cardList = cards.filterNotNull() as List<Any>
+                        callback(cardList)
+                    }
+                }
+                null
+            }
+            
+            val subscribeMethod = brazeInstance.javaClass.getMethod(
+                "subscribeToContentCardsUpdates",
+                consumerClass
+            )
+            subscribeMethod.invoke(brazeInstance, consumer)
+            
+            // Return the consumer as a way to "unsubscribe" (though Braze SDK manages this)
+            consumer
+        } catch (e: Exception) {
+            Log.e("BrazeUserSync", "Error subscribing to Content Cards updates: ${e.message}", e)
+            null
+        }
+    }
 }
