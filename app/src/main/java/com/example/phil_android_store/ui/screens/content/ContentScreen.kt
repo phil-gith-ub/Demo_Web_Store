@@ -46,7 +46,7 @@ fun ContentScreen() {
             // User Action button in top right
             Button(
                 onClick = {
-                    // Log custom event to Braze
+                    // Braze SDK: Log custom event to Braze
                     val brazeInstance = Braze.getInstance(context)
                     brazeInstance.logCustomEvent("user_action_button")
                     brazeInstance.requestImmediateDataFlush()

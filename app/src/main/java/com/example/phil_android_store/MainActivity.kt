@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Ensure in-app message manager is subscribed to events
+        // Braze SDK: Ensure in-app message manager is subscribed to events
         BrazeInAppMessageManager.getInstance().ensureSubscribedToInAppMessageEvents(this)
         
         // Handle deep link
@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
     
     override fun onResume() {
         super.onResume()
-        // Register in-app message manager to display messages
+        // Braze SDK: Register in-app message manager to display messages
         BrazeInAppMessageManager.getInstance().registerInAppMessageManager(this)
         
         // Check for deep link in current intent (handles case when app resumes after deep link)
@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
     
     override fun onPause() {
         super.onPause()
-        // Unregister in-app message manager to prevent memory leaks
+        // Braze SDK: Unregister in-app message manager to prevent memory leaks
         BrazeInAppMessageManager.getInstance().unregisterInAppMessageManager(this)
     }
     
@@ -253,27 +253,27 @@ fun Phil_Android_StoreApp(
         }
     }
     
-    // Initialize Braze session on app startup
+    // Braze SDK: Initialize Braze session on app startup
     LaunchedEffect(Unit) {
         val currentProfile = profileManager.getCurrentProfile()
         if (currentProfile != null) {
-            // User is logged in - identify them and set active_member=true
+            // Braze SDK: User is logged in - identify them and set active_member=true
             // Do NOT send profile attributes (those are only sent when Save Profile is clicked)
             BrazeUserSync.loginUserToBraze(context, currentProfile.userId)
             
-            // Sync VIP status on app startup
+            // Braze SDK: Sync VIP status on app startup
             val purchaseManager = PurchaseManager(context)
             val isVip = purchaseManager.isVip(currentProfile.userId)
             BrazeUserSync.syncVipStatusToBraze(context, currentProfile.userId, isVip)
         } else {
-            // No user logged in - initialize anonymous session
+            // Braze SDK: No user logged in - initialize anonymous session
             BrazeUserSync.initializeAnonymousSession(context)
         }
         
-        // Request banner refresh for all banner placements on app startup
+        // Braze SDK: Request banner refresh for all banner placements on app startup
         BrazeUserSync.requestBannerRefresh(context, listOf("store_page_banner", "cart_banner"))
         
-        // Request Content Cards refresh on app startup
+        // Braze SDK: Request Content Cards refresh on app startup
         BrazeUserSync.requestContentCardsRefresh(context)
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner

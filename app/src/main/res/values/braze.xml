@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Braze SDK configuration: Braze SDK configuration file -->
 <resources>
+  <!-- Braze SDK configuration: API Key -->
   <string translatable="false" name="com_braze_api_key">fe11c5a5-07fb-4ae5-aad5-9100cd14e9eb</string>
+  <!-- Braze SDK configuration: Custom Endpoint -->
   <string translatable="false" name="com_braze_custom_endpoint">sondheim.braze.com</string>
   <!-- Minimum time interval (in seconds) between in-app message triggers -->
   <!-- Default is 30 seconds. Setting to 5 seconds allows messages to trigger more frequently -->
   <integer name="com_braze_trigger_action_minimum_time_interval_seconds">5</integer>
+  <!-- Braze SDK configuration: Firebase Cloud Messaging -->
   <bool translatable="false" name="com_braze_firebase_cloud_messaging_registration_enabled">true</bool>
   <string translatable="false" name="com_braze_firebase_cloud_messaging_sender_id">768452686820</string>
   
-  <!-- Notification icons - using app icon -->
+  <!-- Braze SDK configuration: Notification icons - using app icon -->
   <drawable name="com_braze_push_small_notification_icon">@mipmap/ic_launcher</drawable>
   <drawable name="com_braze_push_large_notification_icon">@mipmap/ic_launcher</drawable>
   
-  <!-- Default notification channel configuration -->
+  <!-- Braze SDK configuration: Default notification channel configuration -->
   <string name="com_braze_default_notification_channel_name">Store Notifications</string>
   <string name="com_braze_default_notification_channel_description">Notifications from the store</string>
   
-  <!-- Enable automatic deep link opening -->
+  <!-- Braze SDK configuration: Enable automatic deep link opening -->
   <bool name="com_braze_handle_push_deep_links_automatically">true</bool>
 </resources>

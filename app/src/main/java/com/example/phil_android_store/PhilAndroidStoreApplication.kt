@@ -12,15 +12,15 @@ class PhilAndroidStoreApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Configure Braze
+        // Braze SDK installation: Configure Braze SDK
         val brazeConfig = BrazeConfig.Builder()
             .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
             .build()
         
-        // Initialize Braze
+        // Braze SDK installation: Initialize Braze SDK
         Braze.configure(this, brazeConfig)
         
-        // Try to set custom deep link handler using reflection (in case classes aren't available)
+        // Braze SDK: Set custom deep link handler using reflection (in case classes aren't available)
         try {
             Log.d("BrazeDeeplinkHandler", "Attempting to register custom deep link handler...")
             val handlerClass = Class.forName("com.braze.deeplink.IBrazeDeeplinkHandler")
@@ -83,7 +83,7 @@ class PhilAndroidStoreApplication : Application() {
             // Deep links will be handled by WebViewClient in BrazeBanner instead
         }
         
-        // Register activity lifecycle callback for in-app messages
+        // Braze SDK: Register activity lifecycle callback for in-app messages
         registerActivityLifecycleCallbacks(BrazeActivityLifecycleCallbackListener())
     }
 }

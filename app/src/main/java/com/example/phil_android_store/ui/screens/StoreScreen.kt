@@ -70,12 +70,12 @@ fun StoreScreen(
     // Check if user is VIP based on total purchases > $1000
     var isVipUser by remember { mutableStateOf(false) }
     
-    // Refresh feature flag on screen load
+    // Braze SDK: Refresh feature flag on screen load
     LaunchedEffect(Unit) {
         isVipFeatureEnabled = BrazeUserSync.isVipProductsEnabled(context)
     }
     
-    // Refresh feature flag and VIP status when refreshKey changes (login/logout)
+    // Braze SDK: Refresh feature flag and VIP status when refreshKey changes (login/logout)
     LaunchedEffect(refreshKey) {
         // Small delay to allow Braze actions (changeUser, events) to complete
         delay(500)
@@ -178,7 +178,7 @@ fun StoreScreen(
                         selected = selectedCategory == category,
                         onClick = { 
                             selectedCategory = category
-                            // Log event every time VIP products tab is clicked
+                            // Braze SDK: Log event every time VIP products tab is clicked
                             if (category == ProductCategory.VIP) {
                                 BrazeUserSync.logViewedVipProducts(context)
                             }
@@ -238,7 +238,7 @@ fun StoreScreen(
                         product = product,
                         onBuyClick = {
                             cartManager.addToCart(product)
-                            // Log event when item is added to cart
+                            // Braze SDK: Log event when item is added to cart
                             BrazeUserSync.logAddedItemToCart(context, product)
                             notificationMessage = "${product.name} added to cart!"
                             // Notify parent that cart was updated

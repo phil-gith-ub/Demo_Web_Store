@@ -51,12 +51,12 @@ fun CustomContentCard(
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     
-    // Get the Content Card and refresh when positionId changes
+    // Braze SDK: Get the Content Card and refresh when positionId changes
     var contentCard by remember(positionId) { 
         mutableStateOf<Any?>(BrazeUserSync.getContentCardByPositionId(context, positionId))
     }
     
-    // Refresh card when positionId changes
+    // Braze SDK: Refresh card when positionId changes
     LaunchedEffect(positionId) {
         kotlinx.coroutines.delay(100)
         contentCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
@@ -97,7 +97,7 @@ fun CustomContentCard(
             
         // Only render if we have at least title or image
         if (title != null || imageUrl != null) {
-            // Log impression when card is displayed
+            // Braze SDK: Log impression when card is displayed
             LaunchedEffect(contentCard) {
                 if (contentCard != null) {
                     try {
@@ -114,7 +114,7 @@ fun CustomContentCard(
                 modifier = modifier
                     .fillMaxWidth()
                     .clickable(enabled = cardUrl != null) {
-                        // Log click analytics
+                        // Braze SDK: Log click analytics
                         if (contentCard != null) {
                             try {
                                 val logClickMethod = contentCard!!.javaClass.getMethod("logClick")

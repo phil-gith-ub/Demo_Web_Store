@@ -37,15 +37,15 @@ fun BrazeContentCard(
     var contentCard by remember(positionId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(positionId) { mutableStateOf(false) }
     
-    // Subscribe to Content Cards updates using proper event-based pattern
+    // Braze SDK: Subscribe to Content Cards updates using proper event-based pattern
     DisposableEffect(positionId) {
-        // Request initial refresh
+        // Braze SDK: Request initial refresh
         BrazeUserSync.requestContentCardsRefresh(context)
         
-        // Subscribe to Content Cards updates - this will notify us when cards change
+        // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
             // This callback is called whenever Content Cards are updated
-            // Re-fetch the card by position_id from the updated cards
+            // Braze SDK: Re-fetch the card by position_id from the updated cards
             val updatedCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
             contentCard = updatedCard
             
@@ -65,7 +65,7 @@ fun BrazeContentCard(
             onCardUpdate?.invoke(updatedCard)
         }
         
-        // Get initial Content Card after a short delay
+        // Braze SDK: Get initial Content Card after a short delay
         scope.launch {
             kotlinx.coroutines.delay(500)
             val initialCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
@@ -88,7 +88,7 @@ fun BrazeContentCard(
             onCardUpdate?.invoke(initialCard)
         }
         
-        // Unsubscribe when composable is disposed
+        // Braze SDK: Unsubscribe when composable is disposed
         onDispose {
             if (subscription != null) {
                 BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)

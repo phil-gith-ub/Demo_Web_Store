@@ -73,7 +73,7 @@ fun SettingsScreen(
                 val versionField = buildConfigClass.getField("VERSION_NAME")
                 versionField.get(null) as? String ?: "40.1.1" // Fallback to known version
             } catch (e: Exception) {
-                // Fallback: try Braze instance method
+                // Braze SDK: Fallback: try Braze instance method
                 try {
                     val brazeInstance = Braze.getInstance(context)
                     val versionMethod = brazeInstance.javaClass.getMethod("getSdkVersion")

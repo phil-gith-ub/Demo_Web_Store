@@ -11,7 +11,7 @@ import org.json.JSONObject
 import java.math.BigDecimal
 
 /**
- * Utility class to sync user profile data to Braze attributes
+ * Braze SDK: Utility class to sync user profile data to Braze attributes
  * Only sends deltas (changed attributes) to minimize data transfer
  */
 object BrazeUserSync {
@@ -92,17 +92,19 @@ object BrazeUserSync {
      * that the user is logged in for the next session.
      */
     fun loginUserToBraze(context: Context, userId: String) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
-        // Change user to identify them in Braze (this starts a new session for this user)
+        // Braze SDK: Change user to identify them in Braze (this starts a new session for this user)
         brazeInstance.changeUser(userId)
         
         // Load last sent values to preserve vipMember
         val lastSent = loadLastSentValues(context, userId)
         
-        // ALWAYS set active_member to true on login (not delta tracked)
+        // Braze SDK: ALWAYS set active_member to true on login (not delta tracked)
         // This signals to Braze that the user is logged in for the next session
         brazeInstance.currentUser?.let { user ->
+            // Braze SDK: Set custom user attribute
             user.setCustomUserAttribute("active_member", true)
             
             // Update last sent values (preserve vipMember)
@@ -112,7 +114,7 @@ object BrazeUserSync {
                 lastSent.copy(activeMember = true)
             )
             
-            // Flush data to ensure attribute is sent to Braze immediately
+            // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
     }
@@ -130,6 +132,7 @@ object BrazeUserSync {
      * This should only be called when "Save Profile" is clicked and changes have been made.
      */
     fun syncUserToBraze(context: Context, profile: UserProfile) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
         // Load last sent values to compare
@@ -143,37 +146,39 @@ object BrazeUserSync {
         val currentMobile = if (profile.mobile.isNotBlank()) profile.mobile else null
         val currentCategory = if (profile.favoriteProductCategory.isNotBlank()) profile.favoriteProductCategory else null
         
-        // Use a null-safe call with ?.let to execute code only if currentUser is not null
+        // Braze SDK: Use a null-safe call with ?.let to execute code only if currentUser is not null
         brazeInstance.currentUser?.let { user ->
-            // Only send firstName if it changed
+            // Braze SDK: Only send firstName if it changed
             if (currentFirstName != lastSent.firstName) {
                 user.setFirstName(currentFirstName ?: "")
                 hasChanges = true
             }
             
-            // Only send lastName if it changed
+            // Braze SDK: Only send lastName if it changed
             if (currentLastName != lastSent.lastName) {
                 user.setLastName(currentLastName ?: "")
                 hasChanges = true
             }
             
-            // Only send email if it changed
+            // Braze SDK: Only send email if it changed
             if (currentEmail != lastSent.email) {
                 user.setEmail(currentEmail ?: "")
                 hasChanges = true
             }
             
-            // Only send mobile if it changed
+            // Braze SDK: Only send mobile if it changed
             if (currentMobile != lastSent.mobile) {
                 user.setPhoneNumber(currentMobile ?: "")
                 hasChanges = true
             }
             
-            // Only send favoriteProductCategory if it changed
+            // Braze SDK: Only send favoriteProductCategory if it changed
             if (currentCategory != lastSent.favoriteProductCategory) {
                 if (currentCategory != null) {
+                    // Braze SDK: Set custom user attribute
                     user.setCustomUserAttribute("favorite_product_category", currentCategory)
                 } else {
+                    // Braze SDK: Unset custom user attribute
                     user.unsetCustomUserAttribute("favorite_product_category")
                 }
                 hasChanges = true
@@ -196,7 +201,7 @@ object BrazeUserSync {
                 )
             )
             
-            // Flush data to ensure attributes are sent to Braze immediately
+            // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
     }
@@ -208,15 +213,17 @@ object BrazeUserSync {
      * This should be called on app startup if no user is logged in.
      */
     fun initializeAnonymousSession(context: Context) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
-        // Change to anonymous user to start a session
+        // Braze SDK: Change to anonymous user to start a session
         brazeInstance.changeUser(ANONYMOUS_USER_ID)
         
         // Check if active_member needs to be updated
         val lastSent = loadLastSentValues(context, ANONYMOUS_USER_ID)
         if (lastSent.activeMember != false) {
             brazeInstance.currentUser?.let { user ->
+                // Braze SDK: Set custom user attribute
                 user.setCustomUserAttribute("active_member", false)
             }
             
@@ -227,7 +234,7 @@ object BrazeUserSync {
                 LastSentValues(activeMember = false)
             )
             
-            // Flush data to ensure attributes are sent to Braze immediately
+            // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
     }
@@ -238,14 +245,16 @@ object BrazeUserSync {
      * Does NOT call changeUser or wipeData - user remains identified in Braze.
      */
     fun onUserLogout(context: Context, userId: String) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
         // Load last sent values to check if active_member needs to be updated
         val lastSent = loadLastSentValues(context, userId)
         
-        // Set active_member to false (only if it changed)
+        // Braze SDK: Set active_member to false (only if it changed)
         if (lastSent.activeMember != false) {
             brazeInstance.currentUser?.let { user ->
+                // Braze SDK: Set custom user attribute
                 user.setCustomUserAttribute("active_member", false)
                 
                 // Update last sent values
@@ -257,10 +266,10 @@ object BrazeUserSync {
             }
         }
         
-        // Log logged_out event
+        // Braze SDK: Log logged_out event
         brazeInstance.logCustomEvent("logged_out")
         
-        // Flush data to ensure attributes and event are sent to Braze immediately
+        // Braze SDK: Flush data to ensure attributes and event are sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
     }
     
@@ -269,6 +278,7 @@ object BrazeUserSync {
      * Includes product properties: product_name (lowercase with underscores), product_category, product_price
      */
     fun logAddedItemToCart(context: Context, product: Product) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
         // Convert product name to lowercase with underscores (e.g., "Wireless Headphones" -> "wireless_headphones")
@@ -286,8 +296,9 @@ object BrazeUserSync {
             addProperty("product_price", product.price)
         }
         
+        // Braze SDK: Log custom event
         brazeInstance.logCustomEvent("added_item_to_cart", properties)
-        // Flush data to ensure event is sent to Braze immediately
+        // Braze SDK: Flush data to ensure event is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
     }
     
@@ -296,6 +307,7 @@ object BrazeUserSync {
      * Triggered when user clicks on VIP products tab
      */
     fun logViewedVipProducts(context: Context) {
+        // Braze SDK: Get Braze instance and log custom event
         val brazeInstance = Braze.getInstance(context)
         brazeInstance.logCustomEvent("viewed_vip_products")
     }
@@ -309,9 +321,11 @@ object BrazeUserSync {
      */
     fun logLoggedIn(context: Context, userId: String) {
         if (userId.isNotBlank()) {
+            // Braze SDK: Get Braze instance
             val brazeInstance = Braze.getInstance(context)
+            // Braze SDK: Log custom event
             brazeInstance.logCustomEvent("logged_in")
-            // Flush immediately to ensure event is sent to Braze servers right away
+            // Braze SDK: Flush immediately to ensure event is sent to Braze servers right away
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
         }
@@ -327,21 +341,23 @@ object BrazeUserSync {
      * - On logout (to set to false)
      */
     fun syncVipStatusToBraze(context: Context, userId: String, isVip: Boolean) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
         // Load last sent values to check if vip_member needs to be updated
         val lastSent = loadLastSentValues(context, userId)
         
-        // Only send if value has changed
+        // Braze SDK: Only send if value has changed
         if (lastSent.vipMember != isVip) {
             brazeInstance.currentUser?.let { user ->
+                // Braze SDK: Set custom user attribute
                 user.setCustomUserAttribute("vip_member", isVip)
                 
                 // Update last sent values
                 val updatedValues = lastSent.copy(vipMember = isVip)
                 saveLastSentValues(context, userId, updatedValues)
                 
-                // Flush data to ensure attribute is sent to Braze immediately
+                // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
                 brazeInstance.requestImmediateDataFlush()
             }
         }
@@ -358,6 +374,7 @@ object BrazeUserSync {
      * @param currencyCode The currency code (defaults to "USD")
      */
     fun logPurchase(context: Context, product: Product, quantity: Int = 1, currencyCode: String = "USD") {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
         // Convert product name to lowercase with underscores for product_id (similar to added_item_to_cart event)
@@ -379,7 +396,7 @@ object BrazeUserSync {
             }
         }
         
-        // Log purchase to Braze
+        // Braze SDK: Log purchase to Braze
         // Method signature: logPurchase(productId: String, currencyCode: String, price: BigDecimal, quantity: Int, purchaseProperties: BrazeProperties?)
         brazeInstance.logPurchase(
             productId,
@@ -389,7 +406,7 @@ object BrazeUserSync {
             purchaseProperties
         )
         
-        // Flush data to ensure purchase is sent to Braze immediately
+        // Braze SDK: Flush data to ensure purchase is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
     }
     
@@ -418,10 +435,12 @@ object BrazeUserSync {
      * Returns false by default if feature flag is not found.
      */
     fun isVipProductsEnabled(context: Context): Boolean {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
+        // Braze SDK: Get feature flag
         val featureFlag = brazeInstance.getFeatureFlag("enable_vip_products")
         
-        // Log feature flag impression for analytics
+        // Braze SDK: Log feature flag impression for analytics
         brazeInstance.logFeatureFlagImpression("enable_vip_products")
         
         return featureFlag?.enabled == true
@@ -435,7 +454,9 @@ object BrazeUserSync {
      * @param placementIds List of banner placement IDs to refresh
      */
     fun requestBannerRefresh(context: Context, placementIds: List<String>) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
+        // Braze SDK: Request banner refresh
         brazeInstance.requestBannersRefresh(placementIds)
     }
     
@@ -448,7 +469,9 @@ object BrazeUserSync {
      * @return Banner instance or null if not available
      */
     fun getBanner(context: Context, placementId: String): Any? {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
+        // Braze SDK: Get banner by placement ID
         return brazeInstance.getBanner(placementId)
     }
     
@@ -459,9 +482,10 @@ object BrazeUserSync {
      * @param context Android context
      */
     fun requestContentCardsRefresh(context: Context) {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         try {
-            // Use reflection to call requestContentCardsRefresh
+            // Braze SDK: Use reflection to call requestContentCardsRefresh
             val method = brazeInstance.javaClass.getMethod("requestContentCardsRefresh")
             method.invoke(brazeInstance)
         } catch (e: Exception) {
@@ -476,9 +500,10 @@ object BrazeUserSync {
      * @return List of Content Card instances
      */
     fun getContentCards(context: Context): List<Any> {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         return try {
-            // Use reflection to call getContentCards
+            // Braze SDK: Use reflection to call getContentCards
             val method = brazeInstance.javaClass.getMethod("getContentCards")
             val cards = method.invoke(brazeInstance)
             if (cards is List<*>) {
@@ -537,15 +562,16 @@ object BrazeUserSync {
         context: Context,
         callback: (List<Any>) -> Unit
     ): Any? {
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         return try {
-            // Get the ContentCardsUpdatedEvent class
+            // Braze SDK: Get the ContentCardsUpdatedEvent class
             val eventClass = Class.forName("com.braze.events.ContentCardsUpdatedEvent")
             
-            // Get the IEventSubscriber interface
+            // Braze SDK: Get the IEventSubscriber interface
             val subscriberInterface = Class.forName("com.braze.events.IEventSubscriber")
             
-            // Create a proxy implementation of IEventSubscriber
+            // Braze SDK: Create a proxy implementation of IEventSubscriber
             val subscriber = java.lang.reflect.Proxy.newProxyInstance(
                 subscriberInterface.classLoader,
                 arrayOf(subscriberInterface)
@@ -554,7 +580,7 @@ object BrazeUserSync {
                     // The event object is passed as the first argument
                     val event = args[0]
                     
-                    // Call getAllCards() on the event
+                    // Braze SDK: Call getAllCards() on the event
                     val getAllCardsMethod = eventClass.getMethod("getAllCards")
                     val cards = getAllCardsMethod.invoke(event)
                     
@@ -567,7 +593,7 @@ object BrazeUserSync {
                 null
             }
             
-            // Subscribe using subscribeToContentCardsUpdates
+            // Braze SDK: Subscribe using subscribeToContentCardsUpdates
             val subscribeMethod = brazeInstance.javaClass.getMethod(
                 "subscribeToContentCardsUpdates",
                 subscriberInterface
@@ -594,12 +620,13 @@ object BrazeUserSync {
     fun unsubscribeFromContentCardsUpdates(context: Context, subscriber: Any?) {
         if (subscriber == null) return
         
+        // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         try {
-            // Get the ContentCardsUpdatedEvent class
+            // Braze SDK: Get the ContentCardsUpdatedEvent class
             val eventClass = Class.forName("com.braze.events.ContentCardsUpdatedEvent")
             
-            // Call removeSingleSubscription
+            // Braze SDK: Call removeSingleSubscription
             val removeMethod = brazeInstance.javaClass.getMethod(
                 "removeSingleSubscription",
                 Class.forName("com.braze.events.IEventSubscriber"),

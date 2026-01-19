@@ -64,7 +64,7 @@
             </intent-filter>
         </activity>
         
-        <!-- Braze Firebase Messaging Service for push notifications -->
+        <!-- Braze SDK installation: Firebase Messaging Service for push notifications -->
         <service android:name="com.braze.push.BrazeFirebaseMessagingService"
             android:exported="false">
             <intent-filter>

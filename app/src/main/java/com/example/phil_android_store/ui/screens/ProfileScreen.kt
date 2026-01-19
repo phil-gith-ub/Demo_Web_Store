@@ -69,7 +69,7 @@ fun ProfileScreen(
     LaunchedEffect(isLoggedIn, currentUserId) {
         if (isLoggedIn && currentUserId != null) {
             isVip = purchaseManager.isVip(currentUserId)
-            // Sync VIP status to Braze whenever we check it
+            // Braze SDK: Sync VIP status to Braze whenever we check it
             BrazeUserSync.syncVipStatusToBraze(context, currentUserId, isVip)
         } else {
             isVip = false
@@ -82,7 +82,7 @@ fun ProfileScreen(
             val newVipStatus = purchaseManager.isVip(currentUserId)
             if (newVipStatus != isVip) {
                 isVip = newVipStatus
-                // Sync VIP status to Braze when it changes
+                // Braze SDK: Sync VIP status to Braze when it changes
                 BrazeUserSync.syncVipStatusToBraze(context, currentUserId, newVipStatus)
             }
         }
@@ -176,13 +176,13 @@ fun ProfileScreen(
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
                                 
-                                // Login user to Braze (calls changeUser, sets active_member=true)
+                                // Braze SDK: Login user to Braze (calls changeUser, sets active_member=true)
                                 BrazeUserSync.loginUserToBraze(context, userId)
                                 
-                                // Log login event immediately after changeUser
+                                // Braze SDK: Log login event immediately after changeUser
                                 BrazeUserSync.logLoggedIn(context, userId)
                                 
-                                // Refresh VIP status and sync to Braze
+                                // Braze SDK: Refresh VIP status and sync to Braze
                                 isVip = purchaseManager.isVip(userId)
                                 BrazeUserSync.syncVipStatusToBraze(context, userId, isVip)
                                 
@@ -245,7 +245,7 @@ fun ProfileScreen(
                             )
                             profileManager.saveProfile(profile)
                             
-                            // Sync updated profile to Braze
+                            // Braze SDK: Sync updated profile to Braze
                             BrazeUserSync.syncUserToBraze(context, profile)
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -255,7 +255,7 @@ fun ProfileScreen(
                     
                     Button(
                         onClick = {
-                            // Set active_member=false and log logged_out event (no changeUser, no wipeData)
+                            // Braze SDK: Set active_member=false and log logged_out event (no changeUser, no wipeData)
                             // Note: VIP status is NOT changed on logout - it persists based on purchase history
                             BrazeUserSync.onUserLogout(context, userId)
                             

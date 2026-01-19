@@ -44,15 +44,15 @@ fun BrazeBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh when this composable is first displayed
+    // Braze SDK: Request banner refresh when this composable is first displayed
     LaunchedEffect(placementId) {
-        // Request refresh for this placement
+        // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         
         // Small delay to allow banner to be fetched
         kotlinx.coroutines.delay(500)
         
-        // Get the banner
+        // Braze SDK: Get the banner
         banner = BrazeUserSync.getBanner(context, placementId)
         
         // Check if banner exists and is not a control variant
@@ -189,11 +189,11 @@ fun BrazeBanner(
                         }
                     }
                     
-                    // Get the current banner
+                    // Braze SDK: Get the current banner
                     val currentBanner = BrazeUserSync.getBanner(context, placementId)
                     if (currentBanner != null) {
                         try {
-                            // Try to use insertBanner method (Braze SDK method)
+                            // Braze SDK: Try to use insertBanner method (Braze SDK method)
                             val brazeInstance = Braze.getInstance(context)
                             val insertMethod = brazeInstance.javaClass.getMethod(
                                 "insertBanner", 

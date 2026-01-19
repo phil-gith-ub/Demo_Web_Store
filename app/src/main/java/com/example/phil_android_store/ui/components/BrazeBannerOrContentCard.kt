@@ -37,16 +37,16 @@ fun BrazeBannerOrContentCard(
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // Check for banner and content card availability, and subscribe to updates
+    // Braze SDK: Check for banner and content card availability, and subscribe to updates
     DisposableEffect(bannerPlacementId, contentCardPositionId) {
-        // Request refresh for both
+        // Braze SDK: Request refresh for both
         BrazeUserSync.requestBannerRefresh(context, listOf(bannerPlacementId))
         BrazeUserSync.requestContentCardsRefresh(context)
         
-        // Subscribe to Content Cards updates (recommended approach per Braze docs)
+        // Braze SDK: Subscribe to Content Cards updates (recommended approach per Braze docs)
         // This will notify us whenever Content Cards are updated
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-            // Re-check for content card when cards are updated
+            // Braze SDK: Re-check for content card when cards are updated
             val updatedCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
             if (updatedCard != null) {
                 try {
@@ -61,11 +61,11 @@ fun BrazeBannerOrContentCard(
             }
         }
         
-        // Initial check after a short delay
+        // Braze SDK: Initial check after a short delay
         scope.launch {
             kotlinx.coroutines.delay(500)
             
-            // Initial check for banner
+            // Braze SDK: Initial check for banner
             val banner = BrazeUserSync.getBanner(context, bannerPlacementId)
             if (banner != null) {
                 try {
@@ -79,7 +79,7 @@ fun BrazeBannerOrContentCard(
                 hasBanner = false
             }
             
-            // Initial check for content card
+            // Braze SDK: Initial check for content card
             val contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
             if (contentCard != null) {
                 try {
@@ -94,7 +94,7 @@ fun BrazeBannerOrContentCard(
             }
         }
         
-        // Unsubscribe when composable is disposed
+        // Braze SDK: Unsubscribe when composable is disposed
         onDispose {
             if (subscription != null) {
                 BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
