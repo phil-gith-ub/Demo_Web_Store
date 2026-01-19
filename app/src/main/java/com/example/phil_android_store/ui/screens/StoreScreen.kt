@@ -40,6 +40,7 @@ import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.components.NotificationBanner
+import com.example.phil_android_store.ui.components.BrazeBanner
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 
@@ -200,11 +201,12 @@ fun StoreScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Banner Container (collapses when bannerContent is null)
-                if (bannerContent != null) {
-                    item {
-                        BannerCard(content = bannerContent)
-                    }
+                // Braze Banner Container (collapses when no banner is available)
+                item {
+                    BrazeBanner(
+                        placementId = "store_page_banner",
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                 }
                 
                 // Show message if user is viewing VIP tab but is not VIP

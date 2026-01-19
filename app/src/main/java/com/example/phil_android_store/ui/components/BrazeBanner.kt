@@ -1,0 +1,96 @@
+package com.example.phil_android_store.ui.components
+
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.braze.Braze
+import com.braze.models.banner.Banner
+import com.example.phil_android_store.data.BrazeUserSync
+
+/**
+ * Composable that displays a Braze banner for a given placement ID.
+ * The banner is collapsible - it only renders when a banner is available.
+ * 
+ * @param placementId The Braze banner placement ID
+ * @param modifier Modifier for the banner container
+ * @param onBannerUpdate Callback when banner is updated (receives banner or null)
+ */
+@Composable
+fun BrazeBanner(
+    placementId: String,
+    modifier: Modifier = Modifier,
+    onBannerUpdate: ((Banner?) -> Unit)? = null
+) {
+    val context = LocalContext.current
+    var banner by remember(placementId) { mutableStateOf<Banner?>(null) }
+    
+    // Request banner refresh when this composable is first displayed
+    LaunchedEffect(placementId) {
+        // Request refresh for this placement
+        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
+        
+        // Get the banner
+        banner = BrazeUserSync.getBanner(context, placementId)
+        onBannerUpdate?.invoke(banner)
+    }
+    
+    // Subscribe to banner updates
+    LaunchedEffect(placementId) {
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.subscribeToBannersUpdates { banners ->
+            // Check if our placement's banner was updated
+            val updatedBanner = BrazeUserSync.getBanner(context, placementId)
+            if (updatedBanner != banner) {
+                banner = updatedBanner
+                onBannerUpdate?.invoke(updatedBanner)
+            }
+        }
+    }
+    
+    // Only render if banner is available and not a control variant
+    if (banner != null && !banner!!.isControl) {
+        AndroidView(
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    webViewClient = WebViewClient()
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                }
+            },
+            update = { webView ->
+                // Get the current banner and load its HTML content
+                val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                if (currentBanner != null && !currentBanner.isControl) {
+                    // Get the HTML content from the banner
+                    val htmlContent = currentBanner.html
+                    if (htmlContent != null) {
+                        // Load the HTML content into the WebView
+                        webView.loadDataWithBaseURL(
+                            null,
+                            htmlContent,
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                    }
+                }
+            },
+            modifier = modifier
+                .fillMaxWidth()
+                .height(120.dp)
+        )
+    }
+}

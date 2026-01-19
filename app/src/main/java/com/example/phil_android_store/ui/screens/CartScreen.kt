@@ -38,6 +38,7 @@ import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.components.NotificationBanner
+import com.example.phil_android_store.ui.components.BrazeBanner
 
 @Composable
 fun CartScreen(
@@ -187,6 +188,31 @@ fun CartScreen(
                 onDismiss = { purchaseSuccessMessage = null },
                 modifier = Modifier.padding(top = 8.dp)
             )
+        }
+        
+        // Floating Braze banner at the bottom, above main menu tabs
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .zIndex(1f)
+                .padding(bottom = 80.dp), // Position above bottom navigation (typically ~56-64dp)
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .padding(horizontal = 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                BrazeBanner(
+                    placementId = "cart_banner",
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

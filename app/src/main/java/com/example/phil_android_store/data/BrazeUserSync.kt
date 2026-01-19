@@ -6,6 +6,7 @@ import com.braze.Braze
 import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
 import com.braze.models.FeatureFlag
+import com.braze.models.banner.Banner
 import org.json.JSONObject
 import java.math.BigDecimal
 
@@ -424,5 +425,30 @@ object BrazeUserSync {
         brazeInstance.logFeatureFlagImpression("enable_vip_products")
         
         return featureFlag?.enabled == true
+    }
+    
+    /**
+     * Request banner refresh for the specified placement IDs.
+     * Should be called when the app starts or when navigating to screens with banners.
+     * 
+     * @param context Android context
+     * @param placementIds List of banner placement IDs to refresh
+     */
+    fun requestBannerRefresh(context: Context, placementIds: List<String>) {
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.requestBannersRefresh(placementIds)
+    }
+    
+    /**
+     * Get a banner for a specific placement ID.
+     * Returns null if no banner is available for the user.
+     * 
+     * @param context Android context
+     * @param placementId The banner placement ID
+     * @return Banner instance or null if not available
+     */
+    fun getBanner(context: Context, placementId: String): Banner? {
+        val brazeInstance = Braze.getInstance(context)
+        return brazeInstance.getBanner(placementId)
     }
 }

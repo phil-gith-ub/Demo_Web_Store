@@ -224,6 +224,9 @@ fun Phil_Android_StoreApp(
             // No user logged in - initialize anonymous session
             BrazeUserSync.initializeAnonymousSession(context)
         }
+        
+        // Request banner refresh for all banner placements on app startup
+        BrazeUserSync.requestBannerRefresh(context, listOf("store_page_banner", "cart_banner"))
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     var showPurchaseHistory by remember { mutableStateOf(false) }
