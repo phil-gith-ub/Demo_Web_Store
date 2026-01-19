@@ -9,7 +9,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +33,7 @@ fun BrazeContentCard(
     onCardUpdate: ((Any?) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var contentCard by remember(positionId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(positionId) { mutableStateOf(false) }
     
@@ -63,7 +66,7 @@ fun BrazeContentCard(
         }
         
         // Get initial Content Card after a short delay
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+        scope.launch {
             kotlinx.coroutines.delay(500)
             val initialCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
             contentCard = initialCard
