@@ -2,6 +2,7 @@ package com.example.phil_android_store.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.braze.Braze
 import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
