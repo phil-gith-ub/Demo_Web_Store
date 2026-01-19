@@ -194,6 +194,7 @@ fun Phil_Android_StoreApp(
     
     // Refresh key that changes when login/logout happens to trigger UI refresh
     var refreshKey by remember { mutableStateOf(0) }
+    var showPurchaseHistory by remember { mutableStateOf(false) }
     
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
@@ -246,7 +247,6 @@ fun Phil_Android_StoreApp(
         BrazeUserSync.requestBannerRefresh(context, listOf("store_page_banner", "cart_banner"))
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
-    var showPurchaseHistory by remember { mutableStateOf(false) }
     
     // Set up purchase history callback
     LaunchedEffect(Unit) {
