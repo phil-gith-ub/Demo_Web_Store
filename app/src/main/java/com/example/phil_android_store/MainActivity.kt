@@ -1,5 +1,6 @@
 package com.example.phil_android_store
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -110,18 +111,21 @@ class MainActivity : ComponentActivity() {
     
     private fun handleDeepLinkNavigation(intent: Intent?) {
         val destination = handleDeepLink(intent)
-        if (destination != null) {
-            // Use post to ensure callback is set if called during activity creation
-            window.decorView.post {
+        val category = getDeepLinkCategory(intent)
+        
+        // Use post to ensure callback is set if called during activity creation
+        window.decorView.post {
+            if (category == "PURCHASE_HISTORY") {
+                // For purchase history, navigate to profile first, then show purchase history
+                navigationCallback?.invoke(AppDestinations.PROFILE)
+                purchaseHistoryCallback?.invoke(true)
+            } else if (category == "VIP") {
+                if (destination != null) {
+                    navigationCallback?.invoke(destination)
+                }
+                vipTabCallback?.invoke(true)
+            } else if (destination != null) {
                 navigationCallback?.invoke(destination)
-                // Check if deep link is for VIP tab or purchase history
-                val category = getDeepLinkCategory(intent)
-                if (category == "VIP") {
-                    vipTabCallback?.invoke(true)
-                }
-                if (category == "PURCHASE_HISTORY") {
-                    purchaseHistoryCallback?.invoke(true)
-                }
             }
         }
     }
@@ -161,6 +165,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @PreviewScreenSizes
 @Composable
 fun Phil_Android_StoreApp(
@@ -207,16 +212,19 @@ fun Phil_Android_StoreApp(
         val activity = context as? MainActivity
         activity?.let {
             val destination = it.handleDeepLink(it.intent)
-            if (destination != null) {
-                currentDestination = destination
-            }
             // Check if deep link is for VIP tab or purchase history
             val category = it.getDeepLinkCategory(it.intent)
-            if (category == "VIP") {
-                showVipTab = true
-            }
             if (category == "PURCHASE_HISTORY") {
+                // For purchase history, navigate to profile and show purchase history
+                currentDestination = AppDestinations.PROFILE
                 showPurchaseHistory = true
+            } else if (category == "VIP") {
+                if (destination != null) {
+                    currentDestination = destination
+                }
+                showVipTab = true
+            } else if (destination != null) {
+                currentDestination = destination
             }
         }
     }
