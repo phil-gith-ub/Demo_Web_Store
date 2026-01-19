@@ -459,18 +459,37 @@ object BrazeUserSync {
      */
     fun requestContentCardsRefresh(context: Context) {
         val brazeInstance = Braze.getInstance(context)
-        brazeInstance.requestContentCardsRefresh()
+        try {
+            // Use reflection to call requestContentCardsRefresh
+            val method = brazeInstance.javaClass.getMethod("requestContentCardsRefresh")
+            method.invoke(brazeInstance)
+        } catch (e: Exception) {
+            Log.e("BrazeUserSync", "Error requesting Content Cards refresh: ${e.message}", e)
+        }
     }
     
     /**
-     * Get all Content Cards from Braze.
+     * Get all Content Cards from Braze using reflection.
      * 
      * @param context Android context
      * @return List of Content Card instances
      */
     fun getContentCards(context: Context): List<Any> {
         val brazeInstance = Braze.getInstance(context)
-        return brazeInstance.getContentCards() ?: emptyList()
+        return try {
+            // Use reflection to call getContentCards
+            val method = brazeInstance.javaClass.getMethod("getContentCards")
+            val cards = method.invoke(brazeInstance)
+            if (cards is List<*>) {
+                @Suppress("UNCHECKED_CAST")
+                cards.filterNotNull() as List<Any>
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e("BrazeUserSync", "Error getting Content Cards: ${e.message}", e)
+            emptyList()
+        }
     }
     
     /**
