@@ -9,12 +9,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeUserSync
+import kotlinx.coroutines.launch
 
 /**
  * Shared container that displays either a Braze Banner or a Content Card.
@@ -33,7 +35,8 @@ fun BrazeBannerOrContentCard(
     val context = LocalContext.current
     var hasBanner by remember(bannerPlacementId) { mutableStateOf(false) }
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
-    
+    val scope = rememberCoroutineScope()
+
     // Check for banner and content card availability, and subscribe to updates
     DisposableEffect(bannerPlacementId, contentCardPositionId) {
         // Request refresh for both
@@ -59,7 +62,7 @@ fun BrazeBannerOrContentCard(
         }
         
         // Initial check after a short delay
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+        scope.launch {
             kotlinx.coroutines.delay(500)
             
             // Initial check for banner
