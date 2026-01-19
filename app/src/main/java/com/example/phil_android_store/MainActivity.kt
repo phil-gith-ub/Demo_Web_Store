@@ -51,6 +51,7 @@ import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
 import com.example.phil_android_store.ui.screens.PurchaseHistoryScreen
+import com.example.phil_android_store.ui.screens.SettingsScreen
 import com.example.phil_android_store.ui.screens.StoreScreen
 import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 
@@ -212,6 +213,7 @@ fun Phil_Android_StoreApp(
     // Refresh key that changes when login/logout happens to trigger UI refresh
     var refreshKey by remember { mutableIntStateOf(0) }
     var showPurchaseHistory by remember { mutableStateOf(initialVipCategory == "PURCHASE_HISTORY") }
+    var showSettings by remember { mutableStateOf(false) }
     
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
@@ -297,8 +299,10 @@ fun Phil_Android_StoreApp(
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Persistent Top Banner
-            TopBanner()
+            // Persistent Top Banner (hide when Settings is shown, as it has its own banner)
+            if (!showSettings) {
+                TopBanner()
+            }
             
             NavigationSuiteScaffold(
                 navigationSuiteItems = {
@@ -330,17 +334,23 @@ fun Phil_Android_StoreApp(
                                 }
                             },
                             label = { Text(it.label) },
-                            selected = it == currentDestination && !showPurchaseHistory,
+                            selected = it == currentDestination && !showPurchaseHistory && !showSettings,
                             onClick = { 
                                 currentDestination = it
                                 showPurchaseHistory = false // Close purchase history when navigating
+                                showSettings = false // Close settings when navigating
                             }
                         )
                     }
                 }
             ) {
                 Scaffold(modifier = Modifier.fillMaxSize()) {
-                    if (showPurchaseHistory) {
+                    if (showSettings) {
+                        // Show Settings screen (no bottom nav tabs)
+                        SettingsScreen(
+                            onClose = { showSettings = false }
+                        )
+                    } else if (showPurchaseHistory) {
                         // Show Purchase History screen within the main UI
                         PurchaseHistoryScreen(
                             onBack = { showPurchaseHistory = false }
@@ -378,6 +388,9 @@ fun Phil_Android_StoreApp(
                                 },
                                 onNavigateToPurchaseHistory = {
                                     showPurchaseHistory = true
+                                },
+                                onNavigateToSettings = {
+                                    showSettings = true
                                 }
                             )
                         }

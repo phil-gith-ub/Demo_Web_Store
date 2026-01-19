@@ -14,6 +14,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,7 +46,8 @@ import com.example.phil_android_store.data.UserProfileManager
 fun ProfileScreen(
     onDarkModeChanged: (Boolean) -> Unit,
     onLoginStateChanged: () -> Unit = {},
-    onNavigateToPurchaseHistory: () -> Unit = {}
+    onNavigateToPurchaseHistory: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val profileManager = remember { UserProfileManager(context) }
@@ -113,12 +117,28 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Profile",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        // Profile title with settings icon
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
