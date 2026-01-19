@@ -4,16 +4,20 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,23 +118,33 @@ fun SettingsScreen(
         "Cart Banner" to "cart_banner"
     )
     
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
     ) {
+        // Status bar background to match banner color
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(statusBarPadding.calculateTopPadding()),
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {}
+        
         // Purple banner with "Demo Store" and X button (matches TopBanner style)
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
+                // Centered "Demo Store" text
                 Text(
                     text = "Demo Store",
                     style = MaterialTheme.typography.titleLarge,
@@ -138,7 +152,11 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 
-                IconButton(onClick = onClose) {
+                // Close button aligned to the right
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
@@ -318,7 +336,13 @@ fun SettingsScreen(
                                 text = id,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Placement ID", id)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Placement ID copied to clipboard", Toast.LENGTH_SHORT).show()
+                                }
                             )
                         }
                     }
