@@ -6,7 +6,6 @@ import com.braze.Braze
 import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
 import com.braze.models.FeatureFlag
-import com.braze.models.banner.Banner
 import org.json.JSONObject
 import java.math.BigDecimal
 
@@ -447,7 +446,7 @@ object BrazeUserSync {
      * @param placementId The banner placement ID
      * @return Banner instance or null if not available
      */
-    fun getBanner(context: Context, placementId: String): Banner? {
+    fun getBanner(context: Context, placementId: String): Any? {
         val brazeInstance = Braze.getInstance(context)
         return brazeInstance.getBanner(placementId)
     }

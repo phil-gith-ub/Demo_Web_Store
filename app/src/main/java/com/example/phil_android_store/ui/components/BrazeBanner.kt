@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
-import com.braze.models.banner.Banner
 import com.example.phil_android_store.data.BrazeUserSync
 
 /**
@@ -30,36 +29,42 @@ import com.example.phil_android_store.data.BrazeUserSync
 fun BrazeBanner(
     placementId: String,
     modifier: Modifier = Modifier,
-    onBannerUpdate: ((Banner?) -> Unit)? = null
+    onBannerUpdate: ((Any?) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    var banner by remember(placementId) { mutableStateOf<Banner?>(null) }
+    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    var shouldRender by remember(placementId) { mutableStateOf(false) }
     
     // Request banner refresh when this composable is first displayed
     LaunchedEffect(placementId) {
         // Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         
+        // Small delay to allow banner to be fetched
+        kotlinx.coroutines.delay(500)
+        
         // Get the banner
         banner = BrazeUserSync.getBanner(context, placementId)
+        
+        // Check if banner exists and is not a control variant
+        if (banner != null) {
+            try {
+                val isControlMethod = banner!!.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                shouldRender = !isControl
+            } catch (e: Exception) {
+                // If isControl method doesn't exist, assume we should render
+                shouldRender = true
+            }
+        } else {
+            shouldRender = false
+        }
+        
         onBannerUpdate?.invoke(banner)
     }
     
-    // Subscribe to banner updates
-    LaunchedEffect(placementId) {
-        val brazeInstance = Braze.getInstance(context)
-        brazeInstance.subscribeToBannersUpdates { banners ->
-            // Check if our placement's banner was updated
-            val updatedBanner = BrazeUserSync.getBanner(context, placementId)
-            if (updatedBanner != banner) {
-                banner = updatedBanner
-                onBannerUpdate?.invoke(updatedBanner)
-            }
-        }
-    }
-    
     // Only render if banner is available and not a control variant
-    if (banner != null && !banner!!.isControl) {
+    if (shouldRender && banner != null) {
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
@@ -71,20 +76,35 @@ fun BrazeBanner(
                 }
             },
             update = { webView ->
-                // Get the current banner and load its HTML content
+                // Get the current banner
                 val currentBanner = BrazeUserSync.getBanner(context, placementId)
-                if (currentBanner != null && !currentBanner.isControl) {
-                    // Get the HTML content from the banner
-                    val htmlContent = currentBanner.html
-                    if (htmlContent != null) {
-                        // Load the HTML content into the WebView
-                        webView.loadDataWithBaseURL(
-                            null,
-                            htmlContent,
-                            "text/html",
-                            "UTF-8",
-                            null
+                if (currentBanner != null) {
+                    try {
+                        // Try to use insertBanner method (Braze SDK method)
+                        val brazeInstance = Braze.getInstance(context)
+                        val insertMethod = brazeInstance.javaClass.getMethod(
+                            "insertBanner", 
+                            currentBanner.javaClass,
+                            android.view.View::class.java
                         )
+                        insertMethod.invoke(brazeInstance, currentBanner, webView)
+                    } catch (e: Exception) {
+                        // If insertBanner doesn't work, try to get HTML content
+                        try {
+                            val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
+                            val htmlContent = htmlMethod.invoke(currentBanner) as? String
+                            if (htmlContent != null) {
+                                webView.loadDataWithBaseURL(
+                                    null,
+                                    htmlContent,
+                                    "text/html",
+                                    "UTF-8",
+                                    null
+                                )
+                            }
+                        } catch (e2: Exception) {
+                            // Both methods failed - banner might not be renderable
+                        }
                     }
                 }
             },
