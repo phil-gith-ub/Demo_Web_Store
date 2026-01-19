@@ -203,10 +203,47 @@ fun BrazeBanner(
                             insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
                             // IMPORTANT: Set our WebViewClient AFTER Braze inserts the banner
-                            // Use post to ensure it's set after Braze's operations complete
+                            // Use multiple post delays to ensure it's set after Braze's operations complete
                             webView.post {
                                 webView.webViewClient = customWebViewClient
-                                Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner (via post)")
+                                Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner (first post)")
+                                
+                                // Also inject JavaScript to intercept clicks as a backup
+                                webView.postDelayed({
+                                    try {
+                                        val jsCode = """
+                                            (function() {
+                                                document.addEventListener('click', function(e) {
+                                                    var target = e.target;
+                                                    while (target && target.tagName !== 'A') {
+                                                        target = target.parentElement;
+                                                    }
+                                                    if (target && target.href && target.href.startsWith('philstore://')) {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        window.location.href = target.href;
+                                                        return false;
+                                                    }
+                                                }, true);
+                                                
+                                                // Also intercept all links
+                                                var links = document.querySelectorAll('a[href^="philstore://"]');
+                                                links.forEach(function(link) {
+                                                    link.addEventListener('click', function(e) {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        window.location.href = this.href;
+                                                        return false;
+                                                    }, true);
+                                                });
+                                            })();
+                                        """.trimIndent()
+                                        webView.evaluateJavascript(jsCode, null)
+                                        Log.d("BrazeBanner", "Injected JavaScript click interceptor")
+                                    } catch (e: Exception) {
+                                        Log.e("BrazeBanner", "Error injecting JavaScript: ${e.message}", e)
+                                    }
+                                }, 500)
                             }
                         } catch (e: Exception) {
                             // If insertBanner doesn't work, try to get HTML content
