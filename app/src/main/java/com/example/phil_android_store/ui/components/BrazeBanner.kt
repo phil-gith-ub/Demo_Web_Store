@@ -15,7 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,6 +39,9 @@ fun BrazeBanner(
     onBannerUpdate: ((Any?) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkMode = colorScheme.isDark
+    val backgroundColor = colorScheme.surface
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
@@ -79,6 +84,10 @@ fun BrazeBanner(
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        // Set background to transparent to prevent white flash
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        backgroundColor = android.graphics.Color.TRANSPARENT
+                        
                         // Custom WebViewClient to intercept deep links
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
@@ -184,6 +193,9 @@ fun BrazeBanner(
                                     // Set WebViewClient before loading HTML
                                     webView.webViewClient = customWebViewClient
                                     
+                                    // Set background color to match theme
+                                    val bgColorHex = String.format("#%08X", backgroundColor.toArgb())
+                                    
                                     // Wrap HTML to center content and allow dynamic height
                                     val wrappedHtml = """
                                         <!DOCTYPE html>
@@ -198,6 +210,7 @@ fun BrazeBanner(
                                                     justify-content: center;
                                                     align-items: center;
                                                     min-height: 100%;
+                                                    background-color: $bgColorHex;
                                                 }
                                                 * {
                                                     max-width: 100%;
