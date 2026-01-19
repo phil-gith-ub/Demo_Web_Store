@@ -129,14 +129,13 @@ fun BrazeBanner(
                     }
                 },
                 update = { webView ->
-                    // Always set our custom WebViewClient to handle deep links
-                    // This must be set after Braze inserts the banner, as Braze may override it
+                    // Create custom WebViewClient to handle deep links
                     val customWebViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                             // Check if the URL is a philstore deep link
                             if (url != null && url.startsWith("philstore://")) {
                                 try {
-                                    Log.d("BrazeBanner", "Intercepted deep link: $url")
+                                    Log.d("BrazeBanner", "WebViewClient intercepted deep link: $url")
                                     
                                     // Parse the URI (handles URL encoding automatically)
                                     val uri = Uri.parse(url)
@@ -146,6 +145,7 @@ fun BrazeBanner(
                                     val intent = Intent(Intent.ACTION_VIEW, uri)
                                     // Use SINGLE_TOP to reuse existing activity and trigger onNewIntent
                                     intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    intent.setPackage(context.packageName)
                                     
                                     // Start the activity - this will trigger onNewIntent if activity exists
                                     context.startActivity(intent)
@@ -161,6 +161,30 @@ fun BrazeBanner(
                                 }
                             }
                             // For other URLs, let WebView handle them normally
+                            return false
+                        }
+                        
+                        // Also override the newer API method (Android 24+)
+                        @android.annotation.SuppressLint("NewApi")
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                            val url = request?.url?.toString()
+                            if (url != null && url.startsWith("philstore://")) {
+                                try {
+                                    Log.d("BrazeBanner", "WebViewClient (new API) intercepted deep link: $url")
+                                    
+                                    val intent = Intent(Intent.ACTION_VIEW, request.url)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    intent.setPackage(context.packageName)
+                                    
+                                    context.startActivity(intent)
+                                    Log.d("BrazeBanner", "Started activity with deep link intent (new API)")
+                                    
+                                    return true
+                                } catch (e: Exception) {
+                                    Log.e("BrazeBanner", "Error handling deep link (new API): ${e.message}", e)
+                                    return false
+                                }
+                            }
                             return false
                         }
                     }
@@ -179,9 +203,11 @@ fun BrazeBanner(
                             insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
                             // IMPORTANT: Set our WebViewClient AFTER Braze inserts the banner
-                            // This ensures our deep link handler is active even if Braze set its own
-                            webView.webViewClient = customWebViewClient
-                            Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner")
+                            // Use post to ensure it's set after Braze's operations complete
+                            webView.post {
+                                webView.webViewClient = customWebViewClient
+                                Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner (via post)")
+                            }
                         } catch (e: Exception) {
                             // If insertBanner doesn't work, try to get HTML content
                             try {

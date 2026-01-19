@@ -22,9 +22,13 @@ class PhilAndroidStoreApplication : Application() {
         
         // Try to set custom deep link handler using reflection (in case classes aren't available)
         try {
+            Log.d("BrazeDeeplinkHandler", "Attempting to register custom deep link handler...")
             val handlerClass = Class.forName("com.braze.deeplink.IBrazeDeeplinkHandler")
+            Log.d("BrazeDeeplinkHandler", "Found IBrazeDeeplinkHandler class")
+            
             val handlerSetMethod = Class.forName("com.braze.deeplink.BrazeDeeplinkHandler")
                 .getMethod("setBrazeDeeplinkHandler", handlerClass)
+            Log.d("BrazeDeeplinkHandler", "Found setBrazeDeeplinkHandler method")
             
             val handlerInstance = java.lang.reflect.Proxy.newProxyInstance(
                 handlerClass.classLoader,
@@ -63,15 +67,19 @@ class PhilAndroidStoreApplication : Application() {
                         }
                     } catch (e: Exception) {
                         Log.e("BrazeDeeplinkHandler", "Error handling deep link: ${e.message}", e)
+                        e.printStackTrace()
                     }
                 }
                 null
             }
             
             handlerSetMethod.invoke(null, handlerInstance)
-            Log.d("BrazeDeeplinkHandler", "Custom deep link handler registered successfully")
+            Log.d("BrazeDeeplinkHandler", "Custom deep link handler registered successfully via reflection")
+        } catch (e: ClassNotFoundException) {
+            Log.w("BrazeDeeplinkHandler", "Deep link handler classes not found in SDK - using WebViewClient approach instead: ${e.message}")
         } catch (e: Exception) {
-            Log.w("BrazeDeeplinkHandler", "Could not register custom deep link handler (may not be available in this SDK version): ${e.message}")
+            Log.e("BrazeDeeplinkHandler", "Error registering custom deep link handler: ${e.message}", e)
+            e.printStackTrace()
             // Deep links will be handled by WebViewClient in BrazeBanner instead
         }
         
