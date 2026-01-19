@@ -40,7 +40,6 @@ fun BrazeBanner(
 ) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
-    val isDarkMode = colorScheme.isDark
     val backgroundColor = colorScheme.surface
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
@@ -86,7 +85,6 @@ fun BrazeBanner(
                     WebView(ctx).apply {
                         // Set background to transparent to prevent white flash
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        backgroundColor = android.graphics.Color.TRANSPARENT
                         
                         // Custom WebViewClient to intercept deep links
                         webViewClient = object : WebViewClient() {
