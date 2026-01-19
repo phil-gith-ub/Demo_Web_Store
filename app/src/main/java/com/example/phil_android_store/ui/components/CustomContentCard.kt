@@ -20,7 +20,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,28 +57,46 @@ fun CustomContentCard(
     }
     
     // Refresh card when positionId changes
-    androidx.compose.runtime.LaunchedEffect(positionId) {
+    LaunchedEffect(positionId) {
         kotlinx.coroutines.delay(100)
         contentCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
     }
     
-    if (contentCard != null) {
-        try {
-            // Extract card properties using reflection
-            val getTitleMethod = contentCard.javaClass.getMethod("getTitle")
-            val title = getTitleMethod.invoke(contentCard) as? String
+    // Extract card properties using reflection (outside of composable)
+    val cardData = remember(contentCard) {
+        if (contentCard != null) {
+            try {
+                val card = contentCard!!
+                val getTitleMethod = card.javaClass.getMethod("getTitle")
+                val title = getTitleMethod.invoke(card) as? String
+                
+                val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
+                val description = getDescriptionMethod.invoke(card) as? String
+                
+                val getImageMethod = card.javaClass.getMethod("getImage")
+                val imageUrl = getImageMethod.invoke(card) as? String
+                
+                val getUrlMethod = card.javaClass.getMethod("getUrlString")
+                val cardUrl = getUrlMethod.invoke(card) as? String
+                
+                CardData(title, description, imageUrl, cardUrl)
+            } catch (e: Exception) {
+                Log.e("CustomContentCard", "Error extracting card data: ${e.message}", e)
+                null
+            }
+        } else {
+            null
+        }
+    }
+    
+    if (cardData != null) {
+        val title = cardData.title
+        val description = cardData.description
+        val imageUrl = cardData.imageUrl
+        val cardUrl = cardData.cardUrl
             
-            val getDescriptionMethod = contentCard.javaClass.getMethod("getCardDescription")
-            val description = getDescriptionMethod.invoke(contentCard) as? String
-            
-            val getImageMethod = contentCard.javaClass.getMethod("getImage")
-            val imageUrl = getImageMethod.invoke(contentCard) as? String
-            
-            val getUrlMethod = contentCard.javaClass.getMethod("getUrlString")
-            val cardUrl = getUrlMethod.invoke(contentCard) as? String
-            
-            // Only render if we have at least title or image
-            if (title != null || imageUrl != null) {
+        // Only render if we have at least title or image
+        if (title != null || imageUrl != null) {
                 Card(
                     modifier = modifier
                         .fillMaxWidth()
@@ -159,8 +181,16 @@ fun CustomContentCard(
                     }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("CustomContentCard", "Error rendering Content Card: ${e.message}", e)
         }
     }
 }
+
+/**
+ * Data class to hold extracted Content Card properties
+ */
+private data class CardData(
+    val title: String?,
+    val description: String?,
+    val imageUrl: String?,
+    val cardUrl: String?
+)
