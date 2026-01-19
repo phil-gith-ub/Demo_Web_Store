@@ -63,18 +63,6 @@ fun CartScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            if (cartItems.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Your cart is empty",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(16.dp),
@@ -89,32 +77,49 @@ fun CartScreen(
                     )
                 }
                 
-                // Banner at the top of the list (same as store banner)
+                // Braze Banner Container (collapses when no banner is available) - same format as store page
                 item {
                     BrazeBanner(
                         placementId = "cart_banner",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-
-                items(cartItems) { product ->
-                    CartItemCard(
-                        product = product,
-                        onRemoveClick = {
-                            cartManager.removeFromCart(product)
-                            // Update local state immediately
-                            cartItems = cartManager.cartItems
-                            totalPrice = cartManager.getTotalPrice()
-                            onCartUpdated()
+                
+                // Show cart items or empty message
+                if (cartItems.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Your cart is empty",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
+                    }
+                } else {
+                    items(cartItems) { product ->
+                        CartItemCard(
+                            product = product,
+                            onRemoveClick = {
+                                cartManager.removeFromCart(product)
+                                // Update local state immediately
+                                cartItems = cartManager.cartItems
+                                totalPrice = cartManager.getTotalPrice()
+                                onCartUpdated()
+                            }
+                        )
+                    }
                 }
             }
-
-            // Checkout section
-            Card(
+            
+            // Checkout section (only show when cart has items)
+            if (cartItems.isNotEmpty()) {
+                Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -182,7 +187,7 @@ fun CartScreen(
                         Text("Checkout")
                     }
                 }
-            }
+                }
             }
         }
         
