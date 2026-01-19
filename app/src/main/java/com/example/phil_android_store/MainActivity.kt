@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
@@ -53,6 +54,7 @@ import com.example.phil_android_store.ui.screens.ProfileScreen
 import com.example.phil_android_store.ui.screens.PurchaseHistoryScreen
 import com.example.phil_android_store.ui.screens.SettingsScreen
 import com.example.phil_android_store.ui.screens.StoreScreen
+import com.example.phil_android_store.ui.screens.content.ContentScreen
 import com.example.phil_android_store.ui.theme.Phil_Android_StoreTheme
 
 class MainActivity : ComponentActivity() {
@@ -379,6 +381,9 @@ fun Phil_Android_StoreApp(
                                     }
                                 )
                             }
+                            AppDestinations.CONTENT -> {
+                                ContentScreen()
+                            }
                         AppDestinations.PROFILE -> ProfileScreen(
                             onDarkModeChanged = { enabled ->
                                 isDarkMode = enabled
@@ -444,5 +449,6 @@ enum class AppDestinations(
 ) {
     HOME("Store", Icons.Default.Home),
     CART("Cart", Icons.Default.ShoppingCart),
+    CONTENT("Content", Icons.Default.Article),
     PROFILE("Profile", Icons.Default.AccountBox),
 }
