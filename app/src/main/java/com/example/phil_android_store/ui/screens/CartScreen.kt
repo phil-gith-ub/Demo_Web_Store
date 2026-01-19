@@ -38,7 +38,7 @@ import com.example.phil_android_store.data.Product
 import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.components.NotificationBanner
-import com.example.phil_android_store.ui.components.BrazeBannerOrContentCard
+import com.example.phil_android_store.ui.components.BrazeBanner
 
 @Composable
 fun CartScreen(
@@ -89,23 +89,14 @@ fun CartScreen(
                     )
                 }
                 
-                // Banner or Content Card at the top of the list
+                // Banner at the top of the list (same as store banner)
                 item {
-                    Card(
+                    BrazeBanner(
+                        placementId = "cart_banner",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        BrazeBannerOrContentCard(
-                            bannerPlacementId = "cart_banner",
-                            contentCardPositionId = "cart_content_card",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                            .padding(bottom = 8.dp)
+                    )
                 }
 
                 items(cartItems) { product ->
