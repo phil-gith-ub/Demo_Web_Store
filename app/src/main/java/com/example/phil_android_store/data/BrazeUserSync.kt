@@ -526,13 +526,12 @@ object BrazeUserSync {
     }
     
     /**
-     * Subscribe to Content Cards updates from Braze.
-     * This is the recommended approach per Braze documentation - listening for updates
-     * rather than just fetching on demand.
+     * Subscribe to Content Cards updates from Braze using the proper event-based pattern.
+     * This follows the Braze documentation pattern using IEventSubscriber<ContentCardsUpdatedEvent>.
      * 
      * @param context Android context
      * @param callback Function to call when Content Cards are updated (receives list of cards)
-     * @return A disposable/cancellable object, or null if subscription fails
+     * @return The subscriber object that can be used to unsubscribe, or null if subscription fails
      */
     fun subscribeToContentCardsUpdates(
         context: Context,
@@ -540,15 +539,25 @@ object BrazeUserSync {
     ): Any? {
         val brazeInstance = Braze.getInstance(context)
         return try {
-            // Use reflection to call subscribeToContentCardsUpdates
-            // The method signature: subscribeToContentCardsUpdates(Consumer<List<ContentCard>>)
-            val consumerClass = Class.forName("java.util.function.Consumer")
-            val consumer = java.lang.reflect.Proxy.newProxyInstance(
-                consumerClass.classLoader,
-                arrayOf(consumerClass)
+            // Get the ContentCardsUpdatedEvent class
+            val eventClass = Class.forName("com.braze.events.ContentCardsUpdatedEvent")
+            
+            // Get the IEventSubscriber interface
+            val subscriberInterface = Class.forName("com.braze.events.IEventSubscriber")
+            
+            // Create a proxy implementation of IEventSubscriber
+            val subscriber = java.lang.reflect.Proxy.newProxyInstance(
+                subscriberInterface.classLoader,
+                arrayOf(subscriberInterface)
             ) { _, method, args ->
-                if (method.name == "accept" && args != null && args.isNotEmpty()) {
-                    val cards = args[0]
+                if (method.name == "trigger" && args != null && args.isNotEmpty()) {
+                    // The event object is passed as the first argument
+                    val event = args[0]
+                    
+                    // Call getAllCards() on the event
+                    val getAllCardsMethod = eventClass.getMethod("getAllCards")
+                    val cards = getAllCardsMethod.invoke(event)
+                    
                     if (cards is List<*>) {
                         @Suppress("UNCHECKED_CAST")
                         val cardList = cards.filterNotNull() as List<Any>
@@ -558,17 +567,49 @@ object BrazeUserSync {
                 null
             }
             
+            // Subscribe using subscribeToContentCardsUpdates
             val subscribeMethod = brazeInstance.javaClass.getMethod(
                 "subscribeToContentCardsUpdates",
-                consumerClass
+                subscriberInterface
             )
-            subscribeMethod.invoke(brazeInstance, consumer)
+            subscribeMethod.invoke(brazeInstance, subscriber)
             
-            // Return the consumer as a way to "unsubscribe" (though Braze SDK manages this)
-            consumer
+            Log.d("BrazeUserSync", "Successfully subscribed to Content Cards updates")
+            
+            // Return the subscriber for potential unsubscription
+            subscriber
         } catch (e: Exception) {
             Log.e("BrazeUserSync", "Error subscribing to Content Cards updates: ${e.message}", e)
+            e.printStackTrace()
             null
+        }
+    }
+    
+    /**
+     * Unsubscribe from Content Cards updates.
+     * 
+     * @param context Android context
+     * @param subscriber The subscriber object returned from subscribeToContentCardsUpdates
+     */
+    fun unsubscribeFromContentCardsUpdates(context: Context, subscriber: Any?) {
+        if (subscriber == null) return
+        
+        val brazeInstance = Braze.getInstance(context)
+        try {
+            // Get the ContentCardsUpdatedEvent class
+            val eventClass = Class.forName("com.braze.events.ContentCardsUpdatedEvent")
+            
+            // Call removeSingleSubscription
+            val removeMethod = brazeInstance.javaClass.getMethod(
+                "removeSingleSubscription",
+                Class.forName("com.braze.events.IEventSubscriber"),
+                Class::class.java
+            )
+            removeMethod.invoke(brazeInstance, subscriber, eventClass)
+            
+            Log.d("BrazeUserSync", "Successfully unsubscribed from Content Cards updates")
+        } catch (e: Exception) {
+            Log.e("BrazeUserSync", "Error unsubscribing from Content Cards updates: ${e.message}", e)
         }
     }
 }

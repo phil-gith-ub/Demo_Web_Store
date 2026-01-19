@@ -97,29 +97,53 @@ fun CustomContentCard(
             
         // Only render if we have at least title or image
         if (title != null || imageUrl != null) {
-                Card(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = cardUrl != null) {
-                            // Handle click - check if it's a deep link
-                            if (cardUrl != null) {
-                                if (cardUrl.startsWith("philstore://")) {
-                                    try {
-                                        Log.d("CustomContentCard", "Handling deep link: $cardUrl")
-                                        val uri = Uri.parse(cardUrl)
-                                        val intent = Intent(Intent.ACTION_VIEW, uri)
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                        intent.setPackage(context.packageName)
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Log.e("CustomContentCard", "Error handling deep link: ${e.message}", e)
-                                    }
-                                } else {
-                                    // Handle regular URL if needed
-                                    Log.d("CustomContentCard", "Card URL: $cardUrl")
-                                }
+            // Log impression when card is displayed
+            LaunchedEffect(contentCard) {
+                if (contentCard != null) {
+                    try {
+                        val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
+                        logImpressionMethod.invoke(contentCard)
+                        Log.d("CustomContentCard", "Logged Content Card impression")
+                    } catch (e: Exception) {
+                        Log.e("CustomContentCard", "Error logging impression: ${e.message}", e)
+                    }
+                }
+            }
+            
+            Card(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = cardUrl != null) {
+                        // Log click analytics
+                        if (contentCard != null) {
+                            try {
+                                val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
+                                logClickMethod.invoke(contentCard)
+                                Log.d("CustomContentCard", "Logged Content Card click")
+                            } catch (e: Exception) {
+                                Log.e("CustomContentCard", "Error logging click: ${e.message}", e)
                             }
-                        },
+                        }
+                        
+                        // Handle click - check if it's a deep link
+                        if (cardUrl != null) {
+                            if (cardUrl.startsWith("philstore://")) {
+                                try {
+                                    Log.d("CustomContentCard", "Handling deep link: $cardUrl")
+                                    val uri = Uri.parse(cardUrl)
+                                    val intent = Intent(Intent.ACTION_VIEW, uri)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    intent.setPackage(context.packageName)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("CustomContentCard", "Error handling deep link: ${e.message}", e)
+                                }
+                            } else {
+                                // Handle regular URL if needed
+                                Log.d("CustomContentCard", "Card URL: $cardUrl")
+                            }
+                        }
+                    },
                     colors = CardDefaults.cardColors(
                         containerColor = colorScheme.surface
                     ),

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,41 +35,10 @@ fun BrazeBannerOrContentCard(
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
     
     // Check for banner and content card availability, and subscribe to updates
-    LaunchedEffect(bannerPlacementId, contentCardPositionId) {
+    DisposableEffect(bannerPlacementId, contentCardPositionId) {
         // Request refresh for both
         BrazeUserSync.requestBannerRefresh(context, listOf(bannerPlacementId))
         BrazeUserSync.requestContentCardsRefresh(context)
-        
-        // Small delay to allow content to be fetched
-        kotlinx.coroutines.delay(500)
-        
-        // Initial check for banner
-        val banner = BrazeUserSync.getBanner(context, bannerPlacementId)
-        if (banner != null) {
-            try {
-                val isControlMethod = banner.javaClass.getMethod("isControl")
-                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
-                hasBanner = !isControl
-            } catch (e: Exception) {
-                hasBanner = true
-            }
-        } else {
-            hasBanner = false
-        }
-        
-        // Initial check for content card
-        val contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
-        if (contentCard != null) {
-            try {
-                val isControlMethod = contentCard.javaClass.getMethod("isControlCard")
-                val isControl = isControlMethod.invoke(contentCard) as? Boolean ?: false
-                hasContentCard = !isControl
-            } catch (e: Exception) {
-                hasContentCard = true
-            }
-        } else {
-            hasContentCard = false
-        }
         
         // Subscribe to Content Cards updates (recommended approach per Braze docs)
         // This will notify us whenever Content Cards are updated
@@ -88,8 +58,45 @@ fun BrazeBannerOrContentCard(
             }
         }
         
-        // Note: Braze SDK manages subscription lifecycle automatically
-        // The subscription will remain active until the composable is disposed
+        // Initial check after a short delay
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            kotlinx.coroutines.delay(500)
+            
+            // Initial check for banner
+            val banner = BrazeUserSync.getBanner(context, bannerPlacementId)
+            if (banner != null) {
+                try {
+                    val isControlMethod = banner.javaClass.getMethod("isControl")
+                    val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                    hasBanner = !isControl
+                } catch (e: Exception) {
+                    hasBanner = true
+                }
+            } else {
+                hasBanner = false
+            }
+            
+            // Initial check for content card
+            val contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
+            if (contentCard != null) {
+                try {
+                    val isControlMethod = contentCard.javaClass.getMethod("isControlCard")
+                    val isControl = isControlMethod.invoke(contentCard) as? Boolean ?: false
+                    hasContentCard = !isControl
+                } catch (e: Exception) {
+                    hasContentCard = true
+                }
+            } else {
+                hasContentCard = false
+            }
+        }
+        
+        // Unsubscribe when composable is disposed
+        onDispose {
+            if (subscription != null) {
+                BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+            }
+        }
     }
     
     // Show banner if available, otherwise show content card
