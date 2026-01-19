@@ -450,4 +450,58 @@ object BrazeUserSync {
         val brazeInstance = Braze.getInstance(context)
         return brazeInstance.getBanner(placementId)
     }
+    
+    /**
+     * Request Content Cards refresh from Braze.
+     * Should be called when the app starts or when navigating to screens with content cards.
+     * 
+     * @param context Android context
+     */
+    fun requestContentCardsRefresh(context: Context) {
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.requestContentCardsRefresh()
+    }
+    
+    /**
+     * Get all Content Cards from Braze.
+     * 
+     * @param context Android context
+     * @return List of Content Card instances
+     */
+    fun getContentCards(context: Context): List<Any> {
+        val brazeInstance = Braze.getInstance(context)
+        return brazeInstance.getContentCards() ?: emptyList()
+    }
+    
+    /**
+     * Get a Content Card by position_id from extras.
+     * 
+     * @param context Android context
+     * @param positionId The position_id value to search for in card extras
+     * @return Content Card instance or null if not found
+     */
+    fun getContentCardByPositionId(context: Context, positionId: String): Any? {
+        val cards = getContentCards(context)
+        for (card in cards) {
+            try {
+                // Check if card is a control card (should not be displayed)
+                val isControlMethod = card.javaClass.getMethod("isControlCard")
+                val isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                if (isControl) continue
+                
+                // Get extras from card
+                val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                
+                // Check if position_id matches
+                if (extras != null && extras["position_id"] == positionId) {
+                    return card
+                }
+            } catch (e: Exception) {
+                // Skip cards that don't have the expected methods
+                continue
+            }
+        }
+        return null
+    }
 }

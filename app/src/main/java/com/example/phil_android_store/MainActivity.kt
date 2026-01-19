@@ -268,6 +268,9 @@ fun Phil_Android_StoreApp(
         
         // Request banner refresh for all banner placements on app startup
         BrazeUserSync.requestBannerRefresh(context, listOf("store_page_banner", "cart_banner"))
+        
+        // Request Content Cards refresh on app startup
+        BrazeUserSync.requestContentCardsRefresh(context)
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     
