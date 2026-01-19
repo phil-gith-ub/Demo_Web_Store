@@ -185,8 +185,15 @@ fun Phil_Android_StoreApp(
         )
     }
     
+    // Determine initial destination - if purchase history, go to profile
+    val computedInitialDestination = if (initialVipCategory == "PURCHASE_HISTORY") {
+        AppDestinations.PROFILE
+    } else {
+        initialDestination ?: AppDestinations.HOME
+    }
+    
     var currentDestination by rememberSaveable { 
-        mutableStateOf(initialDestination ?: AppDestinations.HOME) 
+        mutableStateOf(computedInitialDestination) 
     }
     
     // Track if we should show VIP tab on home screen
@@ -194,7 +201,7 @@ fun Phil_Android_StoreApp(
     
     // Refresh key that changes when login/logout happens to trigger UI refresh
     var refreshKey by remember { mutableIntStateOf(0) }
-    var showPurchaseHistory by remember { mutableStateOf(false) }
+    var showPurchaseHistory by remember { mutableStateOf(initialVipCategory == "PURCHASE_HISTORY") }
     
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
@@ -207,24 +214,27 @@ fun Phil_Android_StoreApp(
         onDispose { }
     }
     
-    // Observe intent changes to handle deep links
+    // Observe intent changes to handle deep links (only if not already set from initial values)
     LaunchedEffect(Unit) {
-        val activity = context as? MainActivity
-        activity?.let {
-            val destination = it.handleDeepLink(it.intent)
-            // Check if deep link is for VIP tab or purchase history
-            val category = it.getDeepLinkCategory(it.intent)
-            if (category == "PURCHASE_HISTORY") {
-                // For purchase history, navigate to profile and show purchase history
-                currentDestination = AppDestinations.PROFILE
-                showPurchaseHistory = true
-            } else if (category == "VIP") {
-                if (destination != null) {
+        // Only process if we don't already have purchase history or VIP set from initial deep link
+        if (!showPurchaseHistory && !showVipTab) {
+            val activity = context as? MainActivity
+            activity?.let {
+                val destination = it.handleDeepLink(it.intent)
+                // Check if deep link is for VIP tab or purchase history
+                val category = it.getDeepLinkCategory(it.intent)
+                if (category == "PURCHASE_HISTORY") {
+                    // For purchase history, navigate to profile and show purchase history
+                    currentDestination = AppDestinations.PROFILE
+                    showPurchaseHistory = true
+                } else if (category == "VIP") {
+                    if (destination != null) {
+                        currentDestination = destination
+                    }
+                    showVipTab = true
+                } else if (destination != null) {
                     currentDestination = destination
                 }
-                showVipTab = true
-            } else if (destination != null) {
-                currentDestination = destination
             }
         }
     }
