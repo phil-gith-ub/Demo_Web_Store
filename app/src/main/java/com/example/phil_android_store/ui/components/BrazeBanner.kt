@@ -98,15 +98,18 @@ fun BrazeBanner(
                                         val uri = Uri.parse(url)
                                         Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
                                         
-                                        // Create an intent to handle the deep link
+                                        // Create an intent to handle the deep link (matching in-app message handler)
                                         val intent = Intent(Intent.ACTION_VIEW, uri)
-                                        // Use SINGLE_TOP to reuse existing activity and trigger onNewIntent
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                        intent.setPackage(ctx.packageName)
                                         
-                                        // Start the activity - this will trigger onNewIntent if activity exists
-                                        ctx.startActivity(intent)
-                                        
-                                        Log.d("BrazeBanner", "Started activity with deep link intent")
+                                        // Check if MainActivity can handle this intent
+                                        if (intent.resolveActivity(ctx.packageManager) != null) {
+                                            ctx.startActivity(intent)
+                                            Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
+                                        } else {
+                                            Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
+                                        }
                                         
                                         // Return true to indicate we handled the URL
                                         return true
@@ -129,7 +132,7 @@ fun BrazeBanner(
                     }
                 },
                 update = { webView ->
-                    // Create custom WebViewClient to handle deep links
+                    // Create custom WebViewClient to handle deep links (matching in-app message handler)
                     val customWebViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                             // Check if the URL is a philstore deep link
@@ -141,16 +144,18 @@ fun BrazeBanner(
                                     val uri = Uri.parse(url)
                                     Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
                                     
-                                    // Create an intent to handle the deep link
+                                    // Create an intent to handle the deep link (matching in-app message handler)
                                     val intent = Intent(Intent.ACTION_VIEW, uri)
-                                    // Use SINGLE_TOP to reuse existing activity and trigger onNewIntent
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                     intent.setPackage(context.packageName)
                                     
-                                    // Start the activity - this will trigger onNewIntent if activity exists
-                                    context.startActivity(intent)
-                                    
-                                    Log.d("BrazeBanner", "Started activity with deep link intent")
+                                    // Check if MainActivity can handle this intent
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                        Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
+                                    } else {
+                                        Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
+                                    }
                                     
                                     // Return true to indicate we handled the URL
                                     return true
@@ -172,12 +177,18 @@ fun BrazeBanner(
                                 try {
                                     Log.d("BrazeBanner", "WebViewClient (new API) intercepted deep link: $url")
                                     
+                                    // Create an intent to handle the deep link (matching in-app message handler)
                                     val intent = Intent(Intent.ACTION_VIEW, request.url)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                     intent.setPackage(context.packageName)
                                     
-                                    context.startActivity(intent)
-                                    Log.d("BrazeBanner", "Started activity with deep link intent (new API)")
+                                    // Check if MainActivity can handle this intent
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                        Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
+                                    } else {
+                                        Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
+                                    }
                                     
                                     return true
                                 } catch (e: Exception) {
