@@ -3,6 +3,7 @@ package com.example.phil_android_store.ui.components
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -132,38 +133,53 @@ fun BrazeBanner(
                     }
                 },
                 update = { webView ->
+                    // Helper function to handle deep links (matching in-app message handler)
+                    fun handleDeepLink(url: String) {
+                        try {
+                            Log.d("BrazeBanner", "Handling deep link: $url")
+                            
+                            // Parse the URI (handles URL encoding automatically)
+                            val uri = Uri.parse(url)
+                            Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
+                            
+                            // Create an intent to handle the deep link (matching in-app message handler)
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            intent.setPackage(context.packageName)
+                            
+                            // Check if MainActivity can handle this intent
+                            if (intent.resolveActivity(context.packageManager) != null) {
+                                context.startActivity(intent)
+                                Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
+                            } else {
+                                Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("BrazeBanner", "Error handling deep link: ${e.message}", e)
+                        }
+                    }
+                    
+                    // JavaScript interface to handle deep links directly from JavaScript
+                    class DeepLinkHandler(private val handler: (String) -> Unit) {
+                        @JavascriptInterface
+                        fun handleDeepLink(url: String) {
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                handler(url)
+                            }
+                        }
+                    }
+                    
+                    // Add JavaScript interface BEFORE setting WebViewClient
+                    webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                    
                     // Create custom WebViewClient to handle deep links (matching in-app message handler)
                     val customWebViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                             // Check if the URL is a philstore deep link
                             if (url != null && url.startsWith("philstore://")) {
-                                try {
-                                    Log.d("BrazeBanner", "WebViewClient intercepted deep link: $url")
-                                    
-                                    // Parse the URI (handles URL encoding automatically)
-                                    val uri = Uri.parse(url)
-                                    Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
-                                    
-                                    // Create an intent to handle the deep link (matching in-app message handler)
-                                    val intent = Intent(Intent.ACTION_VIEW, uri)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                    intent.setPackage(context.packageName)
-                                    
-                                    // Check if MainActivity can handle this intent
-                                    if (intent.resolveActivity(context.packageManager) != null) {
-                                        context.startActivity(intent)
-                                        Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
-                                    } else {
-                                        Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
-                                    }
-                                    
-                                    // Return true to indicate we handled the URL
-                                    return true
-                                } catch (e: Exception) {
-                                    Log.e("BrazeBanner", "Error handling deep link: ${e.message}", e)
-                                    // If something goes wrong, let WebView handle it
-                                    return false
-                                }
+                                handleDeepLink(url)
+                                // Return true to indicate we handled the URL
+                                return true
                             }
                             // For other URLs, let WebView handle them normally
                             return false
@@ -174,31 +190,16 @@ fun BrazeBanner(
                         override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                             val url = request?.url?.toString()
                             if (url != null && url.startsWith("philstore://")) {
-                                try {
-                                    Log.d("BrazeBanner", "WebViewClient (new API) intercepted deep link: $url")
-                                    
-                                    // Create an intent to handle the deep link (matching in-app message handler)
-                                    val intent = Intent(Intent.ACTION_VIEW, request.url)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                    intent.setPackage(context.packageName)
-                                    
-                                    // Check if MainActivity can handle this intent
-                                    if (intent.resolveActivity(context.packageManager) != null) {
-                                        context.startActivity(intent)
-                                        Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
-                                    } else {
-                                        Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
-                                    }
-                                    
-                                    return true
-                                } catch (e: Exception) {
-                                    Log.e("BrazeBanner", "Error handling deep link (new API): ${e.message}", e)
-                                    return false
-                                }
+                                handleDeepLink(url)
+                                return true
                             }
                             return false
                         }
                     }
+                    
+                    // Set WebViewClient BEFORE calling insertBanner to ensure it's in place
+                    webView.webViewClient = customWebViewClient
+                    webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     
                     // Braze SDK: Get the current banner
                     val currentBanner = BrazeUserSync.getBanner(context, placementId)
@@ -213,48 +214,83 @@ fun BrazeBanner(
                             )
                             insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
-                            // IMPORTANT: Set WebViewClient AFTER Braze inserts the banner
-                            // Keep background transparent to prevent any color flash
+                            // Re-apply WebViewClient after insertBanner (in case Braze replaced it)
                             webView.post {
-                                // Ensure background stays transparent
                                 webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                
                                 webView.webViewClient = customWebViewClient
-                                Log.d("BrazeBanner", "Set custom WebViewClient after Braze insertBanner (first post)")
+                                Log.d("BrazeBanner", "Re-applied custom WebViewClient after Braze insertBanner")
                                 
-                                // Also inject JavaScript to intercept clicks
+                                // Inject JavaScript to intercept clicks and use our handler
                                 webView.postDelayed({
                                     try {
                                         val jsCode = """
                                             (function() {
-                                                // Deep link interception
+                                                // Function to handle deep links
+                                                function handleDeepLink(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        // Try JavaScript interface first
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        }
+                                                        // Fallback to location change (will be caught by WebViewClient)
+                                                        window.location.href = url;
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                // Intercept all clicks
                                                 document.addEventListener('click', function(e) {
                                                     var target = e.target;
                                                     while (target && target.tagName !== 'A') {
                                                         target = target.parentElement;
                                                     }
-                                                    if (target && target.href && target.href.startsWith('philstore://')) {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        window.location.href = target.href;
-                                                        return false;
+                                                    if (target && target.href) {
+                                                        if (handleDeepLink(target.href)) {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            return false;
+                                                        }
                                                     }
                                                 }, true);
                                                 
-                                                // Also intercept all links
+                                                // Also intercept all existing links
                                                 var links = document.querySelectorAll('a[href^="philstore://"]');
                                                 links.forEach(function(link) {
                                                     link.addEventListener('click', function(e) {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        window.location.href = this.href;
-                                                        return false;
+                                                        if (handleDeepLink(this.href)) {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            return false;
+                                                        }
                                                     }, true);
                                                 });
+                                                
+                                                // Monitor for dynamically added links
+                                                var observer = new MutationObserver(function(mutations) {
+                                                    mutations.forEach(function(mutation) {
+                                                        mutation.addedNodes.forEach(function(node) {
+                                                            if (node.nodeType === 1) {
+                                                                var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
+                                                                newLinks.forEach(function(link) {
+                                                                    link.addEventListener('click', function(e) {
+                                                                        if (handleDeepLink(this.href)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            return false;
+                                                                        }
+                                                                    }, true);
+                                                                });
+                                                            }
+                                                        });
+                                                    });
+                                                });
+                                                observer.observe(document.body, { childList: true, subtree: true });
                                             })();
                                         """.trimIndent()
                                         webView.evaluateJavascript(jsCode, null)
-                                        Log.d("BrazeBanner", "Injected JavaScript click interceptor")
+                                        Log.d("BrazeBanner", "Injected JavaScript click interceptor with deep link handler")
                                     } catch (e: Exception) {
                                         Log.e("BrazeBanner", "Error injecting JavaScript: ${e.message}", e)
                                     }
