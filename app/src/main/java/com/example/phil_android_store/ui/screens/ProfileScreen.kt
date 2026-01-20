@@ -260,6 +260,25 @@ fun ProfileScreen(
                         }
                     }
                     
+                    // Paid Membership section
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Paid Membership",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Switch(
+                            checked = paidMembership,
+                            onCheckedChange = { paidMembership = it }
+                        )
+                    }
+                    
                     // Save button to update profile
                     Button(
                         onClick = {
@@ -319,7 +338,7 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                 Text(
-                    text = "Member Status: ${if (isLoggedIn) "Member" else "Guest"}",
+                    text = "Member Status: ${if (paidMembership) "Paid Member" else if (isLoggedIn) "Member" else "Guest"}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -340,25 +359,6 @@ fun ProfileScreen(
                             )
                         }
                     }
-                }
-                
-                // Paid Membership section
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Paid Membership",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Switch(
-                        checked = paidMembership,
-                        onCheckedChange = { paidMembership = it }
-                    )
                 }
             }
         }
