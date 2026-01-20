@@ -31,10 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -116,10 +112,6 @@ fun SettingsScreen(
     var pushToken by remember { mutableStateOf<String?>(null) }
     var isLoadingToken by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    
-    // Deep link state
-    var selectedDeepLink by remember { mutableStateOf<String?>(null) }
-    var expandedDeepLink by remember { mutableStateOf(false) }
     
     // Available deep links
     val deepLinks = listOf(
@@ -401,7 +393,7 @@ fun SettingsScreen(
                 }
             }
             
-            // Info Section - Banner Placement IDs
+            // Info Section - Banner Placement IDs and Deep Links
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -412,12 +404,25 @@ fun SettingsScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "Info",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Header with "Info" and "click to copy" hint
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Info",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "click to copy",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     
+                    // Banner Placement IDs
                     Text(
                         text = "Banner Placement IDs",
                         style = MaterialTheme.typography.titleSmall,
@@ -447,87 +452,36 @@ fun SettingsScreen(
                             )
                         }
                     }
-                }
-            }
-            
-            // Deep Link Selector
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                    
+                    // Deep Links
                     Text(
-                        text = "Deep Links",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "Deeplinks",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                     
-                    ExposedDropdownMenuBox(
-                        expanded = expandedDeepLink,
-                        onExpandedChange = { expandedDeepLink = !expandedDeepLink }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedDeepLink?.let { 
-                                deepLinks.find { it.second == selectedDeepLink }?.first ?: selectedDeepLink 
-                            } ?: "Select a page...",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDeepLink)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        
-                        DropdownMenu(
-                            expanded = expandedDeepLink,
-                            onDismissRequest = { expandedDeepLink = false }
-                        ) {
-                            deepLinks.forEach { (name, link) ->
-                                DropdownMenuItem(
-                                    text = { Text(name) },
-                                    onClick = {
-                                        selectedDeepLink = link
-                                        expandedDeepLink = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Show deep link with copy button when selected
-                    if (selectedDeepLink != null) {
+                    deepLinks.forEach { (name, link) ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            OutlinedTextField(
-                                value = selectedDeepLink ?: "",
-                                onValueChange = {},
-                                readOnly = true,
-                                modifier = Modifier.weight(1f)
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                            IconButton(
-                                onClick = {
+                            Text(
+                                text = link,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clip = ClipData.newPlainText("Deep Link", selectedDeepLink)
+                                    val clip = ClipData.newPlainText("Deep Link", link)
                                     clipboard.setPrimaryClip(clip)
                                     Toast.makeText(context, "Deep link copied to clipboard", Toast.LENGTH_SHORT).show()
                                 }
-                            ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copy",
-                                tint = MaterialTheme.colorScheme.primary
                             )
-                            }
                         }
                     }
                 }
