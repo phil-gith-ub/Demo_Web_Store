@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -303,7 +304,9 @@ fun Phil_Android_StoreApp(
         Column(modifier = Modifier.fillMaxSize()) {
             // Persistent Top Banner (hide when Settings is shown, as it has its own banner)
             if (!showSettings) {
-                TopBanner()
+                TopBanner(
+                    onSettingsClick = { showSettings = true }
+                )
             }
             
             NavigationSuiteScaffold(
@@ -393,9 +396,6 @@ fun Phil_Android_StoreApp(
                                 },
                                 onNavigateToPurchaseHistory = {
                                     showPurchaseHistory = true
-                                },
-                                onNavigateToSettings = {
-                                    showSettings = true
                                 }
                             )
                         }
@@ -407,7 +407,9 @@ fun Phil_Android_StoreApp(
 }
 
 @Composable
-fun TopBanner() {
+fun TopBanner(
+    onSettingsClick: () -> Unit = {}
+) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
     
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -432,12 +434,25 @@ fun TopBanner() {
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // Centered "Demo Store" text
                 Text(
                     text = "Demo Store",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+                
+                // Settings button in top right corner (white icon to match banner)
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer // White color to match banner
+                    )
+                }
             }
         }
     }
