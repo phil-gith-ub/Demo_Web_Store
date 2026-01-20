@@ -3,6 +3,7 @@ package com.example.phil_android_store.ui.screens.content
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,27 +32,43 @@ fun ContentScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Top row with title and user action button
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        // Top row with buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Title centered
-            Text(
-                text = "Content",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center)
-            )
+            // Enable Push button on the left
+            Button(
+                onClick = {
+                    // Braze SDK: Log custom event to Braze
+                    val brazeInstance = Braze.getInstance(context)
+                    brazeInstance.logCustomEvent("enable_push")
+                    brazeInstance.requestImmediateDataFlush()
+                }
+            ) {
+                Text("Enable Push")
+            }
             
-            // User Action button in top right
+            // Push Notification button in the middle
+            Button(
+                onClick = {
+                    // Braze SDK: Log custom event to Braze
+                    val brazeInstance = Braze.getInstance(context)
+                    brazeInstance.logCustomEvent("push_notification")
+                    brazeInstance.requestImmediateDataFlush()
+                }
+            ) {
+                Text("Push Notification")
+            }
+            
+            // User Action button on the right
             Button(
                 onClick = {
                     // Braze SDK: Log custom event to Braze
                     val brazeInstance = Braze.getInstance(context)
                     brazeInstance.logCustomEvent("user_action_button")
                     brazeInstance.requestImmediateDataFlush()
-                },
-                modifier = Modifier.align(Alignment.CenterEnd)
+                }
             ) {
                 Text("User Action")
             }
