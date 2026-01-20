@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Network Security Configuration: Allows cleartext traffic for images in in-app messages -->
+<!-- This is needed if Braze in-app messages contain HTTP image URLs -->
+<network-security-config>
+    <!-- Allow cleartext traffic for Braze CDN and common image domains -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">cdn.braze.com</domain>
+        <domain includeSubdomains="true">sondheim.braze.com</domain>
+        <domain includeSubdomains="true">i.imgur.com</domain>
+        <domain includeSubdomains="true">images.unsplash.com</domain>
+    </domain-config>
+    
+    <!-- Base configuration: HTTPS is still preferred -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
