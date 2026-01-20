@@ -11,6 +11,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -41,6 +45,7 @@ import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfile
 import com.example.phil_android_store.data.UserProfileManager
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onDarkModeChanged: (Boolean) -> Unit,
@@ -85,12 +90,22 @@ fun ProfileScreen(
         }
     }
     
+    // Product categories for dropdown
+    val productCategories = listOf(
+        "Electronics",
+        "Clothing",
+        "Appliances",
+        "Accessories",
+        "Fitness"
+    )
+    
     // Profile fields
     var firstName by rememberSaveable { mutableStateOf(currentProfile?.firstName ?: "") }
     var lastName by rememberSaveable { mutableStateOf(currentProfile?.lastName ?: "") }
     var email by rememberSaveable { mutableStateOf(currentProfile?.email ?: "") }
     var mobile by rememberSaveable { mutableStateOf(currentProfile?.mobile ?: "") }
     var favoriteCategory by rememberSaveable { mutableStateOf(currentProfile?.favoriteProductCategory ?: "") }
+    var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
     var isDarkMode by remember { mutableStateOf(currentProfile?.isDarkModeEnabled ?: false) }
     
     // Load profile when component initializes or user logs in
@@ -208,12 +223,39 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    OutlinedTextField(
-                        value = favoriteCategory,
-                        onValueChange = { favoriteCategory = it },
-                        label = { Text("Favorite Product Category") },
+                    // Favorite Product Category Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = isCategoryDropdownExpanded,
+                        onExpandedChange = { isCategoryDropdownExpanded = !isCategoryDropdownExpanded },
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) {
+                        OutlinedTextField(
+                            value = favoriteCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Favorite Product Category") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryDropdownExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = isCategoryDropdownExpanded,
+                            onDismissRequest = { isCategoryDropdownExpanded = false }
+                        ) {
+                            productCategories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        favoriteCategory = category
+                                        isCategoryDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                     
                     // Save button to update profile
                     Button(
