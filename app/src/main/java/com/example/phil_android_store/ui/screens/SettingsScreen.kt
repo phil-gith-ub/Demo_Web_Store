@@ -26,6 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,10 +44,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -102,6 +109,12 @@ fun SettingsScreen(
     var pushSenderId by remember { mutableStateOf(settingsManager.getPushSenderId()) }
     var isPushSenderIdEditable by remember { mutableStateOf(false) }
     var pushSenderIdEditValue by remember { mutableStateOf(pushSenderId) }
+    
+    // Push Token dialog state
+    var showPushTokenDialog by remember { mutableStateOf(false) }
+    var pushToken by remember { mutableStateOf<String?>(null) }
+    var isLoadingToken by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     
     // Deep link state
     var selectedDeepLink by remember { mutableStateOf<String?>(null) }
@@ -321,11 +334,42 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Push Sender ID",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Push Sender ID",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Button(
+                                onClick = {
+                                    isLoadingToken = true
+                                    showPushTokenDialog = true
+                                    pushToken = null
+                                    // Get FCM token
+                                    scope.launch {
+                                        try {
+                                            val token = FirebaseMessaging.getInstance().token.await()
+                                            pushToken = token
+                                        } catch (e: Exception) {
+                                            pushToken = "Error: ${e.message}"
+                                        } finally {
+                                            isLoadingToken = false
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Text(
+                                    text = "Show Push Token",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                         IconButton(
                             onClick = {
                                 if (isPushSenderIdEditable) {
@@ -487,6 +531,48 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+        
+        // Push Token Dialog
+        if (showPushTokenDialog) {
+            AlertDialog(
+                onDismissRequest = { showPushTokenDialog = false },
+                title = {
+                    Text("Push Token")
+                },
+                text = {
+                    if (isLoadingToken) {
+                        Text("Loading push token...")
+                    } else {
+                        Column {
+                            Text(
+                                text = pushToken ?: "No token available",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            if (pushToken != null && !pushToken!!.startsWith("Error")) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = ClipData.newPlainText("Push Token", pushToken)
+                                        clipboard.setPrimaryClip(clip)
+                                        Toast.makeText(context, "Push token copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Text("Copy to Clipboard")
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { showPushTokenDialog = false }
+                    ) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 }
