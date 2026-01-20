@@ -106,6 +106,7 @@ fun ProfileScreen(
     var mobile by rememberSaveable { mutableStateOf(currentProfile?.mobile ?: "") }
     var favoriteCategory by rememberSaveable { mutableStateOf(currentProfile?.favoriteProductCategory ?: "") }
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
+    var paidMembership by rememberSaveable { mutableStateOf(currentProfile?.paidMembership ?: false) }
     var isDarkMode by remember { mutableStateOf(currentProfile?.isDarkModeEnabled ?: false) }
     
     // Load profile when component initializes or user logs in
@@ -117,6 +118,7 @@ fun ProfileScreen(
             email = profile.email
             mobile = profile.mobile
             favoriteCategory = profile.favoriteProductCategory
+            paidMembership = profile.paidMembership
             isDarkMode = profile.isDarkModeEnabled
             onDarkModeChanged(isDarkMode)
         }
@@ -172,6 +174,7 @@ fun ProfileScreen(
                                 email = profile.email
                                 mobile = profile.mobile
                                 favoriteCategory = profile.favoriteProductCategory
+                                paidMembership = profile.paidMembership
                                 isDarkMode = profile.isDarkModeEnabled
                                 onDarkModeChanged(isDarkMode)
                                 
@@ -267,7 +270,8 @@ fun ProfileScreen(
                                 email = email,
                                 mobile = mobile,
                                 favoriteProductCategory = favoriteCategory,
-                                isDarkModeEnabled = isDarkMode
+                                isDarkModeEnabled = isDarkMode,
+                                paidMembership = paidMembership
                             )
                             profileManager.saveProfile(profile)
                             
@@ -293,6 +297,7 @@ fun ProfileScreen(
                             email = ""
                             mobile = ""
                             favoriteCategory = ""
+                            paidMembership = false
                             isDarkMode = false
                             onDarkModeChanged(false)
                             
@@ -335,6 +340,25 @@ fun ProfileScreen(
                             )
                         }
                     }
+                }
+                
+                // Paid Membership section
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Paid Membership",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Switch(
+                        checked = paidMembership,
+                        onCheckedChange = { paidMembership = it }
+                    )
                 }
             }
         }

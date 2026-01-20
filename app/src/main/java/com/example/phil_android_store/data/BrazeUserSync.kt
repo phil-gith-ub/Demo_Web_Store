@@ -29,7 +29,8 @@ object BrazeUserSync {
         val mobile: String? = null,
         val favoriteProductCategory: String? = null,
         val activeMember: Boolean? = null,
-        val vipMember: Boolean? = null
+        val vipMember: Boolean? = null,
+        val paidMembership: Boolean? = null
     )
     
     /**
@@ -59,7 +60,8 @@ object BrazeUserSync {
                 mobile = if (json.has("mobile")) json.getString("mobile") else null,
                 favoriteProductCategory = if (json.has("favoriteProductCategory")) json.getString("favoriteProductCategory") else null,
                 activeMember = if (json.has("activeMember")) json.getBoolean("activeMember") else null,
-                vipMember = if (json.has("vipMember")) json.getBoolean("vipMember") else null
+                vipMember = if (json.has("vipMember")) json.getBoolean("vipMember") else null,
+                paidMembership = if (json.has("paidMembership")) json.getBoolean("paidMembership") else null
             )
         } catch (e: Exception) {
             LastSentValues()
@@ -80,6 +82,7 @@ object BrazeUserSync {
         values.favoriteProductCategory?.let { json.put("favoriteProductCategory", it) }
         values.activeMember?.let { json.put("activeMember", it) }
         values.vipMember?.let { json.put("vipMember", it) }
+        values.paidMembership?.let { json.put("paidMembership", it) }
         
         prefs.edit().putString("${LAST_SENT_PREFIX}$userId", json.toString()).apply()
     }
@@ -183,6 +186,13 @@ object BrazeUserSync {
                 }
                 hasChanges = true
             }
+            
+            // Braze SDK: Only send paid_membership if it changed (delta tracking)
+            if (profile.paidMembership != lastSent.paidMembership) {
+                // Braze SDK: Set custom user attribute
+                user.setCustomUserAttribute("paid_membership", profile.paidMembership)
+                hasChanges = true
+            }
         }
         
         // Update last sent values if there were changes
@@ -197,7 +207,8 @@ object BrazeUserSync {
                     mobile = currentMobile,
                     favoriteProductCategory = currentCategory,
                     activeMember = lastSent.activeMember, // Preserve activeMember value
-                    vipMember = lastSent.vipMember // Preserve vipMember value
+                    vipMember = lastSent.vipMember, // Preserve vipMember value
+                    paidMembership = if (profile.paidMembership != lastSent.paidMembership) profile.paidMembership else lastSent.paidMembership // Update if changed, preserve otherwise
                 )
             )
             

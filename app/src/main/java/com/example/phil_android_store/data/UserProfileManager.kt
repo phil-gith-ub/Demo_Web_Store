@@ -94,7 +94,8 @@ class UserProfileManager(private val context: Context) {
                         email = profileJson.optString("email", ""),
                         mobile = profileJson.optString("mobile", ""),
                         favoriteProductCategory = profileJson.optString("favoriteProductCategory", ""),
-                        isDarkModeEnabled = profileJson.optBoolean("isDarkModeEnabled", false)
+                        isDarkModeEnabled = profileJson.optBoolean("isDarkModeEnabled", false),
+                        paidMembership = profileJson.optBoolean("paidMembership", false)
                     )
                 }
             } catch (e: Exception) {
@@ -120,6 +121,7 @@ class UserProfileManager(private val context: Context) {
                     put("mobile", profile.mobile)
                     put("favoriteProductCategory", profile.favoriteProductCategory)
                     put("isDarkModeEnabled", profile.isDarkModeEnabled)
+                    put("paidMembership", profile.paidMembership)
                 }
                 jsonObject.put(userId, profileJson)
             }

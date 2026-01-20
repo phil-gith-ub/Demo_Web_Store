@@ -7,5 +7,6 @@ data class UserProfile(
     var email: String = "",
     var mobile: String = "",
     var favoriteProductCategory: String = "",
-    var isDarkModeEnabled: Boolean = false
+    var isDarkModeEnabled: Boolean = false,
+    var paidMembership: Boolean = false
 )
