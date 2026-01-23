@@ -38,6 +38,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.Image
 import android.content.Intent
@@ -48,6 +50,7 @@ import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.Color
 
 /**
  * Content screen for demonstrating Braze Content Cards and Banners.
@@ -193,6 +196,25 @@ fun ContentScreen() {
                     .fillMaxWidth()
                     .padding(top = 24.dp) // Gap for notification banner
             )
+            
+            // Content Cards: Tile 2 and Tile 3 (1x1 square style, side by side)
+            // Braze SDK: Two smaller Content Cards displayed next to each other
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Tile 2 - Left side
+                Tile2ContentCard(
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Tile 3 - Right side
+                Tile3ContentCard(
+                    modifier = Modifier.weight(1f)
+                )
+            }
             
             // Blank content area for additional content cards and banners
             Box(
@@ -553,12 +575,26 @@ fun Tile1ContentCard(
                     
                     // Text content (if available)
                     if (cardData.title != null || cardData.description != null) {
-                        Column(
+                        // Add background to text section for visibility in light theme
+                        val isDarkTheme = isSystemInDarkTheme()
+                        val textBackgroundColor = if (isDarkTheme) {
+                            Color.Transparent // No background needed in dark theme
+                        } else {
+                            // Light grey/purple tint for light theme
+                            Color(0xFFF5F3F7) // Light purple-grey
+                        }
+                        
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .background(textBackgroundColor)
                         ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                             if (cardData.title != null) {
                                 Text(
                                     text = cardData.title,
@@ -593,6 +629,615 @@ fun Tile1ContentCard(
                     Text(
                         text = "Content Card",
                         style = MaterialTheme.typography.titleMedium,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "location = $locationKey",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Content Card Fragment: Tile 2
+ * 
+ * Braze SDK: Custom Content Card implementation (1x1 square style)
+ * - Filters Content Cards by key-value pair: location = tile_2
+ * - Displays as 1x1 square (equal width and height)
+ * - Logs analytics (impressions and clicks) to Braze dashboard
+ * - Shows placeholder when no content is available
+ * 
+ * To duplicate this for another card:
+ * 1. Copy this function and rename (e.g., Tile4ContentCard)
+ * 2. Change the locationKey value (e.g., "tile_4")
+ * 3. Update the placeholder text accordingly
+ * 4. Add the new component to ContentScreen
+ */
+@Composable
+fun Tile2ContentCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+    
+    // Braze SDK: Key-value pair filter - location = tile_2
+    val locationKey = "tile_2"
+    
+    // Braze SDK: State to hold the filtered Content Card
+    var contentCard by remember { mutableStateOf<Any?>(null) }
+    var hasCard by remember { mutableStateOf(false) }
+    
+    // Braze SDK: Subscribe to Content Cards updates
+    DisposableEffect(Unit) {
+        // Braze SDK: Request initial refresh
+        BrazeUserSync.requestContentCardsRefresh(context)
+        
+        // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Braze SDK: Debug logging - log all received cards and their extras
+            Log.d("Tile2ContentCard", "Received ${cards.size} Content Cards")
+            
+            // Braze SDK: Filter cards by location = tile_2 from extras
+            var foundCard: Any? = null
+            for (card in cards) {
+                // Check if card is a control card (try multiple methods/approaches)
+                var isControl = false
+                try {
+                    val isControlMethod = card.javaClass.getMethod("isControlCard")
+                    isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val isControlField = card.javaClass.getDeclaredField("isControl")
+                        isControlField.isAccessible = true
+                        isControl = isControlField.get(card) as? Boolean ?: false
+                    } catch (e2: Exception) {
+                        val className = card.javaClass.simpleName
+                        isControl = className.contains("Control", ignoreCase = true)
+                    }
+                } catch (e: Exception) {
+                    Log.d("Tile2ContentCard", "Could not check control status, proceeding: ${e.message}")
+                }
+                
+                if (isControl) continue
+                
+                // Try to get extras and process the card
+                try {
+                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                    
+                    // Filter by location = tile_2
+                    if (extras != null) {
+                        var locationValue: Any? = null
+                        for ((key, value) in extras) {
+                            val keyStr = key?.toString()?.lowercase()
+                            if (keyStr == "location") {
+                                locationValue = value
+                                break
+                            }
+                        }
+                        
+                        if (locationValue == null) {
+                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                        }
+                        
+                        if (locationValue?.toString() == locationKey) {
+                            Log.d("Tile2ContentCard", "✓ Found matching card! location=$locationValue")
+                            foundCard = card
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Tile2ContentCard", "Error processing card (skipping): ${e.message}")
+                    continue
+                }
+            }
+            
+            contentCard = foundCard
+            hasCard = foundCard != null
+        }
+        
+        // Braze SDK: Initial check - subscription callback will handle card updates
+        Log.d("Tile2ContentCard", "Subscribed to Content Cards updates - waiting for cards...")
+        
+        // Braze SDK: Cleanup - unsubscribe when component is removed
+        onDispose {
+            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+        }
+    }
+    
+    // Braze SDK: Extract card properties (title, description, image, URL)
+    val cardData = remember(contentCard) {
+        if (contentCard != null) {
+            try {
+                val card = contentCard!!
+                var title: String? = null
+                var description: String? = null
+                var imageUrl: String? = null
+                var cardUrl: String? = null
+                
+                try {
+                    val getTitleMethod = card.javaClass.getMethod("getTitle")
+                    title = getTitleMethod.invoke(card) as? String
+                } catch (e: Exception) {}
+                
+                try {
+                    val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
+                    description = getDescriptionMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val getDescriptionMethod = card.javaClass.getMethod("getDescription")
+                        description = getDescriptionMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                try {
+                    val getImageMethod = card.javaClass.getMethod("getImage")
+                    imageUrl = getImageMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val getImageMethod = card.javaClass.getMethod("getImageUrl")
+                        imageUrl = getImageMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                try {
+                    val getUrlMethod = card.javaClass.getMethod("getUrlString")
+                    cardUrl = getUrlMethod.invoke(card) as? String
+                } catch (e: Exception) {
+                    try {
+                        val getUrlMethod = card.javaClass.getMethod("getUrl")
+                        cardUrl = getUrlMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                CardData(title, description, imageUrl, cardUrl)
+            } catch (e: Exception) {
+                Log.e("Tile2ContentCard", "Error extracting card data: ${e.message}", e)
+                null
+            }
+        } else {
+            null
+        }
+    }
+    
+    // Braze SDK: Log impression when card is displayed
+    LaunchedEffect(contentCard) {
+        if (contentCard != null) {
+            try {
+                val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
+                logImpressionMethod.invoke(contentCard)
+                Log.d("Tile2ContentCard", "Logged Content Card impression")
+            } catch (e: Exception) {
+                Log.e("Tile2ContentCard", "Error logging impression: ${e.message}", e)
+            }
+        }
+    }
+    
+    // Display card or placeholder
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f) // 1x1 square style (width:height = 1:1)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = hasCard && cardData?.cardUrl != null) {
+                // Braze SDK: Log click analytics
+                if (contentCard != null) {
+                    try {
+                        val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
+                        logClickMethod.invoke(contentCard)
+                        Log.d("Tile2ContentCard", "Logged Content Card click")
+                    } catch (e: Exception) {
+                        Log.e("Tile2ContentCard", "Error logging click: ${e.message}", e)
+                    }
+                }
+                
+                // Handle click - check if it's a deep link
+                val cardUrl = cardData?.cardUrl
+                if (cardUrl != null) {
+                    if (cardUrl.startsWith("philstore://")) {
+                        try {
+                            val uri = Uri.parse(cardUrl)
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            intent.setPackage(context.packageName)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("Tile2ContentCard", "Error handling deep link: ${e.message}", e)
+                        }
+                    }
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        border = if (!hasCard) {
+            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
+        } else null,
+        shadowElevation = if (hasCard) 4.dp else 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (hasCard && cardData != null) {
+                // Braze SDK: Display Content Card with image and/or text
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Image (if available) - fills most of the space
+                    if (cardData.imageUrl != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(cardData.imageUrl),
+                            contentDescription = cardData.title ?: "Content Card Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    
+                    // Text content (if available)
+                    if (cardData.title != null || cardData.description != null) {
+                        // Add background to text section for visibility in light theme
+                        val isDarkTheme = isSystemInDarkTheme()
+                        val textBackgroundColor = if (isDarkTheme) {
+                            Color.Transparent // No background needed in dark theme
+                        } else {
+                            // Light grey/purple tint for light theme
+                            Color(0xFFF5F3F7) // Light purple-grey
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(textBackgroundColor)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (cardData.title != null) {
+                                    Text(
+                                        text = cardData.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                
+                                if (cardData.description != null) {
+                                    Text(
+                                        text = cardData.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Placeholder: Show when no content is available
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Content Card",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "location = $locationKey",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Content Card Fragment: Tile 3
+ * 
+ * Braze SDK: Custom Content Card implementation (1x1 square style)
+ * - Filters Content Cards by key-value pair: location = tile_3
+ * - Displays as 1x1 square (equal width and height)
+ * - Logs analytics (impressions and clicks) to Braze dashboard
+ * - Shows placeholder when no content is available
+ */
+@Composable
+fun Tile3ContentCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+    
+    // Braze SDK: Key-value pair filter - location = tile_3
+    val locationKey = "tile_3"
+    
+    // Braze SDK: State to hold the filtered Content Card
+    var contentCard by remember { mutableStateOf<Any?>(null) }
+    var hasCard by remember { mutableStateOf(false) }
+    
+    // Braze SDK: Subscribe to Content Cards updates
+    DisposableEffect(Unit) {
+        // Braze SDK: Request initial refresh
+        BrazeUserSync.requestContentCardsRefresh(context)
+        
+        // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Braze SDK: Filter cards by location = tile_3 from extras
+            var foundCard: Any? = null
+            for (card in cards) {
+                // Check if card is a control card
+                var isControl = false
+                try {
+                    val isControlMethod = card.javaClass.getMethod("isControlCard")
+                    isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val isControlField = card.javaClass.getDeclaredField("isControl")
+                        isControlField.isAccessible = true
+                        isControl = isControlField.get(card) as? Boolean ?: false
+                    } catch (e2: Exception) {
+                        val className = card.javaClass.simpleName
+                        isControl = className.contains("Control", ignoreCase = true)
+                    }
+                } catch (e: Exception) {
+                    Log.d("Tile3ContentCard", "Could not check control status, proceeding: ${e.message}")
+                }
+                
+                if (isControl) continue
+                
+                // Try to get extras and process the card
+                try {
+                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                    
+                    // Filter by location = tile_3
+                    if (extras != null) {
+                        var locationValue: Any? = null
+                        for ((key, value) in extras) {
+                            val keyStr = key?.toString()?.lowercase()
+                            if (keyStr == "location") {
+                                locationValue = value
+                                break
+                            }
+                        }
+                        
+                        if (locationValue == null) {
+                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                        }
+                        
+                        if (locationValue?.toString() == locationKey) {
+                            Log.d("Tile3ContentCard", "✓ Found matching card! location=$locationValue")
+                            foundCard = card
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Tile3ContentCard", "Error processing card (skipping): ${e.message}")
+                    continue
+                }
+            }
+            
+            contentCard = foundCard
+            hasCard = foundCard != null
+        }
+        
+        // Braze SDK: Initial check - subscription callback will handle card updates
+        Log.d("Tile3ContentCard", "Subscribed to Content Cards updates - waiting for cards...")
+        
+        // Braze SDK: Cleanup - unsubscribe when component is removed
+        onDispose {
+            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+        }
+    }
+    
+    // Braze SDK: Extract card properties (title, description, image, URL)
+    val cardData = remember(contentCard) {
+        if (contentCard != null) {
+            try {
+                val card = contentCard!!
+                var title: String? = null
+                var description: String? = null
+                var imageUrl: String? = null
+                var cardUrl: String? = null
+                
+                try {
+                    val getTitleMethod = card.javaClass.getMethod("getTitle")
+                    title = getTitleMethod.invoke(card) as? String
+                } catch (e: Exception) {}
+                
+                try {
+                    val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
+                    description = getDescriptionMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val getDescriptionMethod = card.javaClass.getMethod("getDescription")
+                        description = getDescriptionMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                try {
+                    val getImageMethod = card.javaClass.getMethod("getImage")
+                    imageUrl = getImageMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val getImageMethod = card.javaClass.getMethod("getImageUrl")
+                        imageUrl = getImageMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                try {
+                    val getUrlMethod = card.javaClass.getMethod("getUrlString")
+                    cardUrl = getUrlMethod.invoke(card) as? String
+                } catch (e: Exception) {
+                    try {
+                        val getUrlMethod = card.javaClass.getMethod("getUrl")
+                        cardUrl = getUrlMethod.invoke(card) as? String
+                    } catch (e2: Exception) {}
+                }
+                
+                CardData(title, description, imageUrl, cardUrl)
+            } catch (e: Exception) {
+                Log.e("Tile3ContentCard", "Error extracting card data: ${e.message}", e)
+                null
+            }
+        } else {
+            null
+        }
+    }
+    
+    // Braze SDK: Log impression when card is displayed
+    LaunchedEffect(contentCard) {
+        if (contentCard != null) {
+            try {
+                val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
+                logImpressionMethod.invoke(contentCard)
+                Log.d("Tile3ContentCard", "Logged Content Card impression")
+            } catch (e: Exception) {
+                Log.e("Tile3ContentCard", "Error logging impression: ${e.message}", e)
+            }
+        }
+    }
+    
+    // Display card or placeholder
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f) // 1x1 square style (width:height = 1:1)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = hasCard && cardData?.cardUrl != null) {
+                // Braze SDK: Log click analytics
+                if (contentCard != null) {
+                    try {
+                        val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
+                        logClickMethod.invoke(contentCard)
+                        Log.d("Tile3ContentCard", "Logged Content Card click")
+                    } catch (e: Exception) {
+                        Log.e("Tile3ContentCard", "Error logging click: ${e.message}", e)
+                    }
+                }
+                
+                // Handle click - check if it's a deep link
+                val cardUrl = cardData?.cardUrl
+                if (cardUrl != null) {
+                    if (cardUrl.startsWith("philstore://")) {
+                        try {
+                            val uri = Uri.parse(cardUrl)
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            intent.setPackage(context.packageName)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("Tile3ContentCard", "Error handling deep link: ${e.message}", e)
+                        }
+                    }
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        border = if (!hasCard) {
+            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
+        } else null,
+        shadowElevation = if (hasCard) 4.dp else 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (hasCard && cardData != null) {
+                // Braze SDK: Display Content Card with image and/or text
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Image (if available) - fills most of the space
+                    if (cardData.imageUrl != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(cardData.imageUrl),
+                            contentDescription = cardData.title ?: "Content Card Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    
+                    // Text content (if available)
+                    if (cardData.title != null || cardData.description != null) {
+                        // Add background to text section for visibility in light theme
+                        val isDarkTheme = isSystemInDarkTheme()
+                        val textBackgroundColor = if (isDarkTheme) {
+                            Color.Transparent // No background needed in dark theme
+                        } else {
+                            // Light grey/purple tint for light theme
+                            Color(0xFFF5F3F7) // Light purple-grey
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(textBackgroundColor)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (cardData.title != null) {
+                                    Text(
+                                        text = cardData.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                
+                                if (cardData.description != null) {
+                                    Text(
+                                        text = cardData.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Placeholder: Show when no content is available
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Content Card",
+                        style = MaterialTheme.typography.titleSmall,
                         color = colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
