@@ -305,17 +305,17 @@ private fun LogEntryCard(
     val eventText = logEntry.event
     
     // Parse different clickable patterns:
-    // 1. logPurchase('productId', 'USD', 29.99, 1, ...) - clickable productId
+    // 1. logPurchase('productId') - clickable productId (consolidated format)
     // 2. logCustomEvent('eventName') - clickable eventName
     // 3. matchCard(location='tile_2') - clickable location
     // 4. getContentCards() → List(X) - clickable card count
     
     val clickableEventName = if (hasPayload) {
         when {
-            // logPurchase('productId', 'USD', ...) - make productId clickable
-            eventText.startsWith("logPurchase('") -> {
+            // logPurchase('productId') - make productId clickable (consolidated format)
+            eventText.startsWith("logPurchase('") && eventText.endsWith("')") -> {
                 val startIdx = 13 // After "logPurchase('"
-                val endIdx = eventText.indexOf("'", startIdx)
+                val endIdx = eventText.length - 2 // Before "')"
                 if (endIdx > startIdx) {
                     eventText.substring(startIdx, endIdx)
                 } else null

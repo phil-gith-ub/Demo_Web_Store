@@ -163,27 +163,21 @@ object BrazeLogManager {
     
     /**
      * Log purchase event (actual Braze SDK method)
+     * Consolidated format: logPurchase('productId') with full payload in clickable link
      */
     fun logPurchase(productId: String, currencyCode: String, price: Double, quantity: Int, properties: Map<String, Any>? = null) {
-        val propsStr = if (properties != null && properties.isNotEmpty()) {
-            val props = properties.entries.joinToString(", ") { "${it.key}='${it.value}'" }
-            ", properties={$props}"
-        } else ""
+        // Build full payload with all purchase details
+        val fullPayload = (properties ?: emptyMap()).plus(mapOf(
+            "product_id" to productId,
+            "currency" to currencyCode,
+            "price" to price,
+            "quantity" to quantity
+        ))
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "logPurchase('$productId', '$currencyCode', $price, $quantity$propsStr)",
+            event = "logPurchase('$productId')",
             type = BrazeLogEntry.LogType.EVENT,
-            payload = properties?.plus(mapOf(
-                "product_id" to productId,
-                "currency" to currencyCode,
-                "price" to price,
-                "quantity" to quantity
-            )) ?: mapOf(
-                "product_id" to productId,
-                "currency" to currencyCode,
-                "price" to price,
-                "quantity" to quantity
-            )
+            payload = fullPayload
         ))
     }
     
