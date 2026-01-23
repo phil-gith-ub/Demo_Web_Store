@@ -156,49 +156,53 @@ fun ContentScreen() {
                 }
             }
             
-            // Notification banner positioned underneath the buttons
-            AnimatedVisibility(
-                visible = notificationMessage != null,
-                enter = fadeIn(animationSpec = tween(300)),
-                exit = fadeOut(animationSpec = tween(300)),
+            // Content Card: Tile 1 (2:1 banner layout)
+            // Filters Braze Content Cards by key-value pair: location = tile_1
+            // Adaptive layout: Square images display side-by-side, wide images display top-to-bottom
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = 24.dp)
             ) {
-                notificationMessage?.let { message ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 0.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shadowElevation = 4.dp
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            contentAlignment = Alignment.Center
+                // Tile1 card - fixed position
+                Tile1ContentCard(
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                // Floating notification banner - overlays the top of Tile1
+                AnimatedVisibility(
+                    visible = notificationMessage != null,
+                    enter = fadeIn(animationSpec = tween(300)),
+                    exit = fadeOut(animationSpec = tween(300)),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    notificationMessage?.let { message ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shadowElevation = 8.dp
                         ) {
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
                 }
             }
-            
-            // Content Card: Tile 1 (2:1 banner layout)
-            // Filters Braze Content Cards by key-value pair: location = tile_1
-            // Adaptive layout: Square images display side-by-side, wide images display top-to-bottom
-            Tile1ContentCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp) // Spacing for notification banner
-            )
             
             // Content Cards: Tile 2 and Tile 3 (1:1 square layout, side-by-side)
             // Filters by location = tile_2 and tile_3 respectively
