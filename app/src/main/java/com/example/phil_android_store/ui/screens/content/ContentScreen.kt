@@ -1471,12 +1471,15 @@ fun ContentBanner(
                         val customWebViewClient = object : android.webkit.WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
                                 android.util.Log.d("ContentBanner", "[update] shouldOverrideUrlLoading called with URL: $url")
-                                if (url != null && url.startsWith("philstore://")) {
-                                    android.util.Log.d("ContentBanner", "[update] Deep link detected, calling handleDeepLink")
-                                    handleDeepLink(url)
-                                    return true
+                                if (url != null) {
+                                    android.util.Log.d("ContentBanner", "[update] Full URL details - scheme: ${android.net.Uri.parse(url).scheme}, host: ${android.net.Uri.parse(url).host}")
+                                    if (url.startsWith("philstore://")) {
+                                        android.util.Log.d("ContentBanner", "[update] Deep link detected, calling handleDeepLink")
+                                        handleDeepLink(url)
+                                        return true
+                                    }
                                 }
-                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link, returning false")
+                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link, allowing WebView to handle: $url")
                                 return false
                             }
                             
@@ -1939,8 +1942,119 @@ fun ContentBanner(
                                             </body>
                                             </html>
                                         """.trimIndent()
-                                        webView.loadDataWithBaseURL(null, wrappedHtml, "text/html", "UTF-8", null)
-                                        android.util.Log.d("ContentBanner", "✓ Loaded HTML content with custom WebViewClient")
+                                        // Inject navigation interceptors BEFORE loading HTML to catch early navigation
+                                        val preloadJs = """
+                                            (function() {
+                                                console.log('ContentBanner: Pre-load navigation interceptors installing...');
+                                                
+                                                function handleDeepLink(url) {
+                                                    console.log('ContentBanner: handleDeepLink called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        console.log('ContentBanner: Deep link detected:', url);
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            console.log('ContentBanner: Using AndroidDeepLinkHandler');
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        }
+                                                        console.warn('ContentBanner: AndroidDeepLinkHandler not available yet');
+                                                        return false;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                // Store original functions
+                                                window._originalLocationHref = window.location.href;
+                                                window._originalOpen = window.open;
+                                                window._originalAssign = window.location.assign;
+                                                window._originalReplace = window.location.replace;
+                                                
+                                                // Intercept window.location.href
+                                                try {
+                                                    Object.defineProperty(window.location, 'href', {
+                                                        set: function(url) {
+                                                            console.log('ContentBanner: window.location.href SET to:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                if (handleDeepLink(url)) return;
+                                                            }
+                                                            window._originalLocationHref = url;
+                                                            window.location.replace(url);
+                                                        },
+                                                        get: function() {
+                                                            return window._originalLocationHref || '';
+                                                        },
+                                                        configurable: true
+                                                    });
+                                                    console.log('ContentBanner: window.location.href interceptor installed');
+                                                } catch(e) {
+                                                    console.error('ContentBanner: Failed to intercept location.href:', e);
+                                                }
+                                                
+                                                // Intercept window.open
+                                                window.open = function(url, target, features) {
+                                                    console.log('ContentBanner: window.open called with:', url, target, features);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return null;
+                                                    }
+                                                    return window._originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.assign
+                                                window.location.assign = function(url) {
+                                                    console.log('ContentBanner: window.location.assign called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalAssign.apply(window.location, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.replace
+                                                window.location.replace = function(url) {
+                                                    console.log('ContentBanner: window.location.replace called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalReplace.apply(window.location, arguments);
+                                                };
+                                                
+                                                console.log('ContentBanner: Pre-load navigation interceptors installed');
+                                            })();
+                                        """.trimIndent()
+                                        
+                                        // Wrap HTML to inject interceptors immediately
+                                        val htmlWithInterceptors = """
+                                            <!DOCTYPE html>
+                                            <html>
+                                            <head>
+                                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                                <script>
+                                                    $preloadJs
+                                                </script>
+                                                <style>
+                                                    body {
+                                                        margin: 0;
+                                                        padding: 0;
+                                                        display: flex;
+                                                        justify-content: center;
+                                                        align-items: center;
+                                                        min-height: 100%;
+                                                        background-color: transparent;
+                                                    }
+                                                    html {
+                                                        background-color: transparent;
+                                                    }
+                                                    * {
+                                                        max-width: 100%;
+                                                    }
+                                                </style>
+                                            </head>
+                                            <body>
+                                                $htmlContent
+                                            </body>
+                                            </html>
+                                        """.trimIndent()
+                                        
+                                        webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
+                                        android.util.Log.d("ContentBanner", "✓ Loaded HTML content with pre-loaded interceptors and custom WebViewClient")
                                         
                                         // Inject JavaScript after HTML loads (same as insertBanner path)
                                         webView.postDelayed({
