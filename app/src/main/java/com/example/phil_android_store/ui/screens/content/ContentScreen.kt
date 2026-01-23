@@ -1528,6 +1528,73 @@ fun ContentBanner(
                                                     return false;
                                                 }
                                                 
+                                                // Intercept window.location changes
+                                                var originalLocationHref = Object.getOwnPropertyDescriptor(window, 'location') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), 'location');
+                                                if (originalLocationHref && originalLocationHref.set) {
+                                                    Object.defineProperty(window, 'location', {
+                                                        set: function(url) {
+                                                            console.log('ContentBanner: window.location set to:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                handleDeepLink(url);
+                                                                return;
+                                                            }
+                                                            originalLocationHref.set.call(window, url);
+                                                        },
+                                                        get: originalLocationHref.get
+                                                    });
+                                                }
+                                                
+                                                // Intercept window.location.href
+                                                var originalHref = Object.getOwnPropertyDescriptor(window.location, 'href') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window.location), 'href');
+                                                if (originalHref && originalHref.set) {
+                                                    Object.defineProperty(window.location, 'href', {
+                                                        set: function(url) {
+                                                            console.log('ContentBanner: window.location.href set to:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                handleDeepLink(url);
+                                                                return;
+                                                            }
+                                                            originalHref.set.call(window.location, url);
+                                                        },
+                                                        get: originalHref.get
+                                                    });
+                                                }
+                                                
+                                                // Intercept window.open
+                                                var originalOpen = window.open;
+                                                window.open = function(url, target, features) {
+                                                    console.log('ContentBanner: window.open called with:', url, target, features);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return null;
+                                                    }
+                                                    return originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.assign
+                                                var originalAssign = window.location.assign;
+                                                window.location.assign = function(url) {
+                                                    console.log('ContentBanner: window.location.assign called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return;
+                                                    }
+                                                    return originalAssign.apply(window.location, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.replace
+                                                var originalReplace = window.location.replace;
+                                                window.location.replace = function(url) {
+                                                    console.log('ContentBanner: window.location.replace called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return;
+                                                    }
+                                                    return originalReplace.apply(window.location, arguments);
+                                                };
+                                                
+                                                console.log('ContentBanner: Navigation interceptors installed');
+                                                
                                                 function setupClickInterceptors() {
                                                     // Intercept all clicks at document level (most aggressive)
                                                     document.addEventListener('click', function(e) {
@@ -1879,26 +1946,93 @@ fun ContentBanner(
                                         webView.postDelayed({
                                             try {
                                                 android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor (getHtml path)")
-                                                val jsCode = """
-                                                    (function() {
-                                                        console.log('ContentBanner: Deep link interceptor script loaded (getHtml path)');
-                                                        
-                                                        function handleDeepLink(url) {
-                                                            console.log('ContentBanner: handleDeepLink called with:', url);
-                                                            if (url && url.startsWith('philstore://')) {
-                                                                console.log('ContentBanner: Deep link detected:', url);
-                                                                if (window.AndroidDeepLinkHandler) {
-                                                                    console.log('ContentBanner: Using AndroidDeepLinkHandler');
-                                                                    window.AndroidDeepLinkHandler.handleDeepLink(url);
-                                                                    return true;
-                                                                } else {
-                                                                    console.warn('ContentBanner: AndroidDeepLinkHandler not available, using location.href');
-                                                                }
-                                                                window.location.href = url;
-                                                                return true;
-                                                            }
-                                                            return false;
+                                        val jsCode = """
+                                            (function() {
+                                                console.log('ContentBanner: Deep link interceptor script loaded (getHtml path)');
+                                                
+                                                function handleDeepLink(url) {
+                                                    console.log('ContentBanner: handleDeepLink called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        console.log('ContentBanner: Deep link detected:', url);
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            console.log('ContentBanner: Using AndroidDeepLinkHandler');
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        } else {
+                                                            console.warn('ContentBanner: AndroidDeepLinkHandler not available, using location.href');
                                                         }
+                                                        window.location.href = url;
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                // Intercept window.location changes
+                                                var originalLocationHref = Object.getOwnPropertyDescriptor(window, 'location') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), 'location');
+                                                if (originalLocationHref && originalLocationHref.set) {
+                                                    Object.defineProperty(window, 'location', {
+                                                        set: function(url) {
+                                                            console.log('ContentBanner: window.location set to:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                handleDeepLink(url);
+                                                                return;
+                                                            }
+                                                            originalLocationHref.set.call(window, url);
+                                                        },
+                                                        get: originalLocationHref.get
+                                                    });
+                                                }
+                                                
+                                                // Intercept window.location.href
+                                                var originalHref = Object.getOwnPropertyDescriptor(window.location, 'href') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window.location), 'href');
+                                                if (originalHref && originalHref.set) {
+                                                    Object.defineProperty(window.location, 'href', {
+                                                        set: function(url) {
+                                                            console.log('ContentBanner: window.location.href set to:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                handleDeepLink(url);
+                                                                return;
+                                                            }
+                                                            originalHref.set.call(window.location, url);
+                                                        },
+                                                        get: originalHref.get
+                                                    });
+                                                }
+                                                
+                                                // Intercept window.open
+                                                var originalOpen = window.open;
+                                                window.open = function(url, target, features) {
+                                                    console.log('ContentBanner: window.open called with:', url, target, features);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return null;
+                                                    }
+                                                    return originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.assign
+                                                var originalAssign = window.location.assign;
+                                                window.location.assign = function(url) {
+                                                    console.log('ContentBanner: window.location.assign called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return;
+                                                    }
+                                                    return originalAssign.apply(window.location, arguments);
+                                                };
+                                                
+                                                // Intercept window.location.replace
+                                                var originalReplace = window.location.replace;
+                                                window.location.replace = function(url) {
+                                                    console.log('ContentBanner: window.location.replace called with:', url);
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        handleDeepLink(url);
+                                                        return;
+                                                    }
+                                                    return originalReplace.apply(window.location, arguments);
+                                                };
+                                                
+                                                console.log('ContentBanner: Navigation interceptors installed');
                                                         
                                                         function setupClickInterceptors() {
                                                             // Intercept all clicks at document level (most aggressive)
@@ -1930,6 +2064,22 @@ fun ContentBanner(
                                                                     console.log('ContentBanner: Clicked element:', clicked.tagName, clicked.className, clicked.id);
                                                                     console.log('ContentBanner: Clicked element attributes:', clicked.getAttribute('onclick'), clicked.getAttribute('data-href'), clicked.getAttribute('href'));
                                                                     console.log('ContentBanner: Clicked element innerHTML:', clicked.innerHTML ? clicked.innerHTML.substring(0, 100) : 'none');
+                                                                    
+                                                                    // Log ALL data attributes
+                                                                    var allAttrs = clicked.attributes;
+                                                                    var dataAttrs = [];
+                                                                    for (var i = 0; i < allAttrs.length; i++) {
+                                                                        var attr = allAttrs[i];
+                                                                        if (attr.name.startsWith('data-') || attr.name === 'href' || attr.name === 'onclick') {
+                                                                            dataAttrs.push(attr.name + '=' + attr.value);
+                                                                        }
+                                                                    }
+                                                                    console.log('ContentBanner: All relevant attributes:', dataAttrs.join(', '));
+                                                                    
+                                                                    // Check if button has a form or action
+                                                                    if (clicked.form) {
+                                                                        console.log('ContentBanner: Button has form with action:', clicked.form.action);
+                                                                    }
                                                                     
                                                                     // Try to extract deep link from various sources
                                                                     var deepLink = null;
