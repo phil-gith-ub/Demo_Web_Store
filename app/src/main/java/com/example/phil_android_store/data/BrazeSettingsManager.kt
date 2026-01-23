@@ -13,6 +13,7 @@ class BrazeSettingsManager(private val context: Context) {
     private val KEY_API_KEY = "braze_api_key"
     private val KEY_ENDPOINT = "braze_endpoint"
     private val KEY_PUSH_SENDER_ID = "braze_push_sender_id"
+    private val KEY_AUTO_REFRESH_CONTENT_CARDS = "auto_refresh_content_cards"
     
     /**
      * Get the Braze API key.
@@ -114,5 +115,20 @@ class BrazeSettingsManager(private val context: Context) {
      */
     fun setPushSenderId(senderId: String) {
         prefs.edit().putString(KEY_PUSH_SENDER_ID, senderId).apply()
+    }
+    
+    /**
+     * Get the auto-refresh Content Cards setting.
+     * Defaults to true (enabled) if not set.
+     */
+    fun getAutoRefreshContentCards(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_REFRESH_CONTENT_CARDS, true) // Default to true (enabled)
+    }
+    
+    /**
+     * Set the auto-refresh Content Cards setting (saves to SharedPreferences)
+     */
+    fun setAutoRefreshContentCards(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_REFRESH_CONTENT_CARDS, enabled).apply()
     }
 }

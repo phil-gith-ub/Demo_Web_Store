@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -112,6 +113,9 @@ fun SettingsScreen(
     var pushToken by remember { mutableStateOf<String?>(null) }
     var isLoadingToken by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    
+    // Auto-refresh Content Cards state
+    var autoRefreshContentCards by remember { mutableStateOf(settingsManager.getAutoRefreshContentCards()) }
     
     // Available deep links
     val deepLinks = listOf(
@@ -389,6 +393,43 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isPushSenderIdEditable,
                         readOnly = !isPushSenderIdEditable
+                    )
+                }
+            }
+            
+            // Auto-refresh Content Cards setting
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Auto requestContentCardsRefresh()",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Automatically refresh Content Cards when entering the Content page",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = autoRefreshContentCards,
+                        onCheckedChange = {
+                            autoRefreshContentCards = it
+                            settingsManager.setAutoRefreshContentCards(it)
+                        }
                     )
                 }
             }

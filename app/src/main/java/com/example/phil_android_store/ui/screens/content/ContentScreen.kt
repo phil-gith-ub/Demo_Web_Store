@@ -44,6 +44,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import com.braze.Braze
+import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,7 +56,19 @@ import kotlinx.coroutines.launch
 @Composable
 fun ContentScreen() {
     val context = LocalContext.current
+    val settingsManager = remember { BrazeSettingsManager(context) }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Braze SDK: Auto-refresh Content Cards when entering this screen (if enabled in settings)
+    LaunchedEffect(Unit) {
+        val autoRefresh = settingsManager.getAutoRefreshContentCards()
+        if (autoRefresh) {
+            Log.d("ContentScreen", "Auto-refresh enabled: Requesting Content Cards refresh")
+            BrazeUserSync.requestContentCardsRefresh(context)
+        } else {
+            Log.d("ContentScreen", "Auto-refresh disabled: Skipping Content Cards refresh")
+        }
+    }
     
     Box(
         modifier = Modifier
