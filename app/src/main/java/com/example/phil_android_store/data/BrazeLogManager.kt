@@ -76,7 +76,7 @@ object BrazeLogManager {
         val idsStr = placementIds.joinToString(", ") { "'$it'" }
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "requestBannerRefresh([$idsStr])",
+            event = "requestBannersRefresh(listOf($idsStr))",
             type = BrazeLogEntry.LogType.REQUEST
         ))
     }
@@ -141,7 +141,7 @@ object BrazeLogManager {
         
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "getContentCards() → [$count cards]",
+            event = "getContentCards() → List($count)",
             type = BrazeLogEntry.LogType.RESPONSE,
             payload = payload
         ))
@@ -165,8 +165,8 @@ object BrazeLogManager {
      * Log custom event
      */
     fun logCustomEvent(eventName: String, properties: Map<String, Any>? = null) {
-        // Format as raw code style: logCustomEvent('eventName') or logPurchaseEvent('purchase')
-        val functionName = if (eventName == "purchase") "logPurchaseEvent" else "logCustomEvent"
+        // Format as raw code style: logCustomEvent('eventName') or logPurchase('productId', ...)
+        val functionName = if (eventName == "purchase") "logPurchase" else "logCustomEvent"
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
             event = "$functionName('$eventName')",

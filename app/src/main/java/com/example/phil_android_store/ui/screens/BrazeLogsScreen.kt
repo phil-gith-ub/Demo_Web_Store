@@ -326,11 +326,11 @@ private fun LogEntryCard(
         } else null
     } else null
     
-    // Check for getContentCards() → [X cards] pattern
-    val cardCountText = if (hasPayload && eventText.contains(" → [") && eventText.contains(" cards]")) {
-        val startIdx = eventText.indexOf(" → [") + 4
-        val endIdx = eventText.indexOf(" cards]", startIdx)
-        if (startIdx > 3 && endIdx > startIdx) {
+    // Check for getContentCards() → List(X) pattern
+    val cardCountText = if (hasPayload && eventText.contains(" → List(") && eventText.contains(")")) {
+        val startIdx = eventText.indexOf(" → List(") + 8
+        val endIdx = eventText.indexOf(")", startIdx)
+        if (startIdx > 7 && endIdx > startIdx) {
             eventText.substring(startIdx, endIdx)
         } else null
     } else null
@@ -391,11 +391,11 @@ private fun LogEntryCard(
         }
         cardCountText != null -> {
             buildAnnotatedString {
-                val clickablePattern = "[$cardCountText cards]"
+                val clickablePattern = "List($cardCountText)"
                 val patternIdx = eventText.indexOf(clickablePattern)
                 if (patternIdx >= 0) {
-                    val beforeClickable = eventText.substring(0, patternIdx + 1) // Include "["
-                    val clickablePart = "$cardCountText cards]"
+                    val beforeClickable = eventText.substring(0, patternIdx + 5) // Include "List("
+                    val clickablePart = cardCountText
                     val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
                     
                     append(beforeClickable)
