@@ -1578,12 +1578,18 @@ fun ContentBanner(
                                                         });
                                                         
                                                         // Also check for buttons or divs with onclick
-                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"]');
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
                                                         console.log('ContentBanner: Found', clickableElements.length, 'clickable element(s)');
                                                         clickableElements.forEach(function(el) {
                                                             el.addEventListener('click', function(e) {
-                                                                console.log('ContentBanner: Clickable element clicked');
+                                                                console.log('ContentBanner: Clickable element clicked:', el.tagName, el.className);
+                                                                console.log('ContentBanner: Element onclick:', el.getAttribute('onclick'));
+                                                                console.log('ContentBanner: Element data-href:', el.getAttribute('data-href'));
+                                                                console.log('ContentBanner: Element href:', el.href);
+                                                                
                                                                 var href = el.href || el.getAttribute('data-href') || el.getAttribute('onclick');
+                                                                console.log('ContentBanner: Extracted href value:', href);
+                                                                
                                                                 if (href && href.includes('philstore://')) {
                                                                     var match = href.match(/philstore:\/\/[^"'\s)]+/);
                                                                     if (match) {
@@ -1594,6 +1600,52 @@ fun ContentBanner(
                                                                             e.stopImmediatePropagation();
                                                                             return false;
                                                                         }
+                                                                    } else {
+                                                                        console.warn('ContentBanner: href contains philstore:// but regex match failed');
+                                                                    }
+                                                                } else {
+                                                                    // Check parent elements
+                                                                    var parent = el.parentElement;
+                                                                    var depth = 0;
+                                                                    while (parent && depth < 5) {
+                                                                        var parentOnclick = parent.getAttribute('onclick');
+                                                                        var parentDataHref = parent.getAttribute('data-href');
+                                                                        var parentHref = parent.href;
+                                                                        console.log('ContentBanner: Checking parent', depth, '- onclick:', parentOnclick, 'data-href:', parentDataHref, 'href:', parentHref);
+                                                                        
+                                                                        if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                            var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                            if (match) {
+                                                                                console.log('ContentBanner: Extracted deep link from parent onclick:', match[0]);
+                                                                                if (handleDeepLink(match[0])) {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    e.stopImmediatePropagation();
+                                                                                    return false;
+                                                                                }
+                                                                                break;
+                                                                            }
+                                                                        } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                            console.log('ContentBanner: Found deep link in parent data-href:', parentDataHref);
+                                                                            if (handleDeepLink(parentDataHref)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                            break;
+                                                                        } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                            console.log('ContentBanner: Found deep link in parent href:', parentHref);
+                                                                            if (handleDeepLink(parentHref)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                            break;
+                                                                        }
+                                                                        parent = parent.parentElement;
+                                                                        depth++;
                                                                     }
                                                                 }
                                                             }, true);
@@ -1875,8 +1927,68 @@ fun ContentBanner(
                                                                 } else {
                                                                     // Check if clicked element has onclick or data attributes
                                                                     var clicked = e.target;
-                                                                    if (clicked && clicked.onclick) {
-                                                                        console.log('ContentBanner: Clicked element has onclick handler');
+                                                                    console.log('ContentBanner: Clicked element:', clicked.tagName, clicked.className, clicked.id);
+                                                                    console.log('ContentBanner: Clicked element attributes:', clicked.getAttribute('onclick'), clicked.getAttribute('data-href'), clicked.getAttribute('href'));
+                                                                    console.log('ContentBanner: Clicked element innerHTML:', clicked.innerHTML ? clicked.innerHTML.substring(0, 100) : 'none');
+                                                                    
+                                                                    // Try to extract deep link from various sources
+                                                                    var deepLink = null;
+                                                                    var onclickAttr = clicked.getAttribute('onclick');
+                                                                    var dataHref = clicked.getAttribute('data-href');
+                                                                    var href = clicked.href;
+                                                                    
+                                                                    if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                        var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) {
+                                                                            deepLink = match[0];
+                                                                            console.log('ContentBanner: Extracted deep link from onclick:', deepLink);
+                                                                        }
+                                                                    } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                        deepLink = dataHref;
+                                                                        console.log('ContentBanner: Found deep link in data-href:', deepLink);
+                                                                    } else if (href && href.includes('philstore://')) {
+                                                                        deepLink = href;
+                                                                        console.log('ContentBanner: Found deep link in href:', deepLink);
+                                                                    } else {
+                                                                        // Check parent elements
+                                                                        var parent = clicked.parentElement;
+                                                                        var depth = 0;
+                                                                        while (parent && depth < 5) {
+                                                                            onclickAttr = parent.getAttribute('onclick');
+                                                                            dataHref = parent.getAttribute('data-href');
+                                                                            href = parent.href;
+                                                                            
+                                                                            if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                                var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                                if (match) {
+                                                                                    deepLink = match[0];
+                                                                                    console.log('ContentBanner: Extracted deep link from parent onclick:', deepLink);
+                                                                                    break;
+                                                                                }
+                                                                            } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                                deepLink = dataHref;
+                                                                                console.log('ContentBanner: Found deep link in parent data-href:', deepLink);
+                                                                                break;
+                                                                            } else if (href && href.includes('philstore://')) {
+                                                                                deepLink = href;
+                                                                                console.log('ContentBanner: Found deep link in parent href:', deepLink);
+                                                                                break;
+                                                                            }
+                                                                            parent = parent.parentElement;
+                                                                            depth++;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    if (deepLink) {
+                                                                        console.log('ContentBanner: Handling deep link from clicked element:', deepLink);
+                                                                        if (handleDeepLink(deepLink)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    } else {
+                                                                        console.warn('ContentBanner: Could not find deep link in clicked element or parents');
                                                                     }
                                                                 }
                                                             }, true); // Use capture phase
@@ -1898,12 +2010,18 @@ fun ContentBanner(
                                                                 });
                                                                 
                                                                 // Also check for buttons or divs with onclick
-                                                                var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"]');
+                                                                var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
                                                                 console.log('ContentBanner: Found', clickableElements.length, 'clickable element(s)');
                                                                 clickableElements.forEach(function(el) {
                                                                     el.addEventListener('click', function(e) {
-                                                                        console.log('ContentBanner: Clickable element clicked');
+                                                                        console.log('ContentBanner: Clickable element clicked:', el.tagName, el.className);
+                                                                        console.log('ContentBanner: Element onclick:', el.getAttribute('onclick'));
+                                                                        console.log('ContentBanner: Element data-href:', el.getAttribute('data-href'));
+                                                                        console.log('ContentBanner: Element href:', el.href);
+                                                                        
                                                                         var href = el.href || el.getAttribute('data-href') || el.getAttribute('onclick');
+                                                                        console.log('ContentBanner: Extracted href value:', href);
+                                                                        
                                                                         if (href && href.includes('philstore://')) {
                                                                             var match = href.match(/philstore:\/\/[^"'\s)]+/);
                                                                             if (match) {
@@ -1914,6 +2032,52 @@ fun ContentBanner(
                                                                                     e.stopImmediatePropagation();
                                                                                     return false;
                                                                                 }
+                                                                            } else {
+                                                                                console.warn('ContentBanner: href contains philstore:// but regex match failed');
+                                                                            }
+                                                                        } else {
+                                                                            // Check parent elements
+                                                                            var parent = el.parentElement;
+                                                                            var depth = 0;
+                                                                            while (parent && depth < 5) {
+                                                                                var parentOnclick = parent.getAttribute('onclick');
+                                                                                var parentDataHref = parent.getAttribute('data-href');
+                                                                                var parentHref = parent.href;
+                                                                                console.log('ContentBanner: Checking parent', depth, '- onclick:', parentOnclick, 'data-href:', parentDataHref, 'href:', parentHref);
+                                                                                
+                                                                                if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                                    var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                                    if (match) {
+                                                                                        console.log('ContentBanner: Extracted deep link from parent onclick:', match[0]);
+                                                                                        if (handleDeepLink(match[0])) {
+                                                                                            e.preventDefault();
+                                                                                            e.stopPropagation();
+                                                                                            e.stopImmediatePropagation();
+                                                                                            return false;
+                                                                                        }
+                                                                                        break;
+                                                                                    }
+                                                                                } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                                    console.log('ContentBanner: Found deep link in parent data-href:', parentDataHref);
+                                                                                    if (handleDeepLink(parentDataHref)) {
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        e.stopImmediatePropagation();
+                                                                                        return false;
+                                                                                    }
+                                                                                    break;
+                                                                                } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                                    console.log('ContentBanner: Found deep link in parent href:', parentHref);
+                                                                                    if (handleDeepLink(parentHref)) {
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        e.stopImmediatePropagation();
+                                                                                        return false;
+                                                                                    }
+                                                                                    break;
+                                                                                }
+                                                                                parent = parent.parentElement;
+                                                                                depth++;
                                                                             }
                                                                         }
                                                                     }, true);
