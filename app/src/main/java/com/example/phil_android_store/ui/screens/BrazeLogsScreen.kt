@@ -241,7 +241,7 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (hasPayload) androidx.compose.foundation.clickable { showPayloadDialog = true } else Modifier),
+            .then(if (hasPayload) Modifier.clickable { showPayloadDialog = true } else Modifier),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
