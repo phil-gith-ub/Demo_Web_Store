@@ -1625,6 +1625,95 @@ fun ContentBanner(
                                         """.trimIndent()
                                         webView.loadDataWithBaseURL(null, wrappedHtml, "text/html", "UTF-8", null)
                                         android.util.Log.d("ContentBanner", "✓ Loaded HTML content with custom WebViewClient")
+                                        
+                                        // Inject JavaScript after HTML loads (same as insertBanner path)
+                                        webView.postDelayed({
+                                            try {
+                                                android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor (getHtml path)")
+                                                val jsCode = """
+                                                    (function() {
+                                                        console.log('ContentBanner: Deep link interceptor script loaded (getHtml path)');
+                                                        
+                                                        function handleDeepLink(url) {
+                                                            console.log('ContentBanner: handleDeepLink called with:', url);
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                console.log('ContentBanner: Deep link detected:', url);
+                                                                if (window.AndroidDeepLinkHandler) {
+                                                                    console.log('ContentBanner: Using AndroidDeepLinkHandler');
+                                                                    window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                                    return true;
+                                                                } else {
+                                                                    console.warn('ContentBanner: AndroidDeepLinkHandler not available, using location.href');
+                                                                }
+                                                                window.location.href = url;
+                                                                return true;
+                                                            }
+                                                            return false;
+                                                        }
+                                                        
+                                                        document.addEventListener('click', function(e) {
+                                                            var target = e.target;
+                                                            while (target && target.tagName !== 'A') {
+                                                                target = target.parentElement;
+                                                            }
+                                                            if (target && target.href) {
+                                                                console.log('ContentBanner: Click detected on link:', target.href);
+                                                                if (handleDeepLink(target.href)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    return false;
+                                                                }
+                                                            }
+                                                        }, true);
+                                                        
+                                                        var links = document.querySelectorAll('a[href^="philstore://"]');
+                                                        console.log('ContentBanner: Found', links.length, 'deep link(s) in document');
+                                                        links.forEach(function(link) {
+                                                            link.addEventListener('click', function(e) {
+                                                                console.log('ContentBanner: Direct link click:', this.href);
+                                                                if (handleDeepLink(this.href)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    return false;
+                                                                }
+                                                            }, true);
+                                                        });
+                                                        
+                                                        var observer = new MutationObserver(function(mutations) {
+                                                            mutations.forEach(function(mutation) {
+                                                                mutation.addedNodes.forEach(function(node) {
+                                                                    if (node.nodeType === 1) {
+                                                                        var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
+                                                                        if (newLinks.length > 0) {
+                                                                            console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                                        }
+                                                                        newLinks.forEach(function(link) {
+                                                                            link.addEventListener('click', function(e) {
+                                                                                console.log('ContentBanner: Dynamic link click:', this.href);
+                                                                                if (handleDeepLink(this.href)) {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    return false;
+                                                                                }
+                                                                            }, true);
+                                                                        });
+                                                                    }
+                                                                });
+                                                            });
+                                                        });
+                                                        observer.observe(document.body, { childList: true, subtree: true });
+                                                        console.log('ContentBanner: MutationObserver set up for dynamic links');
+                                                    })();
+                                                """.trimIndent()
+                                                webView.evaluateJavascript(jsCode) { result ->
+                                                    android.util.Log.d("ContentBanner", "JavaScript injection result (getHtml path): $result")
+                                                }
+                                                android.util.Log.d("ContentBanner", "✓ JavaScript deep link interceptor injected (getHtml path)")
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("ContentBanner", "Error injecting JavaScript (getHtml path): ${e.message}", e)
+                                                e.printStackTrace()
+                                            }
+                                        }, 500)
                                     } else {
                                         android.util.Log.w("ContentBanner", "✗ HTML content is null")
                                     }
