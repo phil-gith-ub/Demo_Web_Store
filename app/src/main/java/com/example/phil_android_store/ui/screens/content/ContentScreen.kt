@@ -212,6 +212,16 @@ fun ContentScreen() {
  * - Logs analytics (impressions and clicks) to Braze dashboard
  * - Shows placeholder when no content is available
  * 
+ * Debugging: Check Logcat for "Tile1ContentCard" tag to see:
+ * - How many cards are received
+ * - All extras for each card
+ * - Which card (if any) matches the filter
+ * 
+ * Common issues:
+ * - Card not received: Check if Content Cards are enabled in Braze dashboard
+ * - Card filtered out: Verify the extras key is exactly "location" (case-sensitive in Braze dashboard)
+ * - Card value mismatch: Verify the value in extras is exactly "tile_1" (no spaces, correct case)
+ * 
  * To duplicate this for another card:
  * 1. Copy this function and rename (e.g., Tile2ContentCard)
  * 2. Change the locationKey value (e.g., "tile_2")
@@ -240,6 +250,9 @@ fun Tile1ContentCard(
         
         // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Braze SDK: Debug logging - log all received cards and their extras
+            Log.d("Tile1ContentCard", "Received ${cards.size} Content Cards")
+            
             // Braze SDK: Filter cards by location = tile_1 from extras
             var foundCard: Any? = null
             for (card in cards) {
@@ -247,51 +260,132 @@ fun Tile1ContentCard(
                     // Skip control cards (they should not be displayed)
                     val isControlMethod = card.javaClass.getMethod("isControlCard")
                     val isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                    if (isControl) continue
+                    if (isControl) {
+                        Log.d("Tile1ContentCard", "Skipping control card")
+                        continue
+                    }
                     
                     // Braze SDK: Get extras (key-value pairs) from card
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                     
+                    // Debug: Log all extras for this card and card ID
+                    try {
+                        val getIdMethod = card.javaClass.getMethod("getId")
+                        val cardId = getIdMethod.invoke(card) as? String
+                        Log.d("Tile1ContentCard", "Card ID: $cardId, extras: $extras")
+                    } catch (e: Exception) {
+                        Log.d("Tile1ContentCard", "Card extras: $extras (could not get card ID)")
+                    }
+                    Log.d("Tile1ContentCard", "Looking for location = $locationKey")
+                    
                     // Filter by location = tile_1
-                    if (extras != null && extras["location"] == locationKey) {
-                        foundCard = card
-                        break
+                    // Check all possible key variations (case-insensitive)
+                    if (extras != null) {
+                        // Check all keys in extras (case-insensitive)
+                        var locationValue: Any? = null
+                        for ((key, value) in extras) {
+                            val keyStr = key?.toString()?.lowercase()
+                            if (keyStr == "location") {
+                                locationValue = value
+                                break
+                            }
+                        }
+                        
+                        // Also try direct access with different cases
+                        if (locationValue == null) {
+                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                        }
+                        
+                        Log.d("Tile1ContentCard", "Card location value: $locationValue")
+                        
+                        if (locationValue?.toString() == locationKey) {
+                            Log.d("Tile1ContentCard", "✓ Found matching card with location = $locationValue")
+                            foundCard = card
+                            break
+                        } else {
+                            Log.d("Tile1ContentCard", "✗ Card location '$locationValue' does not match '$locationKey'")
+                        }
+                    } else {
+                        Log.d("Tile1ContentCard", "Card has no extras")
                     }
                 } catch (e: Exception) {
                     // Skip cards that don't have the expected methods
+                    Log.e("Tile1ContentCard", "Error processing card: ${e.message}", e)
                     continue
                 }
             }
             
             contentCard = foundCard
             hasCard = foundCard != null
+            Log.d("Tile1ContentCard", "Final result: hasCard = $hasCard")
         }
         
         // Braze SDK: Initial check after a short delay
         scope.launch {
             delay(500)
             val allCards = BrazeUserSync.getContentCards(context)
+            Log.d("Tile1ContentCard", "Initial check: Found ${allCards.size} cached Content Cards")
+            
             var foundCard: Any? = null
             for (card in allCards) {
                 try {
                     val isControlMethod = card.javaClass.getMethod("isControlCard")
                     val isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                    if (isControl) continue
+                    if (isControl) {
+                        Log.d("Tile1ContentCard", "Initial check: Skipping control card")
+                        continue
+                    }
                     
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                     
-                    if (extras != null && extras["location"] == locationKey) {
-                        foundCard = card
-                        break
+                    // Debug: Log all extras for this card and card ID
+                    try {
+                        val getIdMethod = card.javaClass.getMethod("getId")
+                        val cardId = getIdMethod.invoke(card) as? String
+                        Log.d("Tile1ContentCard", "Initial check - Card ID: $cardId, extras: $extras")
+                    } catch (e: Exception) {
+                        Log.d("Tile1ContentCard", "Initial check - Card extras: $extras (could not get card ID)")
+                    }
+                    
+                    // Filter by location = tile_1 (check all case variations)
+                    if (extras != null) {
+                        // Check all keys in extras (case-insensitive)
+                        var locationValue: Any? = null
+                        for ((key, value) in extras) {
+                            val keyStr = key?.toString()?.lowercase()
+                            if (keyStr == "location") {
+                                locationValue = value
+                                break
+                            }
+                        }
+                        
+                        // Also try direct access with different cases
+                        if (locationValue == null) {
+                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                        }
+                        
+                        Log.d("Tile1ContentCard", "Initial check - Card location value: $locationValue")
+                        
+                        if (locationValue?.toString() == locationKey) {
+                            Log.d("Tile1ContentCard", "Initial check: ✓ Found matching card with location = $locationValue")
+                            foundCard = card
+                            break
+                        } else {
+                            Log.d("Tile1ContentCard", "Initial check: ✗ Card location '$locationValue' does not match '$locationKey'")
+                        }
+                    } else {
+                        Log.d("Tile1ContentCard", "Initial check - Card has no extras")
                     }
                 } catch (e: Exception) {
+                    Log.e("Tile1ContentCard", "Initial check - Error processing card: ${e.message}", e)
                     continue
                 }
             }
             contentCard = foundCard
             hasCard = foundCard != null
+            Log.d("Tile1ContentCard", "Initial check result: hasCard = $hasCard")
         }
         
         // Braze SDK: Cleanup - unsubscribe when component is removed
