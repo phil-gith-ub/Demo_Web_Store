@@ -231,7 +231,9 @@ fun ContentScreen() {
                     .fillMaxSize()
                     .padding(top = 16.dp),
                 contentAlignment = Alignment.Center
-            )
+            ) {
+                // Empty placeholder for future content
+            }
         }
     }
     
@@ -570,7 +572,7 @@ fun Tile1ContentCard(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxHeight()
+                                    .fillMaxSize()
                                     .background(textBackgroundColor)
                             ) {
                                 Column(
