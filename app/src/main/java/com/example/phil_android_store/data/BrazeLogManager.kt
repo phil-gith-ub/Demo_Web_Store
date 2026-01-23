@@ -120,20 +120,24 @@ object BrazeLogManager {
      */
     fun logContentCardsReceived(count: Int, cards: List<Any>? = null) {
         // Build payload with card data if available
-        val payload = cards?.mapIndexed { index, card ->
+        val payload: Map<String, Any>? = cards?.mapIndexedNotNull { index, card ->
             try {
                 val getIdMethod = card.javaClass.getMethod("getId")
                 val cardId = getIdMethod.invoke(card) as? String ?: "unknown"
                 val getExtrasMethod = card.javaClass.getMethod("getExtras")
                 val extras = getExtrasMethod.invoke(card) as? Map<*, *>
-                "card_$index" to mapOf(
-                    "id" to cardId,
-                    "extras" to (extras?.mapKeys { it.key?.toString() ?: "unknown" } ?: emptyMap())
-                )
+                val extrasMap = extras?.mapKeys { it.key?.toString() ?: "unknown" }?.mapValues { it.value ?: "" } ?: emptyMap<String, Any>()
+                
+                val cardData = mutableMapOf<String, Any>()
+                cardData["id"] = cardId
+                cardData["extras"] = extrasMap
+                
+                "card_$index" to cardData
             } catch (e: Exception) {
-                "card_$index" to mapOf("error" to e.message ?: "unknown")
+                val errorData = mapOf<String, Any>("error" to (e.message ?: "unknown"))
+                "card_$index" to errorData
             }
-        }?.associate { it.first to it.second }
+        }?.toMap()
         
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
