@@ -1400,6 +1400,22 @@ fun ContentBanner(
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
                             settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                            
+                            // Log all touch events for debugging
+                            setOnTouchListener { view, event ->
+                                when (event.action) {
+                                    android.view.MotionEvent.ACTION_DOWN -> {
+                                        android.util.Log.d("ContentBanner", "TOUCH DOWN at (${event.x}, ${event.y})")
+                                    }
+                                    android.view.MotionEvent.ACTION_UP -> {
+                                        android.util.Log.d("ContentBanner", "TOUCH UP at (${event.x}, ${event.y})")
+                                    }
+                                    android.view.MotionEvent.ACTION_MOVE -> {
+                                        android.util.Log.d("ContentBanner", "TOUCH MOVE at (${event.x}, ${event.y})")
+                                    }
+                                }
+                                false // Don't consume the event, let WebView handle it
+                            }
                         }
                     },
                     update = { webView ->
