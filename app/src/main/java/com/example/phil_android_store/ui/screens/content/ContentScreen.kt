@@ -1306,19 +1306,29 @@ fun ContentBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner (same pattern as BrazeBanner)
+    // Request banner refresh and get banner (with retry logic for first load)
     LaunchedEffect(placementId) {
         android.util.Log.d("ContentBanner", "=== Initializing ContentBanner for placement: $placementId ===")
         // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         android.util.Log.d("ContentBanner", "Requested banner refresh")
         
-        // Small delay to allow banner to be fetched
-        kotlinx.coroutines.delay(500)
-        
-        // Braze SDK: Get the banner
-        banner = BrazeUserSync.getBanner(context, placementId)
-        android.util.Log.d("ContentBanner", "Retrieved banner: ${if (banner != null) "exists (${banner!!.javaClass.simpleName})" else "null"}")
+        // Try to get banner with retries (first load may need more time)
+        var retryCount = 0
+        val maxRetries = 3
+        while (retryCount < maxRetries && banner == null) {
+            // Delay increases with each retry: 500ms, 1000ms, 1500ms
+            kotlinx.coroutines.delay(500L * (retryCount + 1))
+            
+            // Braze SDK: Get the banner
+            banner = BrazeUserSync.getBanner(context, placementId)
+            android.util.Log.d("ContentBanner", "Retrieved banner (attempt ${retryCount + 1}): ${if (banner != null) "exists (${banner!!.javaClass.simpleName})" else "null"}")
+            
+            if (banner != null) {
+                break
+            }
+            retryCount++
+        }
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
@@ -1334,7 +1344,7 @@ fun ContentBanner(
             }
         } else {
             shouldRender = false
-            android.util.Log.d("ContentBanner", "No banner found, shouldRender: false")
+            android.util.Log.d("ContentBanner", "No banner found after $maxRetries attempts, shouldRender: false")
         }
         android.util.Log.d("ContentBanner", "=== Banner initialization complete - shouldRender: $shouldRender, banner: ${if (banner != null) "exists" else "null"} ===")
     }
@@ -1486,6 +1496,13 @@ fun ContentBanner(
                             override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 android.util.Log.d("ContentBanner", "onPageFinished called for URL: $url")
+                                
+                                // Only inject JavaScript if page is actually loaded (not about:blank)
+                                if (url == null || url == "about:blank" || url.startsWith("data:")) {
+                                    android.util.Log.d("ContentBanner", "Skipping JavaScript injection - page not fully loaded (URL: $url)")
+                                    return
+                                }
+                                
                                 // Inject JavaScript after page is fully loaded
                                 view?.postDelayed({
                                     try {
@@ -1511,58 +1528,129 @@ fun ContentBanner(
                                                     return false;
                                                 }
                                                 
-                                                document.addEventListener('click', function(e) {
-                                                    var target = e.target;
-                                                    while (target && target.tagName !== 'A') {
-                                                        target = target.parentElement;
-                                                    }
-                                                    if (target && target.href) {
-                                                        console.log('ContentBanner: Click detected on link:', target.href);
-                                                        if (handleDeepLink(target.href)) {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            return false;
+                                                function setupClickInterceptors() {
+                                                    // Intercept all clicks at document level (most aggressive)
+                                                    document.addEventListener('click', function(e) {
+                                                        console.log('ContentBanner: Click event detected');
+                                                        var target = e.target;
+                                                        var link = null;
+                                                        
+                                                        // Find the closest link element
+                                                        while (target && target !== document.body) {
+                                                            if (target.tagName === 'A' && target.href) {
+                                                                link = target;
+                                                                break;
+                                                            }
+                                                            target = target.parentElement;
                                                         }
-                                                    }
-                                                }, true);
-                                                
-                                                var links = document.querySelectorAll('a[href^="philstore://"]');
-                                                console.log('ContentBanner: Found', links.length, 'deep link(s) in document (onPageFinished)');
-                                                links.forEach(function(link) {
-                                                    link.addEventListener('click', function(e) {
-                                                        console.log('ContentBanner: Direct link click:', this.href);
-                                                        if (handleDeepLink(this.href)) {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            return false;
+                                                        
+                                                        if (link && link.href) {
+                                                            console.log('ContentBanner: Click detected on link:', link.href);
+                                                            if (handleDeepLink(link.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        } else {
+                                                            // Check if clicked element has onclick or data attributes
+                                                            var clicked = e.target;
+                                                            if (clicked && clicked.onclick) {
+                                                                console.log('ContentBanner: Clicked element has onclick handler');
+                                                            }
                                                         }
-                                                    }, true);
-                                                });
-                                                
-                                                var observer = new MutationObserver(function(mutations) {
-                                                    mutations.forEach(function(mutation) {
-                                                        mutation.addedNodes.forEach(function(node) {
-                                                            if (node.nodeType === 1) {
-                                                                var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
-                                                                if (newLinks.length > 0) {
-                                                                    console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                    }, true); // Use capture phase
+                                                    
+                                                    // Also intercept all existing and future links
+                                                    function attachToLinks() {
+                                                        var links = document.querySelectorAll('a[href*="philstore://"]');
+                                                        console.log('ContentBanner: Found', links.length, 'deep link(s) in document');
+                                                        links.forEach(function(link) {
+                                                            link.addEventListener('click', function(e) {
+                                                                console.log('ContentBanner: Direct link click:', this.href);
+                                                                if (handleDeepLink(this.href)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
                                                                 }
-                                                                newLinks.forEach(function(link) {
-                                                                    link.addEventListener('click', function(e) {
-                                                                        console.log('ContentBanner: Dynamic link click:', this.href);
-                                                                        if (handleDeepLink(this.href)) {
+                                                            }, true);
+                                                        });
+                                                        
+                                                        // Also check for buttons or divs with onclick
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"]');
+                                                        console.log('ContentBanner: Found', clickableElements.length, 'clickable element(s)');
+                                                        clickableElements.forEach(function(el) {
+                                                            el.addEventListener('click', function(e) {
+                                                                console.log('ContentBanner: Clickable element clicked');
+                                                                var href = el.href || el.getAttribute('data-href') || el.getAttribute('onclick');
+                                                                if (href && href.includes('philstore://')) {
+                                                                    var match = href.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (match) {
+                                                                        console.log('ContentBanner: Extracted deep link:', match[0]);
+                                                                        if (handleDeepLink(match[0])) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
                                                                             return false;
                                                                         }
-                                                                    }, true);
-                                                                });
-                                                            }
+                                                                    }
+                                                                }
+                                                            }, true);
+                                                        });
+                                                    }
+                                                    
+                                                    // Wait for DOM ready, then attach
+                                                    if (document.readyState === 'loading') {
+                                                        document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                    } else {
+                                                        attachToLinks();
+                                                    }
+                                                    
+                                                    // Retry after a delay in case content loads asynchronously
+                                                    setTimeout(attachToLinks, 500);
+                                                    setTimeout(attachToLinks, 1000);
+                                                    setTimeout(attachToLinks, 2000);
+                                                    
+                                                    // MutationObserver for dynamically added content
+                                                    var observer = new MutationObserver(function(mutations) {
+                                                        mutations.forEach(function(mutation) {
+                                                            mutation.addedNodes.forEach(function(node) {
+                                                                if (node.nodeType === 1) {
+                                                                    var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href*="philstore://"]') : [];
+                                                                    if (newLinks.length > 0) {
+                                                                        console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                                    }
+                                                                    newLinks.forEach(function(link) {
+                                                                        link.addEventListener('click', function(e) {
+                                                                            console.log('ContentBanner: Dynamic link click:', this.href);
+                                                                            if (handleDeepLink(this.href)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }, true);
+                                                                    });
+                                                                }
+                                                            });
                                                         });
                                                     });
-                                                });
-                                                observer.observe(document.body, { childList: true, subtree: true });
-                                                console.log('ContentBanner: MutationObserver set up for dynamic links (onPageFinished)');
+                                                    observer.observe(document.body || document.documentElement, { 
+                                                        childList: true, 
+                                                        subtree: true,
+                                                        attributes: true,
+                                                        attributeFilter: ['href', 'onclick', 'data-href']
+                                                    });
+                                                    console.log('ContentBanner: MutationObserver set up for dynamic links (onPageFinished)');
+                                                }
+                                                
+                                                // Wait for DOM to be ready
+                                                if (document.readyState === 'loading') {
+                                                    document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                } else {
+                                                    setupClickInterceptors();
+                                                }
                                             })();
                                         """.trimIndent()
                                         view?.evaluateJavascript(jsCode) { result ->
@@ -1760,58 +1848,129 @@ fun ContentBanner(
                                                             return false;
                                                         }
                                                         
-                                                        document.addEventListener('click', function(e) {
-                                                            var target = e.target;
-                                                            while (target && target.tagName !== 'A') {
-                                                                target = target.parentElement;
-                                                            }
-                                                            if (target && target.href) {
-                                                                console.log('ContentBanner: Click detected on link:', target.href);
-                                                                if (handleDeepLink(target.href)) {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    return false;
+                                                        function setupClickInterceptors() {
+                                                            // Intercept all clicks at document level (most aggressive)
+                                                            document.addEventListener('click', function(e) {
+                                                                console.log('ContentBanner: Click event detected');
+                                                                var target = e.target;
+                                                                var link = null;
+                                                                
+                                                                // Find the closest link element
+                                                                while (target && target !== document.body) {
+                                                                    if (target.tagName === 'A' && target.href) {
+                                                                        link = target;
+                                                                        break;
+                                                                    }
+                                                                    target = target.parentElement;
                                                                 }
-                                                            }
-                                                        }, true);
-                                                        
-                                                        var links = document.querySelectorAll('a[href^="philstore://"]');
-                                                        console.log('ContentBanner: Found', links.length, 'deep link(s) in document');
-                                                        links.forEach(function(link) {
-                                                            link.addEventListener('click', function(e) {
-                                                                console.log('ContentBanner: Direct link click:', this.href);
-                                                                if (handleDeepLink(this.href)) {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    return false;
+                                                                
+                                                                if (link && link.href) {
+                                                                    console.log('ContentBanner: Click detected on link:', link.href);
+                                                                    if (handleDeepLink(link.href)) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                } else {
+                                                                    // Check if clicked element has onclick or data attributes
+                                                                    var clicked = e.target;
+                                                                    if (clicked && clicked.onclick) {
+                                                                        console.log('ContentBanner: Clicked element has onclick handler');
+                                                                    }
                                                                 }
-                                                            }, true);
-                                                        });
-                                                        
-                                                        var observer = new MutationObserver(function(mutations) {
-                                                            mutations.forEach(function(mutation) {
-                                                                mutation.addedNodes.forEach(function(node) {
-                                                                    if (node.nodeType === 1) {
-                                                                        var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
-                                                                        if (newLinks.length > 0) {
-                                                                            console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                            }, true); // Use capture phase
+                                                            
+                                                            // Also intercept all existing and future links
+                                                            function attachToLinks() {
+                                                                var links = document.querySelectorAll('a[href*="philstore://"]');
+                                                                console.log('ContentBanner: Found', links.length, 'deep link(s) in document');
+                                                                links.forEach(function(link) {
+                                                                    link.addEventListener('click', function(e) {
+                                                                        console.log('ContentBanner: Direct link click:', this.href);
+                                                                        if (handleDeepLink(this.href)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
                                                                         }
-                                                                        newLinks.forEach(function(link) {
-                                                                            link.addEventListener('click', function(e) {
-                                                                                console.log('ContentBanner: Dynamic link click:', this.href);
-                                                                                if (handleDeepLink(this.href)) {
+                                                                    }, true);
+                                                                });
+                                                                
+                                                                // Also check for buttons or divs with onclick
+                                                                var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"]');
+                                                                console.log('ContentBanner: Found', clickableElements.length, 'clickable element(s)');
+                                                                clickableElements.forEach(function(el) {
+                                                                    el.addEventListener('click', function(e) {
+                                                                        console.log('ContentBanner: Clickable element clicked');
+                                                                        var href = el.href || el.getAttribute('data-href') || el.getAttribute('onclick');
+                                                                        if (href && href.includes('philstore://')) {
+                                                                            var match = href.match(/philstore:\/\/[^"'\s)]+/);
+                                                                            if (match) {
+                                                                                console.log('ContentBanner: Extracted deep link:', match[0]);
+                                                                                if (handleDeepLink(match[0])) {
                                                                                     e.preventDefault();
                                                                                     e.stopPropagation();
+                                                                                    e.stopImmediatePropagation();
                                                                                     return false;
                                                                                 }
-                                                                            }, true);
-                                                                        });
-                                                                    }
+                                                                            }
+                                                                        }
+                                                                    }, true);
+                                                                });
+                                                            }
+                                                            
+                                                            // Wait for DOM ready, then attach
+                                                            if (document.readyState === 'loading') {
+                                                                document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                            } else {
+                                                                attachToLinks();
+                                                            }
+                                                            
+                                                            // Retry after a delay in case content loads asynchronously
+                                                            setTimeout(attachToLinks, 500);
+                                                            setTimeout(attachToLinks, 1000);
+                                                            setTimeout(attachToLinks, 2000);
+                                                            
+                                                            // MutationObserver for dynamically added content
+                                                            var observer = new MutationObserver(function(mutations) {
+                                                                mutations.forEach(function(mutation) {
+                                                                    mutation.addedNodes.forEach(function(node) {
+                                                                        if (node.nodeType === 1) {
+                                                                            var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href*="philstore://"]') : [];
+                                                                            if (newLinks.length > 0) {
+                                                                                console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                                            }
+                                                                            newLinks.forEach(function(link) {
+                                                                                link.addEventListener('click', function(e) {
+                                                                                    console.log('ContentBanner: Dynamic link click:', this.href);
+                                                                                    if (handleDeepLink(this.href)) {
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        e.stopImmediatePropagation();
+                                                                                        return false;
+                                                                                    }
+                                                                                }, true);
+                                                                            });
+                                                                        }
+                                                                    });
                                                                 });
                                                             });
-                                                        });
-                                                        observer.observe(document.body, { childList: true, subtree: true });
-                                                        console.log('ContentBanner: MutationObserver set up for dynamic links');
+                                                            observer.observe(document.body || document.documentElement, { 
+                                                                childList: true, 
+                                                                subtree: true,
+                                                                attributes: true,
+                                                                attributeFilter: ['href', 'onclick', 'data-href']
+                                                            });
+                                                            console.log('ContentBanner: MutationObserver set up for dynamic links (getHtml path)');
+                                                        }
+                                                        
+                                                        // Wait for DOM to be ready
+                                                        if (document.readyState === 'loading') {
+                                                            document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                        } else {
+                                                            setupClickInterceptors();
+                                                        }
                                                     })();
                                                 """.trimIndent()
                                                 webView.evaluateJavascript(jsCode) { result ->
