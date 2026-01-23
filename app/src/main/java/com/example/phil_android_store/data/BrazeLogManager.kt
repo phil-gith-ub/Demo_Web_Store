@@ -13,7 +13,8 @@ data class BrazeLogEntry(
     val timestamp: Long,
     val event: String,
     val details: String? = null,
-    val type: LogType = LogType.INFO
+    val type: LogType = LogType.INFO,
+    val payload: Map<String, Any>? = null // Raw payload data for events
 ) {
     val formattedTime: String
         get() = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
@@ -63,7 +64,7 @@ object BrazeLogManager {
     fun logScreenEntered(screenName: String) {
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "Entered $screenName",
+            event = "→ $screenName",
             type = BrazeLogEntry.LogType.INFO
         ))
     }
@@ -72,10 +73,10 @@ object BrazeLogManager {
      * Log banner refresh request
      */
     fun logBannerRefreshRequested(placementIds: List<String>) {
+        val idsStr = placementIds.joinToString(", ") { "'$it'" }
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Requested Banner Refresh",
-            details = placementIds.joinToString(", "),
+            event = "requestBannerRefresh([$idsStr])",
             type = BrazeLogEntry.LogType.REQUEST
         ))
     }
@@ -84,11 +85,10 @@ object BrazeLogManager {
      * Log banner received
      */
     fun logBannerReceived(placementId: String, isControl: Boolean = false) {
-        val status = if (isControl) " (control variant)" else ""
+        val status = if (isControl) " (control)" else ""
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Received Banner",
-            details = "$placementId$status",
+            event = "getBanner('$placementId') → Banner$status",
             type = BrazeLogEntry.LogType.RESPONSE
         ))
     }
@@ -99,8 +99,7 @@ object BrazeLogManager {
     fun logBannerNotFound(placementId: String) {
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Banner Not Found",
-            details = placementId,
+            event = "getBanner('$placementId') → null",
             type = BrazeLogEntry.LogType.RESPONSE
         ))
     }
@@ -111,7 +110,7 @@ object BrazeLogManager {
     fun logContentCardsRefreshRequested() {
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Requested Content Cards Refresh",
+            event = "requestContentCardsRefresh()",
             type = BrazeLogEntry.LogType.REQUEST
         ))
     }
@@ -122,8 +121,7 @@ object BrazeLogManager {
     fun logContentCardsReceived(count: Int) {
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Received Content Cards",
-            details = "$count card(s)",
+            event = "getContentCards() → [$count cards]",
             type = BrazeLogEntry.LogType.RESPONSE
         ))
     }
@@ -132,11 +130,10 @@ object BrazeLogManager {
      * Log content card matched
      */
     fun logContentCardMatched(locationKey: String, cardId: String? = null) {
-        val details = cardId?.let { "ID: $it" } ?: locationKey
+        val idStr = cardId?.let { " id='$it'" } ?: ""
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Content Card Matched",
-            details = "$locationKey - $details",
+            event = "matchCard(location='$locationKey'$idStr)",
             type = BrazeLogEntry.LogType.RESPONSE
         ))
     }
@@ -145,12 +142,16 @@ object BrazeLogManager {
      * Log custom event
      */
     fun logCustomEvent(eventName: String, properties: Map<String, Any>? = null) {
-        val details = properties?.entries?.joinToString(", ") { "${it.key}=${it.value}" }
+        val propsStr = if (properties != null && properties.isNotEmpty()) {
+            val props = properties.entries.joinToString(", ") { "${it.key}=${it.value}" }
+            " { $props }"
+        } else ""
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Sent Custom Event",
-            details = "$eventName${if (details != null) " ($details)" else ""}",
-            type = BrazeLogEntry.LogType.EVENT
+            event = "logCustomEvent('$eventName'$propsStr)",
+            details = if (properties != null && properties.isNotEmpty()) "click to view payload" else null,
+            type = BrazeLogEntry.LogType.EVENT,
+            payload = properties
         ))
     }
     
@@ -158,11 +159,10 @@ object BrazeLogManager {
      * Log user identification
      */
     fun logUserIdentified(userId: String, isAnonymous: Boolean = false) {
-        val type = if (isAnonymous) "Anonymous" else "User"
+        val method = if (isAnonymous) "changeUser" else "changeUser"
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK User Identified",
-            details = "$type: $userId",
+            event = "$method('$userId')",
             type = BrazeLogEntry.LogType.INFO
         ))
     }
@@ -173,8 +173,7 @@ object BrazeLogManager {
     fun logUserAttributeUpdated(attribute: String, value: Any?) {
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK User Attribute Updated",
-            details = "$attribute = $value",
+            event = "setCustomUserAttribute('$attribute', $value)",
             type = BrazeLogEntry.LogType.EVENT
         ))
     }
@@ -183,11 +182,11 @@ object BrazeLogManager {
      * Log impression
      */
     fun logImpression(type: String, id: String? = null) {
-        val details = id ?: type
+        val idStr = id?.let { "('$it')" } ?: "()"
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Logged Impression",
-            details = "$type - $details",
+            event = "logImpression$idStr",
+            details = type,
             type = BrazeLogEntry.LogType.EVENT
         ))
     }
@@ -196,11 +195,11 @@ object BrazeLogManager {
      * Log click
      */
     fun logClick(type: String, id: String? = null) {
-        val details = id ?: type
+        val idStr = id?.let { "('$it')" } ?: "()"
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Logged Click",
-            details = "$type - $details",
+            event = "logClick$idStr",
+            details = type,
             type = BrazeLogEntry.LogType.EVENT
         ))
     }
@@ -212,8 +211,7 @@ object BrazeLogManager {
         val details = error?.message ?: message
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "SDK Error",
-            details = details,
+            event = "ERROR: $details",
             type = BrazeLogEntry.LogType.ERROR
         ))
     }

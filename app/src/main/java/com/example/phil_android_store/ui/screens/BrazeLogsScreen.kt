@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -178,7 +180,7 @@ fun BrazeLogsScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(logs) { logEntry ->
                         LogEntryCard(logEntry = logEntry)
@@ -221,10 +223,11 @@ fun BrazeLogsScreen(
 }
 
 /**
- * Individual log entry card
+ * Individual log entry card - condensed console-style format
  */
 @Composable
 private fun LogEntryCard(logEntry: BrazeLogEntry) {
+    var showPayloadDialog by remember { mutableStateOf(false) }
     val typeColor = when (logEntry.type) {
         BrazeLogEntry.LogType.INFO -> MaterialTheme.colorScheme.primary
         BrazeLogEntry.LogType.REQUEST -> MaterialTheme.colorScheme.secondary
@@ -233,61 +236,110 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
         BrazeLogEntry.LogType.ERROR -> MaterialTheme.colorScheme.error
     }
     
+    val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
+    
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (hasPayload) androidx.compose.foundation.clickable { showPayloadDialog = true } else Modifier),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Time and type
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = logEntry.formattedTime,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-                Surface(
-                    color = typeColor.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = logEntry.type.name,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = typeColor,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-            
-            // Event
+            // Time
             Text(
-                text = logEntry.event,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                text = logEntry.formattedTime,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.width(70.dp)
             )
             
-            // Details (if available)
-            if (logEntry.details != null) {
+            // Type badge
+            Surface(
+                color = typeColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(3.dp)
+            ) {
                 Text(
-                    text = logEntry.details,
+                    text = logEntry.type.name.take(3),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = typeColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            // Event (main content)
+            Text(
+                text = logEntry.event,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+            )
+            
+            // Clickable indicator if payload exists
+            if (hasPayload) {
+                Text(
+                    text = "👁",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = 4.dp)
                 )
             }
         }
+    }
+    
+    // Payload dialog
+    if (showPayloadDialog && logEntry.payload != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPayloadDialog = false },
+            title = {
+                Text("Payload", style = MaterialTheme.typography.titleMedium)
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    logEntry.payload.forEach { (key, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "$key:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
+                            Text(
+                                text = value.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showPayloadDialog = false }
+                ) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }
