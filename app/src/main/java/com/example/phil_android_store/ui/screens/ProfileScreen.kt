@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.FeatureFlags
 import com.example.phil_android_store.data.PurchaseManager
@@ -56,6 +57,11 @@ fun ProfileScreen(
     val profileManager = remember { UserProfileManager(context) }
     val purchaseManager = remember { PurchaseManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    
+    // Log screen entry
+    LaunchedEffect(Unit) {
+        BrazeLogManager.logScreenEntered("Profile Page")
+    }
     
     // Check if user is already logged in
     val currentUserId = profileManager.getCurrentUserId()

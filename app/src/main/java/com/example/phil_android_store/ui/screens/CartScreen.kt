@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.Product
@@ -52,6 +53,11 @@ fun CartScreen(
     var purchaseSuccessMessage by remember { mutableStateOf<String?>(null) }
     val purchaseManager = remember { PurchaseManager(context) }
     val profileManager = remember { UserProfileManager(context) }
+    
+    // Log screen entry
+    LaunchedEffect(Unit) {
+        BrazeLogManager.logScreenEntered("Cart Page")
+    }
     
     // Update cart items and total price whenever cart changes
     LaunchedEffect(cartManager.cartItemCount) {

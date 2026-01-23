@@ -49,6 +49,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
+import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
 import kotlinx.coroutines.delay
@@ -67,6 +68,7 @@ fun ContentScreen() {
     
     // Braze SDK: Auto-refresh Content Cards and Banner when entering this screen
     LaunchedEffect(Unit) {
+        BrazeLogManager.logScreenEntered("Content Page")
         val autoRefresh = settingsManager.getAutoRefreshContentCards()
         if (autoRefresh) {
             BrazeUserSync.requestContentCardsRefresh(context)
@@ -95,6 +97,7 @@ fun ContentScreen() {
                         // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("enable_push")
+                        BrazeLogManager.logCustomEvent("enable_push")
                         brazeInstance.requestImmediateDataFlush()
                         notificationMessage = "Custom Event Sent"
                     },
@@ -117,6 +120,7 @@ fun ContentScreen() {
                         // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("push_notification")
+                        BrazeLogManager.logCustomEvent("push_notification")
                         brazeInstance.requestImmediateDataFlush()
                         notificationMessage = "Custom Event Sent"
                     },
@@ -139,6 +143,7 @@ fun ContentScreen() {
                         // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("user_action_button")
+                        BrazeLogManager.logCustomEvent("user_action_button")
                         brazeInstance.requestImmediateDataFlush()
                         notificationMessage = "Custom Event Sent"
                     },
@@ -360,6 +365,13 @@ fun Tile1ContentCard(
                         
                         if (matches) {
                             foundCard = card
+                            try {
+                                val getIdMethod = card.javaClass.getMethod("getId")
+                                val cardId = getIdMethod.invoke(card) as? String
+                                BrazeLogManager.logContentCardMatched(locationKey, cardId)
+                            } catch (e: Exception) {
+                                BrazeLogManager.logContentCardMatched(locationKey, null)
+                            }
                             break
                         }
                     }
@@ -479,6 +491,7 @@ fun Tile1ContentCard(
             try {
                 val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
                 logImpressionMethod.invoke(contentCard)
+                BrazeLogManager.logImpression("Content Card", "tile_1")
             } catch (e: Exception) {
             }
         }
@@ -496,6 +509,7 @@ fun Tile1ContentCard(
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
                         logClickMethod.invoke(contentCard)
+                        BrazeLogManager.logClick("Content Card", "tile_1")
                     } catch (e: Exception) {
                     }
                 }
@@ -742,6 +756,13 @@ fun Tile2ContentCard(
                         
                         if (locationValue?.toString() == locationKey) {
                             foundCard = card
+                            try {
+                                val getIdMethod = card.javaClass.getMethod("getId")
+                                val cardId = getIdMethod.invoke(card) as? String
+                                BrazeLogManager.logContentCardMatched(locationKey, cardId)
+                            } catch (e: Exception) {
+                                BrazeLogManager.logContentCardMatched(locationKey, null)
+                            }
                             break
                         }
                     }
@@ -820,6 +841,7 @@ fun Tile2ContentCard(
             try {
                 val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
                 logImpressionMethod.invoke(contentCard)
+                BrazeLogManager.logImpression("Content Card", "tile_2")
             } catch (e: Exception) {
             }
         }
@@ -837,6 +859,7 @@ fun Tile2ContentCard(
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
                         logClickMethod.invoke(contentCard)
+                        BrazeLogManager.logClick("Content Card", "tile_2")
                     } catch (e: Exception) {
                     }
                 }

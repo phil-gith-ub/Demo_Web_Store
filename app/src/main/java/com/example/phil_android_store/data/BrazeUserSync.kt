@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.braze.Braze
+import com.example.phil_android_store.data.BrazeLogManager
 import com.braze.configuration.BrazeConfig
 import com.braze.models.outgoing.BrazeProperties
 import com.braze.models.FeatureFlag
@@ -100,6 +101,7 @@ object BrazeUserSync {
         
         // Braze SDK: Change user to identify them in Braze (this starts a new session for this user)
         brazeInstance.changeUser(userId)
+        BrazeLogManager.logUserIdentified(userId, isAnonymous = false)
         
         // Load last sent values to preserve vipMember
         val lastSent = loadLastSentValues(context, userId)
@@ -109,6 +111,7 @@ object BrazeUserSync {
         brazeInstance.currentUser?.let { user ->
             // Braze SDK: Set custom user attribute
             user.setCustomUserAttribute("active_member", true)
+            BrazeLogManager.logUserAttributeUpdated("active_member", true)
             
             // Update last sent values (preserve vipMember)
             saveLastSentValues(
@@ -229,6 +232,7 @@ object BrazeUserSync {
         
         // Braze SDK: Change to anonymous user to start a session
         brazeInstance.changeUser(ANONYMOUS_USER_ID)
+        BrazeLogManager.logUserIdentified(ANONYMOUS_USER_ID, isAnonymous = true)
         
         // Check if active_member needs to be updated
         val lastSent = loadLastSentValues(context, ANONYMOUS_USER_ID)
@@ -279,6 +283,7 @@ object BrazeUserSync {
         
         // Braze SDK: Log logged_out event
         brazeInstance.logCustomEvent("logged_out")
+        BrazeLogManager.logCustomEvent("logged_out")
         
         // Braze SDK: Flush data to ensure attributes and event are sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
@@ -309,6 +314,11 @@ object BrazeUserSync {
         
         // Braze SDK: Log custom event
         brazeInstance.logCustomEvent("added_item_to_cart", properties)
+        BrazeLogManager.logCustomEvent("added_item_to_cart", mapOf(
+            "product_name" to productNameFormatted,
+            "product_category" to product.category,
+            "product_price" to product.price
+        ))
         // Braze SDK: Flush data to ensure event is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
     }
@@ -321,6 +331,7 @@ object BrazeUserSync {
         // Braze SDK: Get Braze instance and log custom event
         val brazeInstance = Braze.getInstance(context)
         brazeInstance.logCustomEvent("viewed_vip_products")
+        BrazeLogManager.logCustomEvent("viewed_vip_products")
     }
     
     /**
@@ -336,6 +347,7 @@ object BrazeUserSync {
             val brazeInstance = Braze.getInstance(context)
             // Braze SDK: Log custom event
             brazeInstance.logCustomEvent("logged_in")
+            BrazeLogManager.logCustomEvent("logged_in")
             // Braze SDK: Flush immediately to ensure event is sent to Braze servers right away
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
@@ -363,6 +375,7 @@ object BrazeUserSync {
             brazeInstance.currentUser?.let { user ->
                 // Braze SDK: Set custom user attribute
                 user.setCustomUserAttribute("vip_member", isVip)
+                BrazeLogManager.logUserAttributeUpdated("vip_member", isVip)
                 
                 // Update last sent values
                 val updatedValues = lastSent.copy(vipMember = isVip)
@@ -416,6 +429,13 @@ object BrazeUserSync {
             quantity,
             purchaseProperties
         )
+        BrazeLogManager.logCustomEvent("purchase", mapOf(
+            "product_id" to productId,
+            "product_name" to product.name,
+            "quantity" to quantity,
+            "price" to product.price,
+            "currency" to currencyCode
+        ))
         
         // Braze SDK: Flush data to ensure purchase is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
@@ -469,6 +489,8 @@ object BrazeUserSync {
         val brazeInstance = Braze.getInstance(context)
         // Braze SDK: Request banner refresh
         brazeInstance.requestBannersRefresh(placementIds)
+        // Log the request
+        BrazeLogManager.logBannerRefreshRequested(placementIds)
     }
     
     /**
@@ -483,7 +505,20 @@ object BrazeUserSync {
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         // Braze SDK: Get banner by placement ID
-        return brazeInstance.getBanner(placementId)
+        val banner = brazeInstance.getBanner(placementId)
+        // Log the result
+        if (banner != null) {
+            try {
+                val isControlMethod = banner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                BrazeLogManager.logBannerReceived(placementId, isControl)
+            } catch (e: Exception) {
+                BrazeLogManager.logBannerReceived(placementId, false)
+            }
+        } else {
+            BrazeLogManager.logBannerNotFound(placementId)
+        }
+        return banner
     }
     
     /**
@@ -499,8 +534,11 @@ object BrazeUserSync {
             // Braze SDK: Use reflection to call requestContentCardsRefresh
             val method = brazeInstance.javaClass.getMethod("requestContentCardsRefresh")
             method.invoke(brazeInstance)
+            // Log the request
+            BrazeLogManager.logContentCardsRefreshRequested()
         } catch (e: Exception) {
             Log.e("BrazeUserSync", "Error requesting Content Cards refresh: ${e.message}", e)
+            BrazeLogManager.logError("Error requesting Content Cards refresh: ${e.message}", e)
         }
     }
     
@@ -645,6 +683,7 @@ object BrazeUserSync {
                             if (cards is List<*>) {
                                 @Suppress("UNCHECKED_CAST")
                                 val cardList = cards.filterNotNull() as List<Any>
+                                BrazeLogManager.logContentCardsReceived(cardList.size)
                                 callback(cardList)
                             }
                         }

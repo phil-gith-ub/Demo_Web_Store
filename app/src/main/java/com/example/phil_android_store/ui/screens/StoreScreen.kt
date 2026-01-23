@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
+import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.MockData
@@ -72,6 +73,7 @@ fun StoreScreen(
     
     // Braze SDK: Refresh feature flag on screen load
     LaunchedEffect(Unit) {
+        BrazeLogManager.logScreenEntered("Store Page")
         isVipFeatureEnabled = BrazeUserSync.isVipProductsEnabled(context)
     }
     

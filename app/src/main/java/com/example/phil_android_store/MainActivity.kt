@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
@@ -53,6 +54,7 @@ import com.example.phil_android_store.data.PurchaseManager
 import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.ui.screens.CartScreen
 import com.example.phil_android_store.ui.screens.ProfileScreen
+import com.example.phil_android_store.ui.screens.BrazeLogsScreen
 import com.example.phil_android_store.ui.screens.PurchaseHistoryScreen
 import com.example.phil_android_store.ui.screens.SettingsScreen
 import com.example.phil_android_store.ui.screens.StoreScreen
@@ -218,6 +220,7 @@ fun Phil_Android_StoreApp(
     var refreshKey by remember { mutableIntStateOf(0) }
     var showPurchaseHistory by remember { mutableStateOf(initialVipCategory == "PURCHASE_HISTORY") }
     var showSettings by remember { mutableStateOf(false) }
+    var showLogs by remember { mutableStateOf(false) }
     
     // Register navigation callback with activity so it can trigger navigation updates
     DisposableEffect(Unit) {
@@ -303,10 +306,11 @@ fun Phil_Android_StoreApp(
 
     Phil_Android_StoreTheme(darkTheme = isDarkMode) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Persistent Top Banner (hide when Settings is shown, as it has its own banner)
-            if (!showSettings) {
+            // Persistent Top Banner (hide when Settings or Logs is shown, as they have their own banners)
+            if (!showSettings && !showLogs) {
                 TopBanner(
-                    onSettingsClick = { showSettings = true }
+                    onSettingsClick = { showSettings = true },
+                    onLogsClick = { showLogs = true }
                 )
             }
             
@@ -340,11 +344,12 @@ fun Phil_Android_StoreApp(
                                 }
                             },
                             label = { Text(it.label) },
-                            selected = it == currentDestination && !showPurchaseHistory && !showSettings,
+                            selected = it == currentDestination && !showPurchaseHistory && !showSettings && !showLogs,
                             onClick = { 
                                 currentDestination = it
                                 showPurchaseHistory = false // Close purchase history when navigating
                                 showSettings = false // Close settings when navigating
+                                showLogs = false // Close logs when navigating
                             }
                         )
                     }
@@ -355,6 +360,11 @@ fun Phil_Android_StoreApp(
                         // Show Settings screen (no bottom nav tabs)
                         SettingsScreen(
                             onClose = { showSettings = false }
+                        )
+                    } else if (showLogs) {
+                        // Show Braze SDK Logs screen (no bottom nav tabs)
+                        BrazeLogsScreen(
+                            onClose = { showLogs = false }
                         )
                     } else if (showPurchaseHistory) {
                         // Show Purchase History screen within the main UI
@@ -409,7 +419,8 @@ fun Phil_Android_StoreApp(
 
 @Composable
 fun TopBanner(
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onLogsClick: () -> Unit = {}
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
     
@@ -435,6 +446,18 @@ fun TopBanner(
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // Logs button in top left corner
+                IconButton(
+                    onClick = onLogsClick,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.List,
+                        contentDescription = "Braze SDK Logs",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                
                 // Centered "Demo Store" text
                 Text(
                     text = "Demo Store",
