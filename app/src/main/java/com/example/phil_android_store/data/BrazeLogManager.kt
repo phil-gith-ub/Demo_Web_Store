@@ -162,14 +162,39 @@ object BrazeLogManager {
     }
     
     /**
+     * Log purchase event (actual Braze SDK method)
+     */
+    fun logPurchase(productId: String, currencyCode: String, price: Double, quantity: Int, properties: Map<String, Any>? = null) {
+        val propsStr = if (properties != null && properties.isNotEmpty()) {
+            val props = properties.entries.joinToString(", ") { "${it.key}='${it.value}'" }
+            ", properties={$props}"
+        } else ""
+        addLog(BrazeLogEntry(
+            timestamp = System.currentTimeMillis(),
+            event = "logPurchase('$productId', '$currencyCode', $price, $quantity$propsStr)",
+            type = BrazeLogEntry.LogType.EVENT,
+            payload = properties?.plus(mapOf(
+                "product_id" to productId,
+                "currency" to currencyCode,
+                "price" to price,
+                "quantity" to quantity
+            )) ?: mapOf(
+                "product_id" to productId,
+                "currency" to currencyCode,
+                "price" to price,
+                "quantity" to quantity
+            )
+        ))
+    }
+    
+    /**
      * Log custom event
      */
     fun logCustomEvent(eventName: String, properties: Map<String, Any>? = null) {
-        // Format as raw code style: logCustomEvent('eventName') or logPurchase('productId', ...)
-        val functionName = if (eventName == "purchase") "logPurchase" else "logCustomEvent"
+        // Format as raw code style: logCustomEvent('eventName')
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "$functionName('$eventName')",
+            event = "logCustomEvent('$eventName')",
             details = if (properties != null && properties.isNotEmpty()) "click to view payload" else null,
             type = BrazeLogEntry.LogType.EVENT,
             payload = properties

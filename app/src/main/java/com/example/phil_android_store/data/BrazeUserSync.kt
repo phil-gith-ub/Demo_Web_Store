@@ -429,13 +429,19 @@ object BrazeUserSync {
             quantity,
             purchaseProperties
         )
-        BrazeLogManager.logCustomEvent("purchase", mapOf(
-            "product_id" to productId,
-            "product_name" to product.name,
-            "quantity" to quantity,
-            "price" to product.price,
-            "currency" to currencyCode
-        ))
+        // Log the actual purchase event with all parameters
+        BrazeLogManager.logPurchase(
+            productId = productId,
+            currencyCode = currencyCode,
+            price = product.price,
+            quantity = quantity,
+            properties = mapOf(
+                "product_name" to product.name,
+                "product_category" to product.category,
+                "product_description" to product.description,
+                "is_vip" to product.isVip
+            )
+        )
         
         // Braze SDK: Flush data to ensure purchase is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()

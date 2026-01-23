@@ -305,16 +305,39 @@ private fun LogEntryCard(
     val eventText = logEntry.event
     
     // Parse different clickable patterns:
-    // 1. logPurchaseEvent('purchase') - clickable event name
-    // 2. matchCard(location='tile_2') - clickable location
-    // 3. getContentCards() → [2 cards] - clickable card count
+    // 1. logPurchase('productId', 'USD', 29.99, 1, ...) - clickable productId
+    // 2. logCustomEvent('eventName') - clickable eventName
+    // 3. matchCard(location='tile_2') - clickable location
+    // 4. getContentCards() → List(X) - clickable card count
     
-    val clickableEventName = if (hasPayload && eventText.contains("('") && eventText.contains("')")) {
-        val startIdx = eventText.indexOf("('") + 2
-        val endIdx = eventText.indexOf("')", startIdx)
-        if (startIdx > 1 && endIdx > startIdx) {
-            eventText.substring(startIdx, endIdx)
-        } else null
+    val clickableEventName = if (hasPayload) {
+        when {
+            // logPurchase('productId', 'USD', ...) - make productId clickable
+            eventText.startsWith("logPurchase('") -> {
+                val startIdx = 13 // After "logPurchase('"
+                val endIdx = eventText.indexOf("'", startIdx)
+                if (endIdx > startIdx) {
+                    eventText.substring(startIdx, endIdx)
+                } else null
+            }
+            // logCustomEvent('eventName') - make eventName clickable
+            eventText.startsWith("logCustomEvent('") -> {
+                val startIdx = 16 // After "logCustomEvent('"
+                val endIdx = eventText.indexOf("')", startIdx)
+                if (endIdx > startIdx) {
+                    eventText.substring(startIdx, endIdx)
+                } else null
+            }
+            // Other events with ('eventName') pattern
+            eventText.contains("('") && eventText.contains("')") -> {
+                val startIdx = eventText.indexOf("('") + 2
+                val endIdx = eventText.indexOf("')", startIdx)
+                if (startIdx > 1 && endIdx > startIdx) {
+                    eventText.substring(startIdx, endIdx)
+                } else null
+            }
+            else -> null
+        }
     } else null
     
     // Check for matchCard(location='tile_X') pattern
@@ -339,12 +362,23 @@ private fun LogEntryCard(
     val annotatedText = when {
         clickableEventName != null -> {
             buildAnnotatedString {
-                val clickablePattern = "('$clickableEventName')"
-                val patternIdx = eventText.indexOf(clickablePattern)
+                // Find the clickable pattern - could be "('productId'" or "('eventName')"
+                val pattern1 = "('$clickableEventName'"
+                val pattern2 = "('$clickableEventName')"
+                val patternIdx = when {
+                    eventText.contains(pattern2) -> eventText.indexOf(pattern2)
+                    eventText.contains(pattern1) -> eventText.indexOf(pattern1)
+                    else -> -1
+                }
+                
                 if (patternIdx >= 0) {
                     val beforeClickable = eventText.substring(0, patternIdx + 1)
                     val clickablePart = "'$clickableEventName'"
-                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
+                    val afterClickable = if (eventText.contains(pattern2)) {
+                        eventText.substring(patternIdx + pattern2.length)
+                    } else {
+                        eventText.substring(patternIdx + pattern1.length)
+                    }
                     
                     append(beforeClickable)
                     pushStringAnnotation(tag = "clickable", annotation = clickablePart)
