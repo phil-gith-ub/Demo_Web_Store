@@ -227,9 +227,9 @@ fun BrazeBanner(
                             android.view.View::class.java
                         )
                         insertMethod.invoke(brazeInstance, currentBanner, webView)
-                            
-                            // Re-apply WebViewClient after insertBanner (in case Braze replaced it)
-                            webView.post {
+                        
+                        // Re-apply WebViewClient after insertBanner (in case Braze replaced it)
+                        webView.post {
                                 webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 webView.webViewClient = customWebViewClient
                                 Log.d("BrazeBanner", "Re-applied custom WebViewClient after Braze insertBanner")
@@ -363,7 +363,6 @@ fun BrazeBanner(
                                 Log.e("BrazeBanner", "Error loading banner: ${e2.message}", e2)
                             }
                         }
-                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
