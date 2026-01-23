@@ -580,8 +580,8 @@ fun Tile1ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            // Light grey/purple tint for light theme
-                            Color(0xFFF5F3F7) // Light purple-grey
+                            // Light grey/purple tint for light theme - clearly visible against white background
+                            Color(0xFFD8D0DD) // Light purple-grey (clearly visible)
                         }
                         
                         Box(
@@ -890,8 +890,8 @@ fun Tile2ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            // Light grey/purple tint for light theme
-                            Color(0xFFF5F3F7) // Light purple-grey
+                            // Light grey/purple tint for light theme - clearly visible against white background
+                            Color(0xFFD8D0DD) // Light purple-grey (clearly visible)
                         }
                         
                         Box(
@@ -1190,8 +1190,8 @@ fun Tile3ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            // Light grey/purple tint for light theme
-                            Color(0xFFF5F3F7) // Light purple-grey
+                            // Light grey/purple tint for light theme - clearly visible against white background
+                            Color(0xFFD8D0DD) // Light purple-grey (clearly visible)
                         }
                         
                         Box(
