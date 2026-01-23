@@ -142,13 +142,11 @@ object BrazeLogManager {
      * Log custom event
      */
     fun logCustomEvent(eventName: String, properties: Map<String, Any>? = null) {
-        val propsStr = if (properties != null && properties.isNotEmpty()) {
-            val props = properties.entries.joinToString(", ") { "${it.key}=${it.value}" }
-            " { $props }"
-        } else ""
+        // Format as raw code style: logCustomEvent('eventName') or logPurchaseEvent('purchase')
+        val functionName = if (eventName == "purchase") "logPurchaseEvent" else "logCustomEvent"
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "logCustomEvent('$eventName'$propsStr)",
+            event = "$functionName('$eventName')",
             details = if (properties != null && properties.isNotEmpty()) "click to view payload" else null,
             type = BrazeLogEntry.LogType.EVENT,
             payload = properties

@@ -1,5 +1,8 @@
 package com.example.phil_android_store.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +20,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectLongPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +37,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,14 +47,23 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.phil_android_store.data.BrazeLogEntry
 import com.example.phil_android_store.data.BrazeLogManager
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 /**
  * Braze SDK Logs screen - displays all SDK interactions in readable format
@@ -57,6 +74,9 @@ fun BrazeLogsScreen(
     onClose: () -> Unit
 ) {
     var logs by remember { mutableStateOf(BrazeLogManager.getLogs()) }
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     
     // Update logs periodically to show new entries
     LaunchedEffect(Unit) {
@@ -148,17 +168,45 @@ fun BrazeLogsScreen(
                 }
             }
         } else {
-            // Logs list with clear button
+            // Logs list with buttons
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Clear button at top
+                // Copy All and Clear buttons at top
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Copy All button on the left
+                    Button(
+                        onClick = {
+                            val allLogsText = logs.joinToString("\n") { log ->
+                                val typeAbbr = log.type.name.take(3).lowercase()
+                                "${log.formattedTime} $typeAbbr ${log.event}"
+                            }
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Braze SDK Logs", allLogsText)
+                            clipboard.setPrimaryClip(clip)
+                            scope.launch {
+                                snackbarHostState.showSnackbar("All logs copied to clipboard")
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy All",
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Text("Copy All")
+                    }
+                    
+                    // Clear button on the right
                     Button(
                         onClick = { showClearDialog = true },
                         colors = ButtonDefaults.buttonColors(
@@ -183,11 +231,24 @@ fun BrazeLogsScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(logs) { logEntry ->
-                        LogEntryCard(logEntry = logEntry)
+                        LogEntryCard(
+                            logEntry = logEntry,
+                            onCopyLine = { lineText ->
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Log Entry", lineText)
+                                clipboard.setPrimaryClip(clip)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Log line copied")
+                                }
+                            }
+                        )
                     }
                 }
             }
         }
+        
+        // Snackbar for copy feedback
+        SnackbarHost(hostState = snackbarHostState)
     }
     
     // Clear confirmation dialog
@@ -223,10 +284,14 @@ fun BrazeLogsScreen(
 }
 
 /**
- * Individual log entry card - condensed console-style format
+ * Individual log entry card - raw code style format
  */
 @Composable
-private fun LogEntryCard(logEntry: BrazeLogEntry) {
+private fun LogEntryCard(
+    logEntry: BrazeLogEntry,
+    onCopyLine: (String) -> Unit
+) {
+    val context = LocalContext.current
     var showPayloadDialog by remember { mutableStateOf(false) }
     val typeColor = when (logEntry.type) {
         BrazeLogEntry.LogType.INFO -> MaterialTheme.colorScheme.primary
@@ -238,10 +303,57 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
     
     val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
     
+    // Parse event to find clickable event name (e.g., 'purchase' in logPurchaseEvent('purchase'))
+    val eventText = logEntry.event
+    val clickableEventName = if (hasPayload && eventText.contains("('") && eventText.contains("')")) {
+        val startIdx = eventText.indexOf("('") + 2
+        val endIdx = eventText.indexOf("')", startIdx)
+        if (startIdx > 1 && endIdx > startIdx) {
+            eventText.substring(startIdx, endIdx)
+        } else null
+    } else null
+    
+    // Build annotated string with clickable event name
+    val annotatedText = if (clickableEventName != null) {
+        buildAnnotatedString {
+            val clickablePattern = "('$clickableEventName')"
+            val patternIdx = eventText.indexOf(clickablePattern)
+            if (patternIdx >= 0) {
+                val beforeClickable = eventText.substring(0, patternIdx + 1) // Include the opening parenthesis
+                val clickablePart = "'$clickableEventName'"
+                val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
+                
+                append(beforeClickable)
+                withStyle(
+                    style = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline
+                    )
+                ) {
+                    append(clickablePart)
+                }
+                append(afterClickable)
+            } else {
+                append(eventText)
+            }
+        }
+    } else {
+        buildAnnotatedString {
+            append(eventText)
+        }
+    }
+    
+    // Build full log line text for copying
+    val fullLogLine = "${logEntry.formattedTime} ${logEntry.type.name.take(3).lowercase()} ${logEntry.event}"
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (hasPayload) Modifier.clickable { showPayloadDialog = true } else Modifier),
+            .pointerInput(Unit) {
+                detectLongPress {
+                    onCopyLine(fullLogLine)
+                }
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -251,7 +363,7 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Time
@@ -259,38 +371,43 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
                 text = logEntry.formattedTime,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.width(70.dp)
+                modifier = Modifier.width(70.dp),
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
             )
             
-            // Type badge
+            // Type badge (no gap - spacing handled by Row)
             Surface(
                 color = typeColor.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(3.dp)
             ) {
                 Text(
-                    text = logEntry.type.name.take(3),
+                    text = logEntry.type.name.take(3).lowercase(),
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = typeColor,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                 )
             }
             
-            // Event (main content)
-            Text(
-                text = logEntry.event,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-            )
-            
-            // Clickable indicator if payload exists
-            if (hasPayload) {
+            // Event (main content) - with clickable event name if payload exists
+            if (clickableEventName != null) {
                 Text(
-                    text = "👁",
+                    annotatedText,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 4.dp)
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showPayloadDialog = true },
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                )
+            } else {
+                Text(
+                    text = logEntry.event,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                 )
             }
         }
@@ -298,39 +415,39 @@ private fun LogEntryCard(logEntry: BrazeLogEntry) {
     
     // Payload dialog
     if (showPayloadDialog && logEntry.payload != null) {
+        val context = LocalContext.current
+        val payloadJson = try {
+            JSONObject(logEntry.payload).toString(2) // Pretty print with 2-space indent
+        } catch (e: Exception) {
+            logEntry.payload.toString()
+        }
+        
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showPayloadDialog = false },
             title = {
                 Text("Payload", style = MaterialTheme.typography.titleMedium)
             },
             text = {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    logEntry.payload.forEach { (key, value) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "$key:",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                            )
-                            Text(
-                                text = value.toString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                modifier = Modifier.weight(1f)
-                            )
+                        .pointerInput(Unit) {
+                            detectLongPress {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Payload", payloadJson)
+                                clipboard.setPrimaryClip(clip)
+                            }
                         }
-                    }
+                ) {
+                    Text(
+                        text = payloadJson,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
                 }
             },
             confirmButton = {
