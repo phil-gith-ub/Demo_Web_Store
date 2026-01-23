@@ -50,11 +50,21 @@ fun BrazeBanner(
         // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         
-        // Small delay to allow banner to be fetched
-        kotlinx.coroutines.delay(500)
-        
-        // Braze SDK: Get the banner
-        banner = BrazeUserSync.getBanner(context, placementId)
+        // Try to get banner with one retry if needed
+        var retryCount = 0
+        val maxRetries = 1
+        while (retryCount <= maxRetries && banner == null) {
+            // Delay: 500ms for first attempt, 1000ms for retry
+            kotlinx.coroutines.delay(500L * (retryCount + 1))
+            
+            // Braze SDK: Get the banner
+            banner = BrazeUserSync.getBanner(context, placementId)
+            
+            if (banner != null) {
+                break
+            }
+            retryCount++
+        }
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
@@ -133,6 +143,13 @@ fun BrazeBanner(
                     }
                 },
                 update = { webView ->
+                    // Only update if banner state has changed (prevent repeated updates)
+                    val currentBanner = banner
+                    if (currentBanner == null || webView.tag == currentBanner) {
+                        return@AndroidView // Already loaded or no banner
+                    }
+                    webView.tag = currentBanner // Mark as loaded
+                    
                     // Helper function to handle deep links (matching in-app message handler)
                     fun handleDeepLink(url: String) {
                         try {
@@ -201,18 +218,15 @@ fun BrazeBanner(
                     webView.webViewClient = customWebViewClient
                     webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     
-                    // Braze SDK: Get the current banner
-                    val currentBanner = BrazeUserSync.getBanner(context, placementId)
-                    if (currentBanner != null) {
-                        try {
-                            // Braze SDK: Try to use insertBanner method (Braze SDK method)
-                            val brazeInstance = Braze.getInstance(context)
-                            val insertMethod = brazeInstance.javaClass.getMethod(
-                                "insertBanner", 
-                                currentBanner.javaClass,
-                                android.view.View::class.java
-                            )
-                            insertMethod.invoke(brazeInstance, currentBanner, webView)
+                    try {
+                        // Braze SDK: Try to use insertBanner method (Braze SDK method)
+                        val brazeInstance = Braze.getInstance(context)
+                        val insertMethod = brazeInstance.javaClass.getMethod(
+                            "insertBanner", 
+                            currentBanner.javaClass,
+                            android.view.View::class.java
+                        )
+                        insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
                             // Re-apply WebViewClient after insertBanner (in case Braze replaced it)
                             webView.post {

@@ -65,10 +65,23 @@ fun BrazeContentCard(
             onCardUpdate?.invoke(updatedCard)
         }
         
-        // Braze SDK: Get initial Content Card after a short delay
+        // Braze SDK: Get initial Content Card with one retry if needed
         scope.launch {
-            kotlinx.coroutines.delay(500)
-            val initialCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
+            var retryCount = 0
+            val maxRetries = 1
+            var initialCard: Any? = null
+            
+            while (retryCount <= maxRetries && initialCard == null) {
+                // Delay: 500ms for first attempt, 1000ms for retry
+                kotlinx.coroutines.delay(500L * (retryCount + 1))
+                initialCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
+                
+                if (initialCard != null) {
+                    break
+                }
+                retryCount++
+            }
+            
             contentCard = initialCard
             
             // Check if card exists and is not a control variant

@@ -994,15 +994,15 @@ fun ContentBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner (with retry logic for first load)
+    // Request banner refresh and get banner (with one retry if needed)
     LaunchedEffect(placementId) {
         // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        // Try to get banner with retries (first load may need more time)
+        // Try to get banner with one retry if needed
         var retryCount = 0
-        val maxRetries = 3
-        while (retryCount < maxRetries && banner == null) {
-            // Delay increases with each retry: 500ms, 1000ms, 1500ms
+        val maxRetries = 1
+        while (retryCount <= maxRetries && banner == null) {
+            // Delay: 500ms for first attempt, 1000ms for retry
             kotlinx.coroutines.delay(500L * (retryCount + 1))
             
             // Braze SDK: Get the banner
@@ -1096,6 +1096,13 @@ fun ContentBanner(
                         }
                     },
                     update = { webView ->
+                        // Only update if banner state has changed (prevent repeated updates)
+                        val currentBanner = banner
+                        if (currentBanner == null || webView.tag == currentBanner) {
+                            return@AndroidView // Already loaded or no banner
+                        }
+                        webView.tag = currentBanner // Mark as loaded
+                        
                         // Helper function to handle deep links
                         fun handleDeepLink(url: String) {
                             try {
@@ -1431,8 +1438,7 @@ fun ContentBanner(
                         
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        // Braze SDK: Get the current banner (same as BrazeBanner)
-                        val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                        // Braze SDK: Use the banner from state (already fetched in LaunchedEffect)
                         if (currentBanner != null) {
                             try {
                                 val brazeInstance = com.braze.Braze.getInstance(context)
@@ -2200,16 +2206,16 @@ fun TileBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner (with retry logic for first load)
+    // Request banner refresh and get banner (with one retry if needed)
     LaunchedEffect(placementId) {
         // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         
-        // Try to get banner with retries (first load may need more time)
+        // Try to get banner with one retry if needed
         var retryCount = 0
-        val maxRetries = 3
-        while (retryCount < maxRetries && banner == null) {
-            // Delay increases with each retry: 500ms, 1000ms, 1500ms
+        val maxRetries = 1
+        while (retryCount <= maxRetries && banner == null) {
+            // Delay: 500ms for first attempt, 1000ms for retry
             kotlinx.coroutines.delay(500L * (retryCount + 1))
             
             // Braze SDK: Get the banner
@@ -2288,6 +2294,13 @@ fun TileBanner(
                         }
                     },
                     update = { webView ->
+                        // Only update if banner state has changed (prevent repeated updates)
+                        val currentBanner = banner
+                        if (currentBanner == null || webView.tag == currentBanner) {
+                            return@AndroidView // Already loaded or no banner
+                        }
+                        webView.tag = currentBanner // Mark as loaded
+                        
                         // Helper function to handle deep links
                         fun handleDeepLink(url: String) {
                             try {
@@ -2511,7 +2524,7 @@ fun TileBanner(
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         
-                        val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                        // Braze SDK: Use the banner from state (already fetched in LaunchedEffect)
                         if (currentBanner != null) {
                             try {
                                 val brazeInstance = com.braze.Braze.getInstance(context)

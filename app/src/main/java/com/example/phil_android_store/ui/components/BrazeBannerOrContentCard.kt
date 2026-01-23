@@ -61,12 +61,37 @@ fun BrazeBannerOrContentCard(
             }
         }
         
-        // Braze SDK: Initial check after a short delay
+        // Braze SDK: Initial check with one retry if needed
         scope.launch {
-            kotlinx.coroutines.delay(500)
+            var retryCount = 0
+            val maxRetries = 1
+            var banner: Any? = null
+            var contentCard: Any? = null
             
-            // Braze SDK: Initial check for banner
-            val banner = BrazeUserSync.getBanner(context, bannerPlacementId)
+            // Try to get banner and content card with one retry if needed
+            while (retryCount <= maxRetries && (banner == null || contentCard == null)) {
+                // Delay: 500ms for first attempt, 1000ms for retry
+                kotlinx.coroutines.delay(500L * (retryCount + 1))
+                
+                // Braze SDK: Initial check for banner (only if not found yet)
+                if (banner == null) {
+                    banner = BrazeUserSync.getBanner(context, bannerPlacementId)
+                }
+                
+                // Braze SDK: Initial check for content card (only if not found yet)
+                if (contentCard == null) {
+                    contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
+                }
+                
+                // If both found, break early
+                if (banner != null && contentCard != null) {
+                    break
+                }
+                
+                retryCount++
+            }
+            
+            // Check if banner exists and is not a control variant
             if (banner != null) {
                 try {
                     val isControlMethod = banner.javaClass.getMethod("isControl")
@@ -79,8 +104,7 @@ fun BrazeBannerOrContentCard(
                 hasBanner = false
             }
             
-            // Braze SDK: Initial check for content card
-            val contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
+            // Check if content card exists and is not a control variant
             if (contentCard != null) {
                 try {
                     val isControlMethod = contentCard.javaClass.getMethod("isControlCard")
