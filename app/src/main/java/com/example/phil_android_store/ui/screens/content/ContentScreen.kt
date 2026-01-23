@@ -397,21 +397,63 @@ fun Tile1ContentCard(
     }
     
     // Braze SDK: Extract card properties (title, description, image, URL)
+    // Handle different card types (ShortNewsCard, CaptionedImage, etc.)
     val cardData = remember(contentCard) {
         if (contentCard != null) {
             try {
                 val card = contentCard!!
-                val getTitleMethod = card.javaClass.getMethod("getTitle")
-                val title = getTitleMethod.invoke(card) as? String
+                var title: String? = null
+                var description: String? = null
+                var imageUrl: String? = null
+                var cardUrl: String? = null
                 
-                val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
-                val description = getDescriptionMethod.invoke(card) as? String
+                // Get title (most cards have this)
+                try {
+                    val getTitleMethod = card.javaClass.getMethod("getTitle")
+                    title = getTitleMethod.invoke(card) as? String
+                } catch (e: Exception) {
+                    Log.d("Tile1ContentCard", "Card does not have getTitle method")
+                }
                 
-                val getImageMethod = card.javaClass.getMethod("getImage")
-                val imageUrl = getImageMethod.invoke(card) as? String
+                // Get description - try multiple method names for different card types
+                try {
+                    val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
+                    description = getDescriptionMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    // Try alternative method names
+                    try {
+                        val getDescriptionMethod = card.javaClass.getMethod("getDescription")
+                        description = getDescriptionMethod.invoke(card) as? String
+                    } catch (e2: Exception) {
+                        Log.d("Tile1ContentCard", "Card does not have description method")
+                    }
+                }
                 
-                val getUrlMethod = card.javaClass.getMethod("getUrlString")
-                val cardUrl = getUrlMethod.invoke(card) as? String
+                // Get image URL - try multiple method names
+                try {
+                    val getImageMethod = card.javaClass.getMethod("getImage")
+                    imageUrl = getImageMethod.invoke(card) as? String
+                } catch (e: NoSuchMethodException) {
+                    try {
+                        val getImageMethod = card.javaClass.getMethod("getImageUrl")
+                        imageUrl = getImageMethod.invoke(card) as? String
+                    } catch (e2: Exception) {
+                        Log.d("Tile1ContentCard", "Card does not have image method")
+                    }
+                }
+                
+                // Get URL
+                try {
+                    val getUrlMethod = card.javaClass.getMethod("getUrlString")
+                    cardUrl = getUrlMethod.invoke(card) as? String
+                } catch (e: Exception) {
+                    try {
+                        val getUrlMethod = card.javaClass.getMethod("getUrl")
+                        cardUrl = getUrlMethod.invoke(card) as? String
+                    } catch (e2: Exception) {
+                        Log.d("Tile1ContentCard", "Card does not have URL method")
+                    }
+                }
                 
                 // Debug: Log extracted card data
                 Log.d("Tile1ContentCard", "=== Extracted Card Data ===")
