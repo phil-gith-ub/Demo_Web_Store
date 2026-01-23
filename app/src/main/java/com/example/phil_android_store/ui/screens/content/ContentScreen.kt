@@ -1098,8 +1098,12 @@ fun ContentBanner(
                     update = { webView ->
                         // Only update if banner state has changed (prevent repeated updates)
                         val currentBanner = banner
-                        if (currentBanner == null || webView.tag == currentBanner) {
-                            return@AndroidView // Already loaded or no banner
+                        if (currentBanner == null) {
+                            return@AndroidView // No banner to display
+                        }
+                        // Only skip if this exact banner is already loaded
+                        if (webView.tag == currentBanner) {
+                            return@AndroidView // Already loaded this banner
                         }
                         webView.tag = currentBanner // Mark as loaded
                         
@@ -2296,8 +2300,12 @@ fun TileBanner(
                     update = { webView ->
                         // Only update if banner state has changed (prevent repeated updates)
                         val currentBanner = banner
-                        if (currentBanner == null || webView.tag == currentBanner) {
-                            return@AndroidView // Already loaded or no banner
+                        if (currentBanner == null) {
+                            return@AndroidView // No banner to display
+                        }
+                        // Only skip if this exact banner is already loaded
+                        if (webView.tag == currentBanner) {
+                            return@AndroidView // Already loaded this banner
                         }
                         webView.tag = currentBanner // Mark as loaded
                         
