@@ -47,7 +47,6 @@ import coil.ImageLoader
 import androidx.compose.foundation.Image
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeSettingsManager
@@ -70,15 +69,11 @@ fun ContentScreen() {
     LaunchedEffect(Unit) {
         val autoRefresh = settingsManager.getAutoRefreshContentCards()
         if (autoRefresh) {
-            Log.d("ContentScreen", "Auto-refresh enabled: Requesting Content Cards refresh")
             BrazeUserSync.requestContentCardsRefresh(context)
-        } else {
-            Log.d("ContentScreen", "Auto-refresh disabled: Skipping Content Cards refresh")
         }
         
         // Always refresh banner when entering content screen
-        Log.d("ContentScreen", "Requesting banner refresh for content_banner")
-        BrazeUserSync.requestBannerRefresh(context, listOf("content_banner"))
+        BrazeUserSync.requestBannerRefresh(context, listOf("content_banner", "tile_banner"))
     }
     
     Box(
@@ -218,7 +213,7 @@ fun ContentScreen() {
                     modifier = Modifier.weight(1f)
                 )
                 
-                Tile3ContentCard(
+                TileBanner(
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -299,8 +294,6 @@ fun Tile1ContentCard(
         
         // Subscribe to receive Content Cards when they update
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-            Log.d("Tile1ContentCard", "Received ${cards.size} Content Cards")
-            
             // Filter cards by location key-value pair
             var foundCard: Any? = null
             for (card in cards) {
@@ -319,11 +312,9 @@ fun Tile1ContentCard(
                         isControl = className.contains("Control", ignoreCase = true)
                     }
                 } catch (e: Exception) {
-                    Log.d("Tile1ContentCard", "Could not check control status, proceeding: ${e.message}")
                 }
                 
                 if (isControl) {
-                    Log.d("Tile1ContentCard", "Skipping control card")
                     continue
                 }
                 
@@ -338,11 +329,7 @@ fun Tile1ContentCard(
                         val cardId = getIdMethod.invoke(card) as? String
                         val getTitleMethod = card.javaClass.getMethod("getTitle")
                         val title = getTitleMethod.invoke(card) as? String
-                        
-                        Log.d("Tile1ContentCard", "Card ID: $cardId, Title: $title")
-                        Log.d("Tile1ContentCard", "Extras: ${extras?.keys?.joinToString(", ")}")
                     } catch (e: Exception) {
-                        Log.d("Tile1ContentCard", "Could not get card details: ${e.message}")
                     }
                     
                     // Match card by location key-value pair (case-insensitive)
@@ -372,13 +359,11 @@ fun Tile1ContentCard(
                                      cardIdValue?.toString()?.contains("tile_1") == true
                         
                         if (matches) {
-                            Log.d("Tile1ContentCard", "✓ Found matching card! location=$locationValue")
                             foundCard = card
                             break
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("Tile1ContentCard", "Error processing card (skipping): ${e.message}", e)
                     continue
                 }
             }
@@ -445,7 +430,6 @@ fun Tile1ContentCard(
                 
                 CardData(title, description, imageUrl, cardUrl)
             } catch (e: Exception) {
-                Log.e("Tile1ContentCard", "Error extracting card data: ${e.message}", e)
                 null
             }
         } else {
@@ -478,11 +462,9 @@ fun Tile1ContentCard(
                         val aspectRatio = width.toFloat() / height.toFloat()
                         imageAspectRatio = aspectRatio
                         useRowLayout = aspectRatio <= 1.3f
-                        Log.d("Tile1ContentCard", "Image: ${width}x${height}, ratio: $aspectRatio, layout: ${if (useRowLayout) "Row" else "Column"}")
                     }
                 }
             } catch (e: Exception) {
-                Log.d("Tile1ContentCard", "Could not load image dimensions, using default layout: ${e.message}")
                 useRowLayout = false
             }
         } else {
@@ -497,9 +479,7 @@ fun Tile1ContentCard(
             try {
                 val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
                 logImpressionMethod.invoke(contentCard)
-                Log.d("Tile1ContentCard", "Logged impression")
             } catch (e: Exception) {
-                Log.e("Tile1ContentCard", "Error logging impression: ${e.message}", e)
             }
         }
     }
@@ -516,9 +496,7 @@ fun Tile1ContentCard(
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
                         logClickMethod.invoke(contentCard)
-                        Log.d("Tile1ContentCard", "Logged click")
                     } catch (e: Exception) {
-                        Log.e("Tile1ContentCard", "Error logging click: ${e.message}", e)
                     }
                 }
                 
@@ -533,7 +511,6 @@ fun Tile1ContentCard(
                             intent.setPackage(context.packageName)
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            Log.e("Tile1ContentCard", "Error handling deep link: ${e.message}", e)
                         }
                     }
                 }
@@ -721,8 +698,6 @@ fun Tile2ContentCard(
         
         // Subscribe to receive Content Cards when they update
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-            Log.d("Tile2ContentCard", "Received ${cards.size} Content Cards")
-            
             // Filter cards by location key-value pair
             var foundCard: Any? = null
             for (card in cards) {
@@ -741,7 +716,6 @@ fun Tile2ContentCard(
                         isControl = className.contains("Control", ignoreCase = true)
                     }
                 } catch (e: Exception) {
-                    Log.d("Tile2ContentCard", "Could not check control status, proceeding: ${e.message}")
                 }
                 
                 if (isControl) continue
@@ -767,13 +741,11 @@ fun Tile2ContentCard(
                         }
                         
                         if (locationValue?.toString() == locationKey) {
-                            Log.d("Tile2ContentCard", "✓ Found matching card! location=$locationValue")
                             foundCard = card
                             break
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("Tile2ContentCard", "Error processing card (skipping): ${e.message}")
                     continue
                 }
             }
@@ -835,7 +807,6 @@ fun Tile2ContentCard(
                 
                 CardData(title, description, imageUrl, cardUrl)
             } catch (e: Exception) {
-                Log.e("Tile2ContentCard", "Error extracting card data: ${e.message}", e)
                 null
             }
         } else {
@@ -849,9 +820,7 @@ fun Tile2ContentCard(
             try {
                 val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
                 logImpressionMethod.invoke(contentCard)
-                Log.d("Tile2ContentCard", "Logged impression")
             } catch (e: Exception) {
-                Log.e("Tile2ContentCard", "Error logging impression: ${e.message}", e)
             }
         }
     }
@@ -868,9 +837,7 @@ fun Tile2ContentCard(
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
                         logClickMethod.invoke(contentCard)
-                        Log.d("Tile2ContentCard", "Logged click")
                     } catch (e: Exception) {
-                        Log.e("Tile2ContentCard", "Error logging click: ${e.message}", e)
                     }
                 }
                 
@@ -885,308 +852,6 @@ fun Tile2ContentCard(
                             intent.setPackage(context.packageName)
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            Log.e("Tile2ContentCard", "Error handling deep link: ${e.message}", e)
-                        }
-                    }
-                }
-            },
-        shape = RoundedCornerShape(12.dp),
-        color = Color.Transparent, // Transparent - grey placeholder background shows through
-        border = if (!hasCard) {
-            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
-        } else null,
-        shadowElevation = if (hasCard) 4.dp else 0.dp
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            // Always show placeholder background (grey container)
-            // This provides the background color even when content is displayed
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                // Placeholder text - only visible when no content card
-                if (!hasCard || cardData == null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Content Card",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "location = $locationKey",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-            
-            // Content card displayed over the placeholder background
-            if (hasCard && cardData != null) {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Image (if available) - fills most of the space
-                    if (cardData.imageUrl != null) {
-                        Image(
-                            painter = rememberAsyncImagePainter(cardData.imageUrl),
-                            contentDescription = cardData.title ?: "Content Card Image",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    
-                    // Text section - displays over grey placeholder background
-                    if (cardData.title != null || cardData.description != null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (cardData.title != null) {
-                                Text(
-                                    text = cardData.title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            
-                            if (cardData.description != null) {
-                                Text(
-                                    text = cardData.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Content Card: Tile 3 (1:1 Square Layout)
- * 
- * Custom Braze Content Card implementation:
- * - Filters Content Cards by key-value pair: location = tile_3
- * - Displays as 1:1 square (equal width and height)
- * - Automatically logs impressions and clicks to Braze analytics
- * - Displays placeholder when no content is available
- * 
- * To duplicate for another card:
- * 1. Copy this function and rename (e.g., Tile4ContentCard)
- * 2. Change locationKey to the new value (e.g., "tile_4")
- * 3. Add the component to ContentScreen layout
- */
-@Composable
-fun Tile3ContentCard(
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val colorScheme = MaterialTheme.colorScheme
-    val scope = rememberCoroutineScope()
-    
-    // Filter key: Matches Content Cards with location = tile_3 in Braze dashboard
-    val locationKey = "tile_3"
-    
-    // State: Holds the matched Content Card and whether content is available
-    var contentCard by remember { mutableStateOf<Any?>(null) }
-    var hasCard by remember { mutableStateOf(false) }
-    
-    // Subscribe to Braze Content Cards updates
-    DisposableEffect(Unit) {
-        // Request initial card refresh from Braze
-        BrazeUserSync.requestContentCardsRefresh(context)
-        
-        // Subscribe to receive Content Cards when they update
-        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-            Log.d("Tile3ContentCard", "Received ${cards.size} Content Cards")
-            
-            // Filter cards by location key-value pair
-            var foundCard: Any? = null
-            for (card in cards) {
-                // Skip control cards (used for A/B testing, not displayed)
-                var isControl = false
-                try {
-                    val isControlMethod = card.javaClass.getMethod("isControlCard")
-                    isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                } catch (e: NoSuchMethodException) {
-                    try {
-                        val isControlField = card.javaClass.getDeclaredField("isControl")
-                        isControlField.isAccessible = true
-                        isControl = isControlField.get(card) as? Boolean ?: false
-                    } catch (e2: Exception) {
-                        val className = card.javaClass.simpleName
-                        isControl = className.contains("Control", ignoreCase = true)
-                    }
-                } catch (e: Exception) {
-                    Log.d("Tile3ContentCard", "Could not check control status, proceeding: ${e.message}")
-                }
-                
-                if (isControl) continue
-                
-                // Extract key-value pairs (extras) from card
-                try {
-                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
-                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
-                    
-                    // Match card by location key-value pair (case-insensitive)
-                    if (extras != null) {
-                        var locationValue: Any? = null
-                        for ((key, value) in extras) {
-                            val keyStr = key?.toString()?.lowercase()
-                            if (keyStr == "location") {
-                                locationValue = value
-                                break
-                            }
-                        }
-                        
-                        if (locationValue == null) {
-                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
-                        }
-                        
-                        if (locationValue?.toString() == locationKey) {
-                            Log.d("Tile3ContentCard", "✓ Found matching card! location=$locationValue")
-                            foundCard = card
-                            break
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("Tile3ContentCard", "Error processing card (skipping): ${e.message}")
-                    continue
-                }
-            }
-            
-            contentCard = foundCard
-            hasCard = foundCard != null
-        }
-        
-        // Cleanup: Unsubscribe when component is removed
-        onDispose {
-            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
-        }
-    }
-    
-    // Extract card properties (title, description, image, URL) using reflection
-    val cardData = remember(contentCard) {
-        if (contentCard != null) {
-            try {
-                val card = contentCard!!
-                var title: String? = null
-                var description: String? = null
-                var imageUrl: String? = null
-                var cardUrl: String? = null
-                
-                try {
-                    val getTitleMethod = card.javaClass.getMethod("getTitle")
-                    title = getTitleMethod.invoke(card) as? String
-                } catch (e: Exception) {}
-                
-                try {
-                    val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
-                    description = getDescriptionMethod.invoke(card) as? String
-                } catch (e: NoSuchMethodException) {
-                    try {
-                        val getDescriptionMethod = card.javaClass.getMethod("getDescription")
-                        description = getDescriptionMethod.invoke(card) as? String
-                    } catch (e2: Exception) {}
-                }
-                
-                try {
-                    val getImageMethod = card.javaClass.getMethod("getImage")
-                    imageUrl = getImageMethod.invoke(card) as? String
-                } catch (e: NoSuchMethodException) {
-                    try {
-                        val getImageMethod = card.javaClass.getMethod("getImageUrl")
-                        imageUrl = getImageMethod.invoke(card) as? String
-                    } catch (e2: Exception) {}
-                }
-                
-                try {
-                    val getUrlMethod = card.javaClass.getMethod("getUrlString")
-                    cardUrl = getUrlMethod.invoke(card) as? String
-                } catch (e: Exception) {
-                    try {
-                        val getUrlMethod = card.javaClass.getMethod("getUrl")
-                        cardUrl = getUrlMethod.invoke(card) as? String
-                    } catch (e2: Exception) {}
-                }
-                
-                CardData(title, description, imageUrl, cardUrl)
-            } catch (e: Exception) {
-                Log.e("Tile3ContentCard", "Error extracting card data: ${e.message}", e)
-                null
-            }
-        } else {
-            null
-        }
-    }
-    
-    // Log impression to Braze analytics when card is displayed
-    LaunchedEffect(contentCard) {
-        if (contentCard != null) {
-            try {
-                val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
-                logImpressionMethod.invoke(contentCard)
-                Log.d("Tile3ContentCard", "Logged impression")
-            } catch (e: Exception) {
-                Log.e("Tile3ContentCard", "Error logging impression: ${e.message}", e)
-            }
-        }
-    }
-    
-    // Card container: 1:1 aspect ratio square layout
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1f) // 1:1 square (width:height)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = hasCard && cardData?.cardUrl != null) {
-                // Log click to Braze analytics
-                if (contentCard != null) {
-                    try {
-                        val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
-                        logClickMethod.invoke(contentCard)
-                        Log.d("Tile3ContentCard", "Logged click")
-                    } catch (e: Exception) {
-                        Log.e("Tile3ContentCard", "Error logging click: ${e.message}", e)
-                    }
-                }
-                
-                // Handle deep link navigation (philstore://) or external URL
-                val cardUrl = cardData?.cardUrl as? String
-                if (cardUrl != null) {
-                    if (cardUrl.startsWith("philstore://")) {
-                        try {
-                            val uri = Uri.parse(cardUrl)
-                            val intent = Intent(Intent.ACTION_VIEW, uri)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                            intent.setPackage(context.packageName)
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Log.e("Tile3ContentCard", "Error handling deep link: ${e.message}", e)
                         }
                     }
                 }
@@ -1308,11 +973,8 @@ fun ContentBanner(
     
     // Request banner refresh and get banner (with retry logic for first load)
     LaunchedEffect(placementId) {
-        android.util.Log.d("ContentBanner", "=== Initializing ContentBanner for placement: $placementId ===")
         // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        android.util.Log.d("ContentBanner", "Requested banner refresh")
-        
         // Try to get banner with retries (first load may need more time)
         var retryCount = 0
         val maxRetries = 3
@@ -1322,7 +984,6 @@ fun ContentBanner(
             
             // Braze SDK: Get the banner
             banner = BrazeUserSync.getBanner(context, placementId)
-            android.util.Log.d("ContentBanner", "Retrieved banner (attempt ${retryCount + 1}): ${if (banner != null) "exists (${banner!!.javaClass.simpleName})" else "null"}")
             
             if (banner != null) {
                 break
@@ -1336,17 +997,13 @@ fun ContentBanner(
                 val isControlMethod = banner!!.javaClass.getMethod("isControl")
                 val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
                 shouldRender = !isControl
-                android.util.Log.d("ContentBanner", "Banner isControl: $isControl, shouldRender: $shouldRender")
             } catch (e: Exception) {
                 // If isControl method doesn't exist, assume we should render
                 shouldRender = true
-                android.util.Log.d("ContentBanner", "Could not check isControl, defaulting shouldRender to true: ${e.message}")
             }
         } else {
             shouldRender = false
-            android.util.Log.d("ContentBanner", "No banner found after $maxRetries attempts, shouldRender: false")
         }
-        android.util.Log.d("ContentBanner", "=== Banner initialization complete - shouldRender: $shouldRender, banner: ${if (banner != null) "exists" else "null"} ===")
     }
     
     // Always render container (2:1 aspect ratio banner layout)
@@ -1356,7 +1013,7 @@ fun ContentBanner(
             .aspectRatio(2f) // 2:1 banner (width:height)
             .clip(RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
-        color = if (shouldRender && banner != null) colorScheme.surface else colorScheme.surfaceVariant,
+        color = if (shouldRender && banner != null) Color.Transparent else colorScheme.surfaceVariant,
         border = if (!shouldRender || banner == null) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -1367,7 +1024,6 @@ fun ContentBanner(
             contentAlignment = Alignment.Center
         ) {
             if (shouldRender && banner != null) {
-                android.util.Log.d("ContentBanner", "Rendering banner in WebView")
                 // Display banner (same implementation as BrazeBanner)
                 AndroidView(
                     factory = { ctx ->
@@ -1376,31 +1032,22 @@ fun ContentBanner(
                             
                             webViewClient = object : android.webkit.WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
-                                    android.util.Log.d("ContentBanner", "shouldOverrideUrlLoading called with URL: $url")
                                     if (url != null && url.startsWith("philstore://")) {
-                                        android.util.Log.d("ContentBanner", "Deep link detected: $url")
                                         try {
                                             val uri = android.net.Uri.parse(url)
-                                            android.util.Log.d("ContentBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}, path: ${uri.path}")
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                             intent.setPackage(ctx.packageName)
-                                            android.util.Log.d("ContentBanner", "Intent created - package: ${ctx.packageName}, action: ${intent.action}")
                                             val resolvedActivity = intent.resolveActivity(ctx.packageManager)
-                                            android.util.Log.d("ContentBanner", "Resolved activity: $resolvedActivity")
                                             if (resolvedActivity != null) {
                                                 ctx.startActivity(intent)
-                                                android.util.Log.d("ContentBanner", "✓ Started activity with deep link: $url")
                                             } else {
-                                                android.util.Log.w("ContentBanner", "✗ Could not resolve activity for deep link: $url")
                                             }
                                             return true
                                         } catch (e: Exception) {
-                                            android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
                                             e.printStackTrace()
                                         }
                                     } else {
-                                        android.util.Log.d("ContentBanner", "URL is not a deep link, allowing WebView to handle: $url")
                                     }
                                     return false
                                 }
@@ -1415,13 +1062,10 @@ fun ContentBanner(
                             setOnTouchListener { view, event ->
                                 when (event.action) {
                                     android.view.MotionEvent.ACTION_DOWN -> {
-                                        android.util.Log.d("ContentBanner", "TOUCH DOWN at (${event.x}, ${event.y})")
                                     }
                                     android.view.MotionEvent.ACTION_UP -> {
-                                        android.util.Log.d("ContentBanner", "TOUCH UP at (${event.x}, ${event.y})")
                                     }
                                     android.view.MotionEvent.ACTION_MOVE -> {
-                                        android.util.Log.d("ContentBanner", "TOUCH MOVE at (${event.x}, ${event.y})")
                                     }
                                 }
                                 false // Don't consume the event, let WebView handle it
@@ -1431,24 +1075,17 @@ fun ContentBanner(
                     update = { webView ->
                         // Helper function to handle deep links
                         fun handleDeepLink(url: String) {
-                            android.util.Log.d("ContentBanner", "handleDeepLink called with URL: $url")
                             try {
                                 val uri = android.net.Uri.parse(url)
-                                android.util.Log.d("ContentBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}, path: ${uri.path}")
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                 intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                 intent.setPackage(context.packageName)
-                                android.util.Log.d("ContentBanner", "Intent created - package: ${context.packageName}, action: ${intent.action}")
                                 val resolvedActivity = intent.resolveActivity(context.packageManager)
-                                android.util.Log.d("ContentBanner", "Resolved activity: $resolvedActivity")
                                 if (resolvedActivity != null) {
                                     context.startActivity(intent)
-                                    android.util.Log.d("ContentBanner", "✓ Started activity with deep link: $url")
                                 } else {
-                                    android.util.Log.w("ContentBanner", "✗ Could not resolve activity for deep link: $url")
                                 }
                             } catch (e: Exception) {
-                                android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
                                 e.printStackTrace()
                             }
                         }
@@ -1457,59 +1094,44 @@ fun ContentBanner(
                         class DeepLinkHandler(private val handler: (String) -> Unit) {
                             @android.webkit.JavascriptInterface
                             fun handleDeepLink(url: String) {
-                                android.util.Log.d("ContentBanner", "JavaScript interface handleDeepLink called with URL: $url")
                                 android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                    android.util.Log.d("ContentBanner", "Executing deep link handler on main thread")
                                     handler(url)
                                 }
                             }
                         }
                         
                         webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
-                        android.util.Log.d("ContentBanner", "JavaScript interface 'AndroidDeepLinkHandler' added to WebView")
-                        
                         val customWebViewClient = object : android.webkit.WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
-                                android.util.Log.d("ContentBanner", "[update] shouldOverrideUrlLoading called with URL: $url")
                                 if (url != null) {
-                                    android.util.Log.d("ContentBanner", "[update] Full URL details - scheme: ${android.net.Uri.parse(url).scheme}, host: ${android.net.Uri.parse(url).host}")
                                     if (url.startsWith("philstore://")) {
-                                        android.util.Log.d("ContentBanner", "[update] Deep link detected, calling handleDeepLink")
                                         handleDeepLink(url)
                                         return true
                                     }
                                 }
-                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link, allowing WebView to handle: $url")
                                 return false
                             }
                             
                             @android.annotation.SuppressLint("NewApi")
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString()
-                                android.util.Log.d("ContentBanner", "[update] shouldOverrideUrlLoading (new API) called with URL: $url")
                                 if (url != null && url.startsWith("philstore://")) {
-                                    android.util.Log.d("ContentBanner", "[update] Deep link detected (new API), calling handleDeepLink")
                                     handleDeepLink(url)
                                     return true
                                 }
-                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link (new API), returning false")
                                 return false
                             }
                             
                             override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                 super.onPageFinished(view, url)
-                                android.util.Log.d("ContentBanner", "onPageFinished called for URL: $url")
-                                
                                 // Only inject JavaScript if page is actually loaded (not about:blank)
                                 if (url == null || url == "about:blank" || url.startsWith("data:")) {
-                                    android.util.Log.d("ContentBanner", "Skipping JavaScript injection - page not fully loaded (URL: $url)")
                                     return
                                 }
                                 
                                 // Inject JavaScript after page is fully loaded
                                 view?.postDelayed({
                                     try {
-                                        android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor (onPageFinished)")
                                         val jsCode = """
                                             (function() {
                                                 console.log('ContentBanner: Deep link interceptor script loaded (onPageFinished)');
@@ -1776,11 +1398,8 @@ fun ContentBanner(
                                             })();
                                         """.trimIndent()
                                         view?.evaluateJavascript(jsCode) { result ->
-                                            android.util.Log.d("ContentBanner", "JavaScript injection result (onPageFinished): $result")
                                         }
-                                        android.util.Log.d("ContentBanner", "✓ JavaScript deep link interceptor injected (onPageFinished)")
                                     } catch (e: Exception) {
-                                        android.util.Log.e("ContentBanner", "Error injecting JavaScript (onPageFinished): ${e.message}", e)
                                         e.printStackTrace()
                                     }
                                 }, 100)
@@ -1789,14 +1408,10 @@ fun ContentBanner(
                         
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        android.util.Log.d("ContentBanner", "Custom WebViewClient set on WebView")
-                        
                         // Braze SDK: Get the current banner (same as BrazeBanner)
                         val currentBanner = BrazeUserSync.getBanner(context, placementId)
-                        android.util.Log.d("ContentBanner", "Current banner in update block: ${if (currentBanner != null) "exists (${currentBanner.javaClass.simpleName})" else "null"}")
                         if (currentBanner != null) {
                             try {
-                                android.util.Log.d("ContentBanner", "Attempting to insert banner into WebView")
                                 val brazeInstance = com.braze.Braze.getInstance(context)
                                 val insertMethod = brazeInstance.javaClass.getMethod(
                                     "insertBanner",
@@ -1804,16 +1419,12 @@ fun ContentBanner(
                                     android.view.View::class.java
                                 )
                                 insertMethod.invoke(brazeInstance, currentBanner, webView)
-                                android.util.Log.d("ContentBanner", "✓ Banner inserted into WebView")
-                                
                                 webView.post {
-                                    android.util.Log.d("ContentBanner", "Re-applying WebViewClient after Braze insertBanner")
                                     webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                     webView.webViewClient = customWebViewClient
                                     
                                     webView.postDelayed({
                                         try {
-                                            android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor")
                                             val jsCode = """
                                                 (function() {
                                                     console.log('ContentBanner: Deep link interceptor script loaded');
@@ -1890,47 +1501,17 @@ fun ContentBanner(
                                                 })();
                                             """.trimIndent()
                                             webView.evaluateJavascript(jsCode) { result ->
-                                                android.util.Log.d("ContentBanner", "JavaScript injection result: $result")
                                             }
-                                            android.util.Log.d("ContentBanner", "✓ JavaScript deep link interceptor injected")
                                         } catch (e: Exception) {
-                                            android.util.Log.e("ContentBanner", "Error injecting JavaScript: ${e.message}", e)
                                             e.printStackTrace()
                                         }
                                     }, 500)
                                 }
                             } catch (e: Exception) {
-                                android.util.Log.w("ContentBanner", "insertBanner method failed, trying getHtml: ${e.message}")
                                 try {
                                     val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                     val htmlContent = htmlMethod.invoke(currentBanner) as? String
-                                    android.util.Log.d("ContentBanner", "Retrieved HTML content: ${if (htmlContent != null) "${htmlContent.length} chars" else "null"}")
                                     if (htmlContent != null) {
-                                        // Log if HTML contains deep links
-                                        if (htmlContent.contains("philstore://")) {
-                                            android.util.Log.d("ContentBanner", "✓ HTML contains philstore:// deep links")
-                                            
-                                            // Find and log the actual deep link URL
-                                            val deepLinkPattern = Regex("philstore://[^\"'\\s<>)]+")
-                                            val matches = deepLinkPattern.findAll(htmlContent)
-                                            matches.forEach { match ->
-                                                android.util.Log.d("ContentBanner", "Found deep link in HTML: ${match.value}")
-                                            }
-                                            
-                                            // Check specifically for purchase history link
-                                            if (htmlContent.contains("philstore://history")) {
-                                                android.util.Log.d("ContentBanner", "✓ Found philstore://history in HTML")
-                                                // Extract context around the deep link
-                                                val index = htmlContent.indexOf("philstore://history")
-                                                val start = (index - 100).coerceAtLeast(0)
-                                                val end = (index + 100).coerceAtMost(htmlContent.length)
-                                                android.util.Log.d("ContentBanner", "Context around deep link: ${htmlContent.substring(start, end)}")
-                                            } else {
-                                                android.util.Log.w("ContentBanner", "✗ philstore://history NOT found in HTML")
-                                            }
-                                        } else {
-                                            android.util.Log.d("ContentBanner", "✗ HTML does not contain philstore:// deep links")
-                                        }
                                         
                                         webView.webViewClient = customWebViewClient
                                         val wrappedHtml = """
@@ -2192,12 +1773,9 @@ fun ContentBanner(
                                         """.trimIndent()
                                         
                                         webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
-                                        android.util.Log.d("ContentBanner", "✓ Loaded HTML content with pre-loaded interceptors and custom WebViewClient")
-                                        
                                         // Inject JavaScript after HTML loads (same as insertBanner path)
                                         webView.postDelayed({
                                             try {
-                                                android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor (getHtml path)")
                                         val jsCode = """
                                             (function() {
                                                 console.log('ContentBanner: Deep link interceptor script loaded (getHtml path)');
@@ -2540,20 +2118,641 @@ fun ContentBanner(
                                                     })();
                                                 """.trimIndent()
                                                 webView.evaluateJavascript(jsCode) { result ->
-                                                    android.util.Log.d("ContentBanner", "JavaScript injection result (getHtml path): $result")
                                                 }
-                                                android.util.Log.d("ContentBanner", "✓ JavaScript deep link interceptor injected (getHtml path)")
                                             } catch (e: Exception) {
-                                                android.util.Log.e("ContentBanner", "Error injecting JavaScript (getHtml path): ${e.message}", e)
                                                 e.printStackTrace()
                                             }
                                         }, 500)
                                     } else {
-                                        android.util.Log.w("ContentBanner", "✗ HTML content is null")
                                     }
                                 } catch (e2: Exception) {
-                                    android.util.Log.e("ContentBanner", "✗ Error loading banner HTML: ${e2.message}", e2)
                                     e2.printStackTrace()
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                // Placeholder: Displayed when no banner is available
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Banner",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Placement ID: $placementId",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Banner: Tile Banner (1:1 Square Banner Layout, Non-Collapsing)
+ * 
+ * Custom Braze Banner implementation that always displays a container:
+ * - Uses placement ID: tile_banner
+ * - Displays banner when available (1:1 square layout)
+ * - Shows placeholder when no banner is available (does not collapse)
+ * - Placeholder displays "Banner" and "Placement ID: tile_banner"
+ */
+@Composable
+fun TileBanner(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val placementId = "tile_banner"
+    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    var shouldRender by remember(placementId) { mutableStateOf(false) }
+    
+    // Request banner refresh and get banner (with retry logic for first load)
+    LaunchedEffect(placementId) {
+        // Braze SDK: Request refresh for this placement
+        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
+        
+        // Try to get banner with retries (first load may need more time)
+        var retryCount = 0
+        val maxRetries = 3
+        while (retryCount < maxRetries && banner == null) {
+            // Delay increases with each retry: 500ms, 1000ms, 1500ms
+            kotlinx.coroutines.delay(500L * (retryCount + 1))
+            
+            // Braze SDK: Get the banner
+            banner = BrazeUserSync.getBanner(context, placementId)
+            
+            if (banner != null) {
+                break
+            }
+            retryCount++
+        }
+        
+        // Check if banner exists and is not a control variant
+        if (banner != null) {
+            try {
+                val isControlMethod = banner!!.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                shouldRender = !isControl
+            } catch (e: Exception) {
+                // If isControl method doesn't exist, assume we should render
+                shouldRender = true
+            }
+        } else {
+            shouldRender = false
+        }
+    }
+    
+    // Always render container (1:1 aspect ratio square layout)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f) // 1:1 square (width:height)
+            .clip(RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        color = if (shouldRender && banner != null) Color.Transparent else colorScheme.surfaceVariant,
+        border = if (!shouldRender || banner == null) {
+            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
+        } else null,
+        shadowElevation = if (shouldRender && banner != null) 4.dp else 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (shouldRender && banner != null) {
+                // Display banner (same implementation as ContentBanner)
+                AndroidView(
+                    factory = { ctx ->
+                        android.webkit.WebView(ctx).apply {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            
+                            webViewClient = object : android.webkit.WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                    if (url != null && url.startsWith("philstore://")) {
+                                        try {
+                                            val uri = android.net.Uri.parse(url)
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                            intent.setPackage(ctx.packageName)
+                                            val resolvedActivity = intent.resolveActivity(ctx.packageManager)
+                                            if (resolvedActivity != null) {
+                                                ctx.startActivity(intent)
+                                            }
+                                            return true
+                                        } catch (e: Exception) {
+                                            // Error handling deep link
+                                        }
+                                    }
+                                    return false
+                                }
+                            }
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.loadWithOverviewMode = true
+                            settings.useWideViewPort = true
+                            settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                        }
+                    },
+                    update = { webView ->
+                        // Helper function to handle deep links
+                        fun handleDeepLink(url: String) {
+                            try {
+                                val uri = android.net.Uri.parse(url)
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                intent.setPackage(context.packageName)
+                                val resolvedActivity = intent.resolveActivity(context.packageManager)
+                                if (resolvedActivity != null) {
+                                    context.startActivity(intent)
+                                }
+                            } catch (e: Exception) {
+                                // Error handling deep link
+                            }
+                        }
+                        
+                        // JavaScript interface for deep links
+                        class DeepLinkHandler(private val handler: (String) -> Unit) {
+                            @android.webkit.JavascriptInterface
+                            fun handleDeepLink(url: String) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    handler(url)
+                                }
+                            }
+                        }
+                        
+                        webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                        
+                        val customWebViewClient = object : android.webkit.WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                if (url != null && url.startsWith("philstore://")) {
+                                    handleDeepLink(url)
+                                    return true
+                                }
+                                return false
+                            }
+                            
+                            @android.annotation.SuppressLint("NewApi")
+                            override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString()
+                                if (url != null && url.startsWith("philstore://")) {
+                                    handleDeepLink(url)
+                                    return true
+                                }
+                                return false
+                            }
+                            
+                            override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                
+                                // Only inject JavaScript if page is actually loaded (not about:blank)
+                                if (url == null || url == "about:blank" || url.startsWith("data:")) {
+                                    return
+                                }
+                                
+                                // Inject JavaScript after page is fully loaded
+                                view?.postDelayed({
+                                    try {
+                                        val jsCode = """
+                                            (function() {
+                                                function handleDeepLink(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        }
+                                                        window.location.href = url;
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                var originalOpen = window.open;
+                                                window.open = function(url, target, features) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return null;
+                                                    }
+                                                    return originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                window.location.assign = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalAssign?.apply(window.location, arguments);
+                                                };
+                                                
+                                                window.location.replace = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalReplace?.apply(window.location, arguments);
+                                                };
+                                                
+                                                function setupClickInterceptors() {
+                                                    document.addEventListener('click', function(e) {
+                                                        var target = e.target;
+                                                        var link = null;
+                                                        
+                                                        while (target && target !== document.body) {
+                                                            if (target.tagName === 'A' && target.href) {
+                                                                link = target;
+                                                                break;
+                                                            }
+                                                            target = target.parentElement;
+                                                        }
+                                                        
+                                                        if (link && link.href) {
+                                                            if (handleDeepLink(link.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        } else {
+                                                            var clicked = e.target;
+                                                            var deepLink = null;
+                                                            var onclickAttr = clicked.getAttribute('onclick');
+                                                            var dataHref = clicked.getAttribute('data-href');
+                                                            var href = clicked.href;
+                                                            
+                                                            if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (match) deepLink = match[0];
+                                                            } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                deepLink = dataHref;
+                                                            } else if (href && href.includes('philstore://')) {
+                                                                deepLink = href;
+                                                            } else {
+                                                                var parent = clicked.parentElement;
+                                                                var depth = 0;
+                                                                while (parent && depth < 5) {
+                                                                    var parentOnclick = parent.getAttribute('onclick');
+                                                                    var parentDataHref = parent.getAttribute('data-href');
+                                                                    var parentHref = parent.href;
+                                                                    
+                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) {
+                                                                            deepLink = match[0];
+                                                                            break;
+                                                                        }
+                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        deepLink = parentDataHref;
+                                                                        break;
+                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        deepLink = parentHref;
+                                                                        break;
+                                                                    }
+                                                                    parent = parent.parentElement;
+                                                                    depth++;
+                                                                }
+                                                            }
+                                                            
+                                                            if (deepLink) {
+                                                                if (handleDeepLink(deepLink)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
+                                                                }
+                                                            }
+                                                        }
+                                                    }, true);
+                                                    
+                                                    function attachToLinks() {
+                                                        var htmlContent = document.documentElement.innerHTML || '';
+                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var matches = htmlContent.match(regex);
+                                                        if (matches && matches.length > 0) {
+                                                            window._bannerDeepLink = matches[0];
+                                                        }
+                                                        
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                        clickableElements.forEach(function(el) {
+                                                            el.addEventListener('click', function(e) {
+                                                                var storedDeepLink = window._bannerDeepLink;
+                                                                if (!storedDeepLink) {
+                                                                    storedDeepLink = htmlContent.match(regex)?.[0];
+                                                                    window._bannerDeepLink = storedDeepLink;
+                                                                }
+                                                                
+                                                                if (storedDeepLink) {
+                                                                    if (handleDeepLink(storedDeepLink)) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                }
+                                                            }, true);
+                                                        });
+                                                    }
+                                                    
+                                                    if (document.readyState === 'loading') {
+                                                        document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                    } else {
+                                                        attachToLinks();
+                                                    }
+                                                    
+                                                    setTimeout(attachToLinks, 500);
+                                                    setTimeout(attachToLinks, 1000);
+                                                    setTimeout(attachToLinks, 2000);
+                                                }
+                                                
+                                                if (document.readyState === 'loading') {
+                                                    document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                } else {
+                                                    setupClickInterceptors();
+                                                }
+                                            })();
+                                        """.trimIndent()
+                                        view?.evaluateJavascript(jsCode, null)
+                                    } catch (e: Exception) {
+                                        // Error injecting JavaScript
+                                    }
+                                }, 100)
+                            }
+                        }
+                        
+                        webView.webViewClient = customWebViewClient
+                        webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        
+                        val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                        if (currentBanner != null) {
+                            try {
+                                val brazeInstance = com.braze.Braze.getInstance(context)
+                                val insertMethod = brazeInstance.javaClass.getMethod(
+                                    "insertBanner",
+                                    currentBanner.javaClass,
+                                    android.view.View::class.java
+                                )
+                                insertMethod.invoke(brazeInstance, currentBanner, webView)
+                                
+                                webView.post {
+                                    webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                    webView.webViewClient = customWebViewClient
+                                }
+                            } catch (e: Exception) {
+                                try {
+                                    val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
+                                    val htmlContent = htmlMethod.invoke(currentBanner) as? String
+                                    if (htmlContent != null) {
+                                        val preloadJs = """
+                                            (function() {
+                                                function handleDeepLink(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        }
+                                                        return false;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                window._originalOpen = window.open;
+                                                window.open = function(url, target, features) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return null;
+                                                    }
+                                                    return window._originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                window.location.assign = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalAssign?.apply(window.location, arguments);
+                                                };
+                                                
+                                                window.location.replace = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalReplace?.apply(window.location, arguments);
+                                                };
+                                                
+                                                document.addEventListener('DOMContentLoaded', function() {
+                                                    function findDeepLinkInDocument() {
+                                                        var htmlContent = document.documentElement.innerHTML || '';
+                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var matches = htmlContent.match(regex);
+                                                        if (matches && matches.length > 0) {
+                                                            return matches[0];
+                                                        }
+                                                        return null;
+                                                    }
+                                                    
+                                                    var deepLinkUrl = findDeepLinkInDocument();
+                                                    window._bannerDeepLink = deepLinkUrl;
+                                                    
+                                                    document.addEventListener('click', function(e) {
+                                                        var storedDeepLink = window._bannerDeepLink;
+                                                        if (!storedDeepLink) {
+                                                            storedDeepLink = findDeepLinkInDocument();
+                                                            window._bannerDeepLink = storedDeepLink;
+                                                        }
+                                                        
+                                                        if (storedDeepLink) {
+                                                            if (handleDeepLink(storedDeepLink)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                    }, true);
+                                                });
+                                            })();
+                                        """.trimIndent()
+                                        
+                                        val htmlWithInterceptors = """
+                                            <!DOCTYPE html>
+                                            <html>
+                                            <head>
+                                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                                <script>
+                                                    $preloadJs
+                                                </script>
+                                                <style>
+                                                    body {
+                                                        margin: 0;
+                                                        padding: 0;
+                                                        display: flex;
+                                                        justify-content: center;
+                                                        align-items: center;
+                                                        min-height: 100%;
+                                                        background-color: transparent;
+                                                    }
+                                                    html {
+                                                        background-color: transparent;
+                                                    }
+                                                    * {
+                                                        max-width: 100%;
+                                                    }
+                                                </style>
+                                            </head>
+                                            <body>
+                                                $htmlContent
+                                            </body>
+                                            </html>
+                                        """.trimIndent()
+                                        
+                                        webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
+                                        
+                                        webView.postDelayed({
+                                            try {
+                                                val jsCode = """
+                                                    (function() {
+                                                        function handleDeepLink(url) {
+                                                            if (url && url.startsWith('philstore://')) {
+                                                                if (window.AndroidDeepLinkHandler) {
+                                                                    window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                                    return true;
+                                                                }
+                                                                window.location.href = url;
+                                                                return true;
+                                                            }
+                                                            return false;
+                                                        }
+                                                        
+                                                        function setupClickInterceptors() {
+                                                            document.addEventListener('click', function(e) {
+                                                                var target = e.target;
+                                                                var link = null;
+                                                                
+                                                                while (target && target !== document.body) {
+                                                                    if (target.tagName === 'A' && target.href) {
+                                                                        link = target;
+                                                                        break;
+                                                                    }
+                                                                    target = target.parentElement;
+                                                                }
+                                                                
+                                                                if (link && link.href) {
+                                                                    if (handleDeepLink(link.href)) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                } else {
+                                                                    var clicked = e.target;
+                                                                    var deepLink = null;
+                                                                    var onclickAttr = clicked.getAttribute('onclick');
+                                                                    var dataHref = clicked.getAttribute('data-href');
+                                                                    var href = clicked.href;
+                                                                    
+                                                                    if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                        var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) deepLink = match[0];
+                                                                    } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                        deepLink = dataHref;
+                                                                    } else if (href && href.includes('philstore://')) {
+                                                                        deepLink = href;
+                                                                    } else {
+                                                                        var parent = clicked.parentElement;
+                                                                        var depth = 0;
+                                                                        while (parent && depth < 5) {
+                                                                            var parentOnclick = parent.getAttribute('onclick');
+                                                                            var parentDataHref = parent.getAttribute('data-href');
+                                                                            var parentHref = parent.href;
+                                                                            
+                                                                            if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                                var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                                if (match) {
+                                                                                    deepLink = match[0];
+                                                                                    break;
+                                                                                }
+                                                                            } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                                deepLink = parentDataHref;
+                                                                                break;
+                                                                            } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                                deepLink = parentHref;
+                                                                                break;
+                                                                            }
+                                                                            parent = parent.parentElement;
+                                                                            depth++;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    if (deepLink) {
+                                                                        if (handleDeepLink(deepLink)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }, true);
+                                                            
+                                                            function attachToLinks() {
+                                                                var htmlContent = document.documentElement.innerHTML || '';
+                                                                var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                                var matches = htmlContent.match(regex);
+                                                                if (matches && matches.length > 0) {
+                                                                    window._bannerDeepLink = matches[0];
+                                                                }
+                                                                
+                                                                var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                                clickableElements.forEach(function(el) {
+                                                                    el.addEventListener('click', function(e) {
+                                                                        var storedDeepLink = window._bannerDeepLink;
+                                                                        if (!storedDeepLink) {
+                                                                            storedDeepLink = htmlContent.match(regex)?.[0];
+                                                                            window._bannerDeepLink = storedDeepLink;
+                                                                        }
+                                                                        
+                                                                        if (storedDeepLink) {
+                                                                            if (handleDeepLink(storedDeepLink)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }
+                                                                    }, true);
+                                                                });
+                                                            }
+                                                            
+                                                            if (document.readyState === 'loading') {
+                                                                document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                            } else {
+                                                                attachToLinks();
+                                                            }
+                                                            
+                                                            setTimeout(attachToLinks, 500);
+                                                            setTimeout(attachToLinks, 1000);
+                                                            setTimeout(attachToLinks, 2000);
+                                                        }
+                                                        
+                                                        if (document.readyState === 'loading') {
+                                                            document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                        } else {
+                                                            setupClickInterceptors();
+                                                        }
+                                                    })();
+                                                """.trimIndent()
+                                                webView.evaluateJavascript(jsCode, null)
+                                            } catch (e: Exception) {
+                                                // Error injecting JavaScript
+                                            }
+                                        }, 500)
+                                    }
+                                } catch (e2: Exception) {
+                                    // Error loading banner HTML
                                 }
                             }
                         }

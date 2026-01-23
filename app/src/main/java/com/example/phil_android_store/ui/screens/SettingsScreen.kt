@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -114,9 +113,6 @@ fun SettingsScreen(
     var isLoadingToken by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
-    // Auto-refresh Content Cards state
-    var autoRefreshContentCards by remember { mutableStateOf(settingsManager.getAutoRefreshContentCards()) }
-    
     // Available deep links
     val deepLinks = listOf(
         "Store" to "philstore://store",
@@ -130,7 +126,15 @@ fun SettingsScreen(
     // Banner placement IDs
     val bannerPlacements = listOf(
         "Store Page Banner" to "store_page_banner",
-        "Cart Banner" to "cart_banner"
+        "Cart Banner" to "cart_banner",
+        "Content Banner" to "content_banner",
+        "Tile Banner" to "tile_banner"
+    )
+    
+    // Content Card Key-Value Pairs
+    val contentCardKVPs = listOf(
+        "Tile 1" to "location = tile_1",
+        "Tile 2" to "location = tile_2"
     )
     
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
@@ -397,43 +401,6 @@ fun SettingsScreen(
                 }
             }
             
-            // Auto-refresh Content Cards setting
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Auto requestContentCardsRefresh()",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Automatically refresh Content Cards when entering the Content page",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = autoRefreshContentCards,
-                        onCheckedChange = {
-                            autoRefreshContentCards = it
-                            settingsManager.setAutoRefreshContentCards(it)
-                        }
-                    )
-                }
-            }
-            
             // Info Section - Banner Placement IDs and Deep Links
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -489,6 +456,38 @@ fun SettingsScreen(
                                     val clip = ClipData.newPlainText("Placement ID", id)
                                     clipboard.setPrimaryClip(clip)
                                     Toast.makeText(context, "Placement ID copied to clipboard", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    }
+                    
+                    // Content Card Key-Value Pairs
+                    Text(
+                        text = "Content Card Key-Value Pairs",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    
+                    contentCardKVPs.forEach { (name, kvp) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = kvp,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Content Card KVP", kvp)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Content Card KVP copied to clipboard", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         }
