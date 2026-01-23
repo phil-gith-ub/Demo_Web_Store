@@ -535,16 +535,7 @@ fun Tile1ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) {
-            // Use a solid background color instead of potentially transparent surface
-            if (isSystemInDarkTheme()) {
-                colorScheme.surface
-            } else {
-                Color.White // Solid white background in light theme
-            }
-        } else {
-            colorScheme.surfaceVariant
-        },
+        color = Color.Transparent, // Transparent - grey placeholder background shows through
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -554,16 +545,40 @@ fun Tile1ContentCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (hasCard && cardData != null) {
-                // Text background: Light theme uses colored background for visibility
-                val isDarkTheme = isSystemInDarkTheme()
-                val textBackgroundColor = if (isDarkTheme) {
-                    Color.Transparent
-                } else {
-                    // Solid, visible purple-grey background - NOT transparent
-                    Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
+            // Always show placeholder background (grey container)
+            // This provides the background color even when content is displayed
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                // Placeholder text - only visible when no content card
+                if (!hasCard || cardData == null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Content Card",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "location = $locationKey",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-                
+            }
+            
+            // Content card displayed over the placeholder background
+            if (hasCard && cardData != null) {
                 // Adaptive layout based on image aspect ratio
                 if (useRowLayout && cardData.imageUrl != null) {
                     // Row layout: Square images (image left, text right)
@@ -580,41 +595,35 @@ fun Tile1ContentCard(
                             contentScale = ContentScale.Crop
                         )
                         
+                        // Text section - displays over grey placeholder background
                         if (cardData.title != null || cardData.description != null) {
-                            Surface(
+                            Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxSize(),
-                                color = textBackgroundColor,
-                                shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.Start
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.Start
-                                ) {
-                                    if (cardData.title != null) {
-                                        Text(
-                                            text = cardData.title,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = colorScheme.onSurface,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    
-                                    if (cardData.description != null) {
-                                        Text(
-                                            text = cardData.description,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = colorScheme.onSurfaceVariant,
-                                            maxLines = 3,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                if (cardData.title != null) {
+                                    Text(
+                                        text = cardData.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                
+                                if (cardData.description != null) {
+                                    Text(
+                                        text = cardData.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = colorScheme.onSurfaceVariant,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
@@ -635,62 +644,37 @@ fun Tile1ContentCard(
                             )
                         }
                         
+                        // Text section - displays over grey placeholder background
                         if (cardData.title != null || cardData.description != null) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = textBackgroundColor,
-                                shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    if (cardData.title != null) {
-                                        Text(
-                                            text = cardData.title,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = colorScheme.onSurface,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    
-                                    if (cardData.description != null) {
-                                        Text(
-                                            text = cardData.description,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                if (cardData.title != null) {
+                                    Text(
+                                        text = cardData.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                
+                                if (cardData.description != null) {
+                                    Text(
+                                        text = cardData.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
                     }
-                }
-            } else {
-                // Placeholder: Displayed when no Content Card is available
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Content Card",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "location = $locationKey",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
         }
@@ -903,16 +887,7 @@ fun Tile2ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) {
-            // Use a solid background color instead of potentially transparent surface
-            if (isSystemInDarkTheme()) {
-                colorScheme.surface
-            } else {
-                Color.White // Solid white background in light theme
-            }
-        } else {
-            colorScheme.surfaceVariant
-        },
+        color = Color.Transparent, // Transparent - grey placeholder background shows through
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -922,8 +897,40 @@ fun Tile2ContentCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            // Always show placeholder background (grey container)
+            // This provides the background color even when content is displayed
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                // Placeholder text - only visible when no content card
+                if (!hasCard || cardData == null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Content Card",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "location = $locationKey",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+            
+            // Content card displayed over the placeholder background
             if (hasCard && cardData != null) {
-                // Braze SDK: Display Content Card with image and/or text
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -939,71 +946,36 @@ fun Tile2ContentCard(
                         )
                     }
                     
-                    // Text content (if available)
+                    // Text section - displays over grey placeholder background
                     if (cardData.title != null || cardData.description != null) {
-                        // Add background to text section for visibility in light theme
-                        val isDarkTheme = isSystemInDarkTheme()
-                        val textBackgroundColor = if (isDarkTheme) {
-                            Color.Transparent // No background needed in dark theme
-                        } else {
-                            // Solid, visible purple-grey background - NOT transparent
-                            Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
-                        }
-                        
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = textBackgroundColor,
-                            shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (cardData.title != null) {
-                                    Text(
-                                        text = cardData.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colorScheme.onSurface,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                
-                                if (cardData.description != null) {
-                                    Text(
-                                        text = cardData.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                            if (cardData.title != null) {
+                                Text(
+                                    text = cardData.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            if (cardData.description != null) {
+                                Text(
+                                    text = cardData.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
-                }
-            } else {
-                // Placeholder: Show when no content is available
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Content Card",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "location = $locationKey",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
         }
@@ -1216,16 +1188,7 @@ fun Tile3ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) {
-            // Use a solid background color instead of potentially transparent surface
-            if (isSystemInDarkTheme()) {
-                colorScheme.surface
-            } else {
-                Color.White // Solid white background in light theme
-            }
-        } else {
-            colorScheme.surfaceVariant
-        },
+        color = Color.Transparent, // Transparent - grey placeholder background shows through
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -1235,8 +1198,40 @@ fun Tile3ContentCard(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            // Always show placeholder background (grey container)
+            // This provides the background color even when content is displayed
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                // Placeholder text - only visible when no content card
+                if (!hasCard || cardData == null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Content Card",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "location = $locationKey",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+            
+            // Content card displayed over the placeholder background
             if (hasCard && cardData != null) {
-                // Braze SDK: Display Content Card with image and/or text
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -1252,71 +1247,36 @@ fun Tile3ContentCard(
                         )
                     }
                     
-                    // Text content (if available)
+                    // Text section - displays over grey placeholder background
                     if (cardData.title != null || cardData.description != null) {
-                        // Add background to text section for visibility in light theme
-                        val isDarkTheme = isSystemInDarkTheme()
-                        val textBackgroundColor = if (isDarkTheme) {
-                            Color.Transparent // No background needed in dark theme
-                        } else {
-                            // Solid, visible purple-grey background - NOT transparent
-                            Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
-                        }
-                        
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = textBackgroundColor,
-                            shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (cardData.title != null) {
-                                    Text(
-                                        text = cardData.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colorScheme.onSurface,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                
-                                if (cardData.description != null) {
-                                    Text(
-                                        text = cardData.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                            if (cardData.title != null) {
+                                Text(
+                                    text = cardData.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            if (cardData.description != null) {
+                                Text(
+                                    text = cardData.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
-                }
-            } else {
-                // Placeholder: Show when no content is available
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Content Card",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "location = $locationKey",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
         }
