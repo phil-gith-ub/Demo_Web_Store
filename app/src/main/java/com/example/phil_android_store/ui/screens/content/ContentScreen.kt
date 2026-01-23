@@ -41,6 +41,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import coil.ImageLoader
 import androidx.compose.foundation.Image
 import android.content.Intent
 import android.net.Uri
@@ -495,6 +497,45 @@ fun Tile1ContentCard(
         }
     }
     
+    // Braze SDK: Detect image aspect ratio to determine layout (only for Tile1)
+    var imageAspectRatio by remember(cardData?.imageUrl) { mutableStateOf<Float?>(null) }
+    var useRowLayout by remember(imageAspectRatio) { 
+        mutableStateOf(imageAspectRatio != null && imageAspectRatio!! <= 1.3f) // If aspect ratio <= 1.3, use Row (square-ish)
+    }
+    
+    // Load image dimensions to determine aspect ratio
+    LaunchedEffect(cardData?.imageUrl) {
+        val imageUrl = cardData?.imageUrl
+        if (imageUrl != null) {
+            try {
+                val imageLoader = ImageLoader(context)
+                val request = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .build()
+                // Execute the request (suspend function)
+                val result = imageLoader.execute(request)
+                val drawable = result.drawable
+                if (drawable != null) {
+                    val width = drawable.intrinsicWidth
+                    val height = drawable.intrinsicHeight
+                    if (width > 0 && height > 0) {
+                        val aspectRatio = width.toFloat() / height.toFloat()
+                        imageAspectRatio = aspectRatio
+                        useRowLayout = aspectRatio <= 1.3f // Square-ish images (<= 1.3) use Row layout
+                        Log.d("Tile1ContentCard", "Image dimensions: ${width}x${height}, aspect ratio: $aspectRatio, useRowLayout: $useRowLayout")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d("Tile1ContentCard", "Could not load image dimensions, using default layout: ${e.message}")
+                // Default to Column layout if we can't determine dimensions
+                useRowLayout = false
+            }
+        } else {
+            imageAspectRatio = null
+            useRowLayout = false
+        }
+    }
+    
     // Braze SDK: Log impression when card is displayed
     LaunchedEffect(contentCard) {
         if (contentCard != null) {
@@ -557,64 +598,123 @@ fun Tile1ContentCard(
             contentAlignment = Alignment.Center
         ) {
             if (hasCard && cardData != null) {
-                // Braze SDK: Display Content Card with image and/or text
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Image (if available) - fills most of the space
-                    if (cardData.imageUrl != null) {
+                // Braze SDK: Display Content Card with adaptive layout based on image aspect ratio
+                // Add background to text section for visibility in light theme
+                val isDarkTheme = isSystemInDarkTheme()
+                val textBackgroundColor = if (isDarkTheme) {
+                    Color.Transparent // No background needed in dark theme
+                } else {
+                    // Light grey/purple tint for light theme - clearly visible against white background
+                    Color(0xFFD8D0DD) // Light purple-grey (clearly visible)
+                }
+                
+                // Adaptive layout: Row for square images, Column for wide images
+                if (useRowLayout && cardData.imageUrl != null) {
+                    // Row layout: Image on left, text on right (for square-ish images)
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        // Image on the left
                         Image(
                             painter = rememberAsyncImagePainter(cardData.imageUrl),
                             contentDescription = cardData.title ?: "Content Card Image",
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                                .weight(1f)
+                                .fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                    }
-                    
-                    // Text content (if available)
-                    if (cardData.title != null || cardData.description != null) {
-                        // Add background to text section for visibility in light theme
-                        val isDarkTheme = isSystemInDarkTheme()
-                        val textBackgroundColor = if (isDarkTheme) {
-                            Color.Transparent // No background needed in dark theme
-                        } else {
-                            // Light grey/purple tint for light theme - clearly visible against white background
-                            Color(0xFFD8D0DD) // Light purple-grey (clearly visible)
-                        }
                         
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(textBackgroundColor)
-                        ) {
-                            Column(
+                        // Text content on the right
+                        if (cardData.title != null || cardData.description != null) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .background(textBackgroundColor)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    if (cardData.title != null) {
+                                        Text(
+                                            text = cardData.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colorScheme.onSurface,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    
+                                    if (cardData.description != null) {
+                                        Text(
+                                            text = cardData.description,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Column layout: Image on top, text below (for wide images or no image)
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // Image (if available) - fills most of the space
+                        if (cardData.imageUrl != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(cardData.imageUrl),
+                                contentDescription = cardData.title ?: "Content Card Image",
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    .weight(1f),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        
+                        // Text content (if available)
+                        if (cardData.title != null || cardData.description != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(textBackgroundColor)
                             ) {
-                            if (cardData.title != null) {
-                                Text(
-                                    text = cardData.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            
-                            if (cardData.description != null) {
-                                Text(
-                                    text = cardData.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (cardData.title != null) {
+                                        Text(
+                                            text = cardData.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colorScheme.onSurface,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    
+                                    if (cardData.description != null) {
+                                        Text(
+                                            text = cardData.description,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
