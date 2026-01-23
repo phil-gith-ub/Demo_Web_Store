@@ -560,7 +560,8 @@ fun Tile1ContentCard(
                 val textBackgroundColor = if (isDarkTheme) {
                     Color.Transparent
                 } else {
-                    Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
+                    // Solid, visible purple-grey background - NOT transparent
+                    Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
                 }
                 
                 // Adaptive layout based on image aspect ratio
@@ -584,7 +585,7 @@ fun Tile1ContentCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxSize()
-                                    .background(textBackgroundColor)
+                                    .background(textBackgroundColor, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -637,7 +638,7 @@ fun Tile1ContentCard(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(textBackgroundColor)
+                                    .background(textBackgroundColor, RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
                             ) {
                                 Column(
                                     modifier = Modifier
