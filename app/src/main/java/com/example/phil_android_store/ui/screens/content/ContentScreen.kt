@@ -1963,31 +1963,9 @@ fun ContentBanner(
                                                 }
                                                 
                                                 // Store original functions
-                                                window._originalLocationHref = window.location.href;
                                                 window._originalOpen = window.open;
                                                 window._originalAssign = window.location.assign;
                                                 window._originalReplace = window.location.replace;
-                                                
-                                                // Intercept window.location.href
-                                                try {
-                                                    Object.defineProperty(window.location, 'href', {
-                                                        set: function(url) {
-                                                            console.log('ContentBanner: window.location.href SET to:', url);
-                                                            if (url && url.startsWith('philstore://')) {
-                                                                if (handleDeepLink(url)) return;
-                                                            }
-                                                            window._originalLocationHref = url;
-                                                            window.location.replace(url);
-                                                        },
-                                                        get: function() {
-                                                            return window._originalLocationHref || '';
-                                                        },
-                                                        configurable: true
-                                                    });
-                                                    console.log('ContentBanner: window.location.href interceptor installed');
-                                                } catch(e) {
-                                                    console.error('ContentBanner: Failed to intercept location.href:', e);
-                                                }
                                                 
                                                 // Intercept window.open
                                                 window.open = function(url, target, features) {
@@ -2015,6 +1993,94 @@ fun ContentBanner(
                                                     }
                                                     return window._originalReplace.apply(window.location, arguments);
                                                 };
+                                                
+                                                // Intercept ALL button clicks and check for deep links in the HTML
+                                                document.addEventListener('DOMContentLoaded', function() {
+                                                    console.log('ContentBanner: DOM loaded, setting up click interceptors');
+                                                    
+                                                    // Find the deep link URL in the HTML/document
+                                                    function findDeepLinkInDocument() {
+                                                        // Check all elements for philstore:// links
+                                                        var allElements = document.querySelectorAll('*');
+                                                        for (var i = 0; i < allElements.length; i++) {
+                                                            var el = allElements[i];
+                                                            var onclick = el.getAttribute('onclick');
+                                                            var dataHref = el.getAttribute('data-href');
+                                                            var href = el.href || el.getAttribute('href');
+                                                            
+                                                            if (onclick && onclick.includes('philstore://')) {
+                                                                var match = onclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (match) return match[0];
+                                                            }
+                                                            if (dataHref && dataHref.includes('philstore://')) {
+                                                                return dataHref;
+                                                            }
+                                                            if (href && href.includes('philstore://')) {
+                                                                return href;
+                                                            }
+                                                        }
+                                                        return null;
+                                                    }
+                                                    
+                                                    var deepLinkUrl = findDeepLinkInDocument();
+                                                    console.log('ContentBanner: Found deep link in document:', deepLinkUrl);
+                                                    
+                                                    // Intercept ALL clicks on buttons
+                                                    document.addEventListener('click', function(e) {
+                                                        console.log('ContentBanner: Click detected on:', e.target.tagName, e.target.className);
+                                                        
+                                                        // If we found a deep link, use it
+                                                        if (deepLinkUrl) {
+                                                            console.log('ContentBanner: Using found deep link:', deepLinkUrl);
+                                                            if (handleDeepLink(deepLinkUrl)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                        
+                                                        // Also check if the clicked element or its parents have the link
+                                                        var target = e.target;
+                                                        for (var i = 0; i < 5 && target; i++) {
+                                                            var onclick = target.getAttribute('onclick');
+                                                            var dataHref = target.getAttribute('data-href');
+                                                            var href = target.href || target.getAttribute('href');
+                                                            
+                                                            if (onclick && onclick.includes('philstore://')) {
+                                                                var match = onclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (match) {
+                                                                    console.log('ContentBanner: Found deep link in onclick:', match[0]);
+                                                                    if (handleDeepLink(match[0])) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (dataHref && dataHref.includes('philstore://')) {
+                                                                console.log('ContentBanner: Found deep link in data-href:', dataHref);
+                                                                if (handleDeepLink(dataHref)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
+                                                                }
+                                                            }
+                                                            if (href && href.includes('philstore://')) {
+                                                                console.log('ContentBanner: Found deep link in href:', href);
+                                                                if (handleDeepLink(href)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
+                                                                }
+                                                            }
+                                                            target = target.parentElement;
+                                                        }
+                                                    }, true); // Use capture phase
+                                                });
                                                 
                                                 console.log('ContentBanner: Pre-load navigation interceptors installed');
                                             })();
