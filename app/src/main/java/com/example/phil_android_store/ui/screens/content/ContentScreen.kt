@@ -1909,6 +1909,25 @@ fun ContentBanner(
                                         // Log if HTML contains deep links
                                         if (htmlContent.contains("philstore://")) {
                                             android.util.Log.d("ContentBanner", "✓ HTML contains philstore:// deep links")
+                                            
+                                            // Find and log the actual deep link URL
+                                            val deepLinkPattern = Regex("philstore://[^\"'\\s<>)]+")
+                                            val matches = deepLinkPattern.findAll(htmlContent)
+                                            matches.forEach { match ->
+                                                android.util.Log.d("ContentBanner", "Found deep link in HTML: ${match.value}")
+                                            }
+                                            
+                                            // Check specifically for purchase history link
+                                            if (htmlContent.contains("philstore://history")) {
+                                                android.util.Log.d("ContentBanner", "✓ Found philstore://history in HTML")
+                                                // Extract context around the deep link
+                                                val index = htmlContent.indexOf("philstore://history")
+                                                val start = (index - 100).coerceAtLeast(0)
+                                                val end = (index + 100).coerceAtMost(htmlContent.length)
+                                                android.util.Log.d("ContentBanner", "Context around deep link: ${htmlContent.substring(start, end)}")
+                                            } else {
+                                                android.util.Log.w("ContentBanner", "✗ philstore://history NOT found in HTML")
+                                            }
                                         } else {
                                             android.util.Log.d("ContentBanner", "✗ HTML does not contain philstore:// deep links")
                                         }
@@ -2000,8 +2019,22 @@ fun ContentBanner(
                                                     
                                                     // Find the deep link URL in the HTML/document
                                                     function findDeepLinkInDocument() {
+                                                        console.log('ContentBanner: Searching for deep link in document...');
+                                                        console.log('ContentBanner: Document body:', document.body ? 'exists' : 'null');
+                                                        console.log('ContentBanner: Document HTML length:', document.documentElement.innerHTML ? document.documentElement.innerHTML.length : 0);
+                                                        
+                                                        // First, search the entire HTML content as a string
+                                                        var htmlContent = document.documentElement.innerHTML || '';
+                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var matches = htmlContent.match(regex);
+                                                        if (matches && matches.length > 0) {
+                                                            console.log('ContentBanner: Found deep link(s) in HTML string:', matches);
+                                                            return matches[0]; // Return first match
+                                                        }
+                                                        
                                                         // Check all elements for philstore:// links
                                                         var allElements = document.querySelectorAll('*');
+                                                        console.log('ContentBanner: Checking', allElements.length, 'elements');
                                                         for (var i = 0; i < allElements.length; i++) {
                                                             var el = allElements[i];
                                                             var onclick = el.getAttribute('onclick');
@@ -2010,29 +2043,75 @@ fun ContentBanner(
                                                             
                                                             if (onclick && onclick.includes('philstore://')) {
                                                                 var match = onclick.match(/philstore:\/\/[^"'\s)]+/);
-                                                                if (match) return match[0];
+                                                                if (match) {
+                                                                    console.log('ContentBanner: Found in onclick:', match[0]);
+                                                                    return match[0];
+                                                                }
                                                             }
                                                             if (dataHref && dataHref.includes('philstore://')) {
+                                                                console.log('ContentBanner: Found in data-href:', dataHref);
                                                                 return dataHref;
                                                             }
                                                             if (href && href.includes('philstore://')) {
+                                                                console.log('ContentBanner: Found in href:', href);
                                                                 return href;
                                                             }
                                                         }
+                                                        
+                                                        // Check script tags
+                                                        var scripts = document.querySelectorAll('script');
+                                                        for (var j = 0; j < scripts.length; j++) {
+                                                            var scriptContent = scripts[j].innerHTML || scripts[j].textContent || '';
+                                                            if (scriptContent.includes('philstore://')) {
+                                                                var match = scriptContent.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (match) {
+                                                                    console.log('ContentBanner: Found in script tag:', match[0]);
+                                                                    return match[0];
+                                                                }
+                                                            }
+                                                        }
+                                                        
+                                                        console.log('ContentBanner: No deep link found in document');
                                                         return null;
                                                     }
                                                     
+                                                    // Wait a bit for content to load, then search
+                                                    setTimeout(function() {
+                                                        var deepLinkUrl = findDeepLinkInDocument();
+                                                        window._bannerDeepLink = deepLinkUrl;
+                                                        console.log('ContentBanner: Stored deep link:', deepLinkUrl);
+                                                    }, 100);
+                                                    
+                                                    // Also search immediately
                                                     var deepLinkUrl = findDeepLinkInDocument();
+                                                    window._bannerDeepLink = deepLinkUrl;
                                                     console.log('ContentBanner: Found deep link in document:', deepLinkUrl);
                                                     
                                                     // Intercept ALL clicks on buttons
                                                     document.addEventListener('click', function(e) {
                                                         console.log('ContentBanner: Click detected on:', e.target.tagName, e.target.className);
                                                         
+                                                        // Get stored deep link (might have been found later)
+                                                        var storedDeepLink = window._bannerDeepLink;
+                                                        if (!storedDeepLink) {
+                                                            // Try to find it again
+                                                            storedDeepLink = findDeepLinkInDocument();
+                                                            window._bannerDeepLink = storedDeepLink;
+                                                        }
+                                                        
                                                         // If we found a deep link, use it
-                                                        if (deepLinkUrl) {
-                                                            console.log('ContentBanner: Using found deep link:', deepLinkUrl);
-                                                            if (handleDeepLink(deepLinkUrl)) {
+                                                        if (storedDeepLink) {
+                                                            console.log('ContentBanner: Using found deep link:', storedDeepLink);
+                                                            if (handleDeepLink(storedDeepLink)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        } else {
+                                                            console.warn('ContentBanner: No deep link found, trying philstore://history as fallback');
+                                                            // Fallback: try the known deep link
+                                                            if (handleDeepLink('philstore://history')) {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 e.stopImmediatePropagation();
