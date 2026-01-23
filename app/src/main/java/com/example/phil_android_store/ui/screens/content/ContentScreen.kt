@@ -527,7 +527,7 @@ fun Tile1ContentCard(
                 }
                 
                 // Handle click - check if it's a deep link
-                val cardUrl = cardData?.cardUrl
+                val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
                     if (cardUrl.startsWith("philstore://")) {
                         try {
@@ -614,6 +614,7 @@ fun Tile1ContentCard(
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                            }
                             }
                         }
                     }
@@ -839,7 +840,7 @@ fun Tile2ContentCard(
                 }
                 
                 // Handle click - check if it's a deep link
-                val cardUrl = cardData?.cardUrl
+                val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
                     if (cardUrl.startsWith("philstore://")) {
                         try {
@@ -1139,7 +1140,7 @@ fun Tile3ContentCard(
                 }
                 
                 // Handle click - check if it's a deep link
-                val cardUrl = cardData?.cardUrl
+                val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
                     if (cardUrl.startsWith("philstore://")) {
                         try {
@@ -1255,8 +1256,9 @@ fun Tile3ContentCard(
 
 /**
  * Data class to hold extracted Content Card properties
+ * Shared across all Content Card components
  */
-private data class CardData(
+data class CardData(
     val title: String?,
     val description: String?,
     val imageUrl: String?,
