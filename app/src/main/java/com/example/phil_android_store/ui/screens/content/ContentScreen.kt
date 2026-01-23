@@ -269,15 +269,39 @@ fun Tile1ContentCard(
             // Braze SDK: Filter cards by location = tile_1 from extras
             var foundCard: Any? = null
             for (card in cards) {
+                // Check if card is a control card (try multiple methods/approaches)
+                var isControl = false
                 try {
-                    // Skip control cards (they should not be displayed)
+                    // Try isControlCard() method
                     val isControlMethod = card.javaClass.getMethod("isControlCard")
-                    val isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                    if (isControl) {
-                        Log.d("Tile1ContentCard", "Skipping control card")
-                        continue
+                    isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                } catch (e: NoSuchMethodException) {
+                    // Method doesn't exist, try checking class name or other methods
+                    try {
+                        // Try isControl property (Kotlin style)
+                        val isControlField = card.javaClass.getDeclaredField("isControl")
+                        isControlField.isAccessible = true
+                        isControl = isControlField.get(card) as? Boolean ?: false
+                    } catch (e2: Exception) {
+                        // Check class name for ControlCard
+                        val className = card.javaClass.simpleName
+                        isControl = className.contains("Control", ignoreCase = true)
+                        if (isControl) {
+                            Log.d("Tile1ContentCard", "Detected control card by class name: $className")
+                        }
                     }
-                    
+                } catch (e: Exception) {
+                    // If we can't determine, assume it's not a control card and proceed
+                    Log.d("Tile1ContentCard", "Could not check control status, proceeding: ${e.message}")
+                }
+                
+                if (isControl) {
+                    Log.d("Tile1ContentCard", "Skipping control card")
+                    continue
+                }
+                
+                // Try to get extras and process the card
+                try {
                     // Braze SDK: Get extras (key-value pairs) from card
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
@@ -294,6 +318,7 @@ fun Tile1ContentCard(
                         Log.d("Tile1ContentCard", "=== Card Details ===")
                         Log.d("Tile1ContentCard", "Card ID: $cardId")
                         Log.d("Tile1ContentCard", "Title: $title")
+                        Log.d("Tile1ContentCard", "Card class: ${card.javaClass.simpleName}")
                         Log.d("Tile1ContentCard", "Extras keys: ${extras?.keys?.joinToString(", ")}")
                         Log.d("Tile1ContentCard", "Extras full: $extras")
                         
@@ -304,7 +329,7 @@ fun Tile1ContentCard(
                             }
                         }
                     } catch (e: Exception) {
-                        Log.d("Tile1ContentCard", "Card extras: $extras (could not get card details: ${e.message})")
+                        Log.d("Tile1ContentCard", "Could not get card details: ${e.message}, but extras: $extras")
                     }
                     Log.d("Tile1ContentCard", "Looking for location = $locationKey")
                     
@@ -350,8 +375,8 @@ fun Tile1ContentCard(
                         Log.d("Tile1ContentCard", "Card has no extras")
                     }
                 } catch (e: Exception) {
-                    // Skip cards that don't have the expected methods
-                    Log.e("Tile1ContentCard", "Error processing card: ${e.message}", e)
+                    // Skip cards that we can't process
+                    Log.e("Tile1ContentCard", "Error processing card (skipping): ${e.message}", e)
                     continue
                 }
             }
