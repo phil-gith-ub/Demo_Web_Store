@@ -2109,14 +2109,7 @@ fun ContentBanner(
                                                                 return false;
                                                             }
                                                         } else {
-                                                            console.warn('ContentBanner: No deep link found, trying philstore://history as fallback');
-                                                            // Fallback: try the known deep link
-                                                            if (handleDeepLink('philstore://history')) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                e.stopImmediatePropagation();
-                                                                return false;
-                                                            }
+                                                            console.warn('ContentBanner: No deep link found in banner HTML');
                                                         }
                                                         
                                                         // Also check if the clicked element or its parents have the link
