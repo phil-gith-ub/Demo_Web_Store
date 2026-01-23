@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -350,9 +350,11 @@ private fun LogEntryCard(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
-                detectLongPress {
-                    onCopyLine(fullLogLine)
-                }
+                detectTapGestures(
+                    onLongPress = {
+                        onCopyLine(fullLogLine)
+                    }
+                )
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
@@ -432,11 +434,13 @@ private fun LogEntryCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .pointerInput(Unit) {
-                            detectLongPress {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("Payload", payloadJson)
-                                clipboard.setPrimaryClip(clip)
-                            }
+                            detectTapGestures(
+                                onLongPress = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Payload", payloadJson)
+                                    clipboard.setPrimaryClip(clip)
+                                }
+                            )
                         }
                 ) {
                     Text(
