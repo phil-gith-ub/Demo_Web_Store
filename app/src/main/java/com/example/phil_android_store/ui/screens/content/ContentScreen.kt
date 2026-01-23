@@ -28,12 +28,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.foundation.Image
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeUserSync
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Content screen for demonstrating Braze Content Cards and Banners.
@@ -159,15 +172,24 @@ fun ContentScreen() {
                 }
             }
             
-            // Blank content area for manually installing content cards and banners
+            // Content Card: Tile 1 (1x2 banner style)
+            // Braze SDK: Custom Content Card filtered by location = tile_1
+            // This demonstrates how to create a custom Content Card fragment with key-value pair filtering
+            Tile1ContentCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp) // Gap for notification banner
+            )
+            
+            // Blank content area for additional content cards and banners
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Empty space for content cards and banners
-                // This area can be used to manually install Braze Content Cards and Banners
+                // Empty space for additional content cards and banners
+                // This area can be used to manually install more Braze Content Cards and Banners
             }
         }
     }
@@ -180,3 +202,272 @@ fun ContentScreen() {
         }
     }
 }
+
+/**
+ * Content Card Fragment: Tile 1
+ * 
+ * Braze SDK: Custom Content Card implementation
+ * - Filters Content Cards by key-value pair: location = tile_1
+ * - Displays as 1x2 banner style (full width, 2:1 aspect ratio)
+ * - Logs analytics (impressions and clicks) to Braze dashboard
+ * - Shows placeholder when no content is available
+ * 
+ * To duplicate this for another card:
+ * 1. Copy this function and rename (e.g., Tile2ContentCard)
+ * 2. Change the locationKey value (e.g., "tile_2")
+ * 3. Update the placeholder text accordingly
+ * 4. Add the new component to ContentScreen below this one
+ */
+@Composable
+fun Tile1ContentCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+    
+    // Braze SDK: Key-value pair filter - location = tile_1
+    val locationKey = "tile_1"
+    
+    // Braze SDK: State to hold the filtered Content Card
+    var contentCard by remember { mutableStateOf<Any?>(null) }
+    var hasCard by remember { mutableStateOf(false) }
+    
+    // Braze SDK: Subscribe to Content Cards updates
+    DisposableEffect(Unit) {
+        // Braze SDK: Request initial refresh
+        BrazeUserSync.requestContentCardsRefresh(context)
+        
+        // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Braze SDK: Filter cards by location = tile_1 from extras
+            var foundCard: Any? = null
+            for (card in cards) {
+                try {
+                    // Skip control cards (they should not be displayed)
+                    val isControlMethod = card.javaClass.getMethod("isControlCard")
+                    val isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                    if (isControl) continue
+                    
+                    // Braze SDK: Get extras (key-value pairs) from card
+                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                    
+                    // Filter by location = tile_1
+                    if (extras != null && extras["location"] == locationKey) {
+                        foundCard = card
+                        break
+                    }
+                } catch (e: Exception) {
+                    // Skip cards that don't have the expected methods
+                    continue
+                }
+            }
+            
+            contentCard = foundCard
+            hasCard = foundCard != null
+        }
+        
+        // Braze SDK: Initial check after a short delay
+        scope.launch {
+            delay(500)
+            val allCards = BrazeUserSync.getContentCards(context)
+            var foundCard: Any? = null
+            for (card in allCards) {
+                try {
+                    val isControlMethod = card.javaClass.getMethod("isControlCard")
+                    val isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                    if (isControl) continue
+                    
+                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                    
+                    if (extras != null && extras["location"] == locationKey) {
+                        foundCard = card
+                        break
+                    }
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+            contentCard = foundCard
+            hasCard = foundCard != null
+        }
+        
+        // Braze SDK: Cleanup - unsubscribe when component is removed
+        onDispose {
+            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+        }
+    }
+    
+    // Braze SDK: Extract card properties (title, description, image, URL)
+    val cardData = remember(contentCard) {
+        if (contentCard != null) {
+            try {
+                val card = contentCard!!
+                val getTitleMethod = card.javaClass.getMethod("getTitle")
+                val title = getTitleMethod.invoke(card) as? String
+                
+                val getDescriptionMethod = card.javaClass.getMethod("getCardDescription")
+                val description = getDescriptionMethod.invoke(card) as? String
+                
+                val getImageMethod = card.javaClass.getMethod("getImage")
+                val imageUrl = getImageMethod.invoke(card) as? String
+                
+                val getUrlMethod = card.javaClass.getMethod("getUrlString")
+                val cardUrl = getUrlMethod.invoke(card) as? String
+                
+                CardData(title, description, imageUrl, cardUrl)
+            } catch (e: Exception) {
+                Log.e("Tile1ContentCard", "Error extracting card data: ${e.message}", e)
+                null
+            }
+        } else {
+            null
+        }
+    }
+    
+    // Braze SDK: Log impression when card is displayed
+    LaunchedEffect(contentCard) {
+        if (contentCard != null) {
+            try {
+                val logImpressionMethod = contentCard!!.javaClass.getMethod("logImpression")
+                logImpressionMethod.invoke(contentCard)
+                Log.d("Tile1ContentCard", "Logged Content Card impression")
+            } catch (e: Exception) {
+                Log.e("Tile1ContentCard", "Error logging impression: ${e.message}", e)
+            }
+        }
+    }
+    
+    // Display card or placeholder
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(2f) // 1x2 banner style (width:height = 2:1)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = hasCard && cardData?.cardUrl != null) {
+                // Braze SDK: Log click analytics
+                if (contentCard != null) {
+                    try {
+                        val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
+                        logClickMethod.invoke(contentCard)
+                        Log.d("Tile1ContentCard", "Logged Content Card click")
+                    } catch (e: Exception) {
+                        Log.e("Tile1ContentCard", "Error logging click: ${e.message}", e)
+                    }
+                }
+                
+                // Handle click - check if it's a deep link
+                val cardUrl = cardData?.cardUrl
+                if (cardUrl != null) {
+                    if (cardUrl.startsWith("philstore://")) {
+                        try {
+                            Log.d("Tile1ContentCard", "Handling deep link: $cardUrl")
+                            val uri = Uri.parse(cardUrl)
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            intent.setPackage(context.packageName)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("Tile1ContentCard", "Error handling deep link: ${e.message}", e)
+                        }
+                    } else {
+                        Log.d("Tile1ContentCard", "Card URL: $cardUrl")
+                    }
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        border = if (!hasCard) {
+            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
+        } else null,
+        shadowElevation = if (hasCard) 4.dp else 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (hasCard && cardData != null) {
+                // Braze SDK: Display Content Card with image and/or text
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Image (if available) - fills most of the space
+                    if (cardData.imageUrl != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(cardData.imageUrl),
+                            contentDescription = cardData.title ?: "Content Card Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    
+                    // Text content (if available)
+                    if (cardData.title != null || cardData.description != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (cardData.title != null) {
+                                Text(
+                                    text = cardData.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorScheme.onSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            if (cardData.description != null) {
+                                Text(
+                                    text = cardData.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Placeholder: Show when no content is available
+                // Displays a bordered rectangle with placeholder text
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Content Card",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "location = $locationKey",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Data class to hold extracted Content Card properties
+ */
+private data class CardData(
+    val title: String?,
+    val description: String?,
+    val imageUrl: String?,
+    val cardUrl: String?
+)
