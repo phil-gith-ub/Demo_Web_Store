@@ -286,22 +286,40 @@ fun Tile1ContentCard(
                     try {
                         val getIdMethod = card.javaClass.getMethod("getId")
                         val cardId = getIdMethod.invoke(card) as? String
-                        Log.d("Tile1ContentCard", "Card ID: $cardId, extras: $extras")
+                        
+                        // Get title and description for better logging
+                        val getTitleMethod = card.javaClass.getMethod("getTitle")
+                        val title = getTitleMethod.invoke(card) as? String
+                        
+                        Log.d("Tile1ContentCard", "=== Card Details ===")
+                        Log.d("Tile1ContentCard", "Card ID: $cardId")
+                        Log.d("Tile1ContentCard", "Title: $title")
+                        Log.d("Tile1ContentCard", "Extras keys: ${extras?.keys?.joinToString(", ")}")
+                        Log.d("Tile1ContentCard", "Extras full: $extras")
+                        
+                        // Log each extra key-value pair individually
+                        if (extras != null) {
+                            for ((key, value) in extras) {
+                                Log.d("Tile1ContentCard", "  Extra: '$key' = '$value' (type: ${value?.javaClass?.simpleName})")
+                            }
+                        }
                     } catch (e: Exception) {
-                        Log.d("Tile1ContentCard", "Card extras: $extras (could not get card ID)")
+                        Log.d("Tile1ContentCard", "Card extras: $extras (could not get card details: ${e.message})")
                     }
                     Log.d("Tile1ContentCard", "Looking for location = $locationKey")
                     
                     // Filter by location = tile_1
-                    // Check all possible key variations (case-insensitive)
+                    // Match web code approach: Check multiple possible keys (location, card_id, etc.)
                     if (extras != null) {
-                        // Check all keys in extras (case-insensitive)
+                        // Check all keys in extras (case-insensitive) for "location"
                         var locationValue: Any? = null
+                        var cardIdValue: Any? = null
+                        
                         for ((key, value) in extras) {
                             val keyStr = key?.toString()?.lowercase()
-                            if (keyStr == "location") {
-                                locationValue = value
-                                break
+                            when (keyStr) {
+                                "location" -> locationValue = value
+                                "card_id", "cardid" -> cardIdValue = value
                             }
                         }
                         
@@ -309,15 +327,24 @@ fun Tile1ContentCard(
                         if (locationValue == null) {
                             locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
                         }
+                        if (cardIdValue == null) {
+                            cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
+                        }
                         
                         Log.d("Tile1ContentCard", "Card location value: $locationValue")
+                        Log.d("Tile1ContentCard", "Card card_id value: $cardIdValue")
                         
-                        if (locationValue?.toString() == locationKey) {
-                            Log.d("Tile1ContentCard", "✓ Found matching card with location = $locationValue")
+                        // Match if location = tile_1 OR if card_id matches (for web compatibility)
+                        val matches = locationValue?.toString() == locationKey || 
+                                     cardIdValue?.toString() == locationKey ||
+                                     cardIdValue?.toString()?.contains("tile_1") == true
+                        
+                        if (matches) {
+                            Log.d("Tile1ContentCard", "✓ Found matching card! location=$locationValue, card_id=$cardIdValue")
                             foundCard = card
                             break
                         } else {
-                            Log.d("Tile1ContentCard", "✗ Card location '$locationValue' does not match '$locationKey'")
+                            Log.d("Tile1ContentCard", "✗ Card does not match - location='$locationValue', card_id='$cardIdValue' (looking for '$locationKey')")
                         }
                     } else {
                         Log.d("Tile1ContentCard", "Card has no extras")
@@ -357,36 +384,57 @@ fun Tile1ContentCard(
                     try {
                         val getIdMethod = card.javaClass.getMethod("getId")
                         val cardId = getIdMethod.invoke(card) as? String
-                        Log.d("Tile1ContentCard", "Initial check - Card ID: $cardId, extras: $extras")
+                        
+                        val getTitleMethod = card.javaClass.getMethod("getTitle")
+                        val title = getTitleMethod.invoke(card) as? String
+                        
+                        Log.d("Tile1ContentCard", "=== Initial Check - Card Details ===")
+                        Log.d("Tile1ContentCard", "Card ID: $cardId")
+                        Log.d("Tile1ContentCard", "Title: $title")
+                        Log.d("Tile1ContentCard", "Extras keys: ${extras?.keys?.joinToString(", ")}")
+                        Log.d("Tile1ContentCard", "Extras full: $extras")
+                        
+                        if (extras != null) {
+                            for ((key, value) in extras) {
+                                Log.d("Tile1ContentCard", "  Extra: '$key' = '$value'")
+                            }
+                        }
                     } catch (e: Exception) {
-                        Log.d("Tile1ContentCard", "Initial check - Card extras: $extras (could not get card ID)")
+                        Log.d("Tile1ContentCard", "Initial check - Card extras: $extras (could not get card details: ${e.message})")
                     }
                     
-                    // Filter by location = tile_1 (check all case variations)
+                    // Filter by location = tile_1 (match web code approach - check multiple keys)
                     if (extras != null) {
-                        // Check all keys in extras (case-insensitive)
                         var locationValue: Any? = null
+                        var cardIdValue: Any? = null
+                        
                         for ((key, value) in extras) {
                             val keyStr = key?.toString()?.lowercase()
-                            if (keyStr == "location") {
-                                locationValue = value
-                                break
+                            when (keyStr) {
+                                "location" -> locationValue = value
+                                "card_id", "cardid" -> cardIdValue = value
                             }
                         }
                         
-                        // Also try direct access with different cases
                         if (locationValue == null) {
                             locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
                         }
+                        if (cardIdValue == null) {
+                            cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
+                        }
                         
-                        Log.d("Tile1ContentCard", "Initial check - Card location value: $locationValue")
+                        Log.d("Tile1ContentCard", "Initial check - location=$locationValue, card_id=$cardIdValue")
                         
-                        if (locationValue?.toString() == locationKey) {
-                            Log.d("Tile1ContentCard", "Initial check: ✓ Found matching card with location = $locationValue")
+                        val matches = locationValue?.toString() == locationKey || 
+                                     cardIdValue?.toString() == locationKey ||
+                                     cardIdValue?.toString()?.contains("tile_1") == true
+                        
+                        if (matches) {
+                            Log.d("Tile1ContentCard", "Initial check: ✓ Found matching card! location=$locationValue, card_id=$cardIdValue")
                             foundCard = card
                             break
                         } else {
-                            Log.d("Tile1ContentCard", "Initial check: ✗ Card location '$locationValue' does not match '$locationKey'")
+                            Log.d("Tile1ContentCard", "Initial check: ✗ Card does not match - location='$locationValue', card_id='$cardIdValue'")
                         }
                     } else {
                         Log.d("Tile1ContentCard", "Initial check - Card has no extras")
@@ -424,9 +472,17 @@ fun Tile1ContentCard(
                 val getUrlMethod = card.javaClass.getMethod("getUrlString")
                 val cardUrl = getUrlMethod.invoke(card) as? String
                 
+                // Debug: Log extracted card data
+                Log.d("Tile1ContentCard", "=== Extracted Card Data ===")
+                Log.d("Tile1ContentCard", "Title: $title")
+                Log.d("Tile1ContentCard", "Description: $description")
+                Log.d("Tile1ContentCard", "Image URL: $imageUrl")
+                Log.d("Tile1ContentCard", "Card URL: $cardUrl")
+                
                 CardData(title, description, imageUrl, cardUrl)
             } catch (e: Exception) {
                 Log.e("Tile1ContentCard", "Error extracting card data: ${e.message}", e)
+                e.printStackTrace()
                 null
             }
         } else {
