@@ -581,11 +581,12 @@ fun Tile1ContentCard(
                         )
                         
                         if (cardData.title != null || cardData.description != null) {
-                            Box(
+                            Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxSize()
-                                    .background(textBackgroundColor, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
+                                    .fillMaxSize(),
+                                color = textBackgroundColor,
+                                shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -635,10 +636,10 @@ fun Tile1ContentCard(
                         }
                         
                         if (cardData.title != null || cardData.description != null) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(textBackgroundColor, RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = textBackgroundColor,
+                                shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -945,13 +946,14 @@ fun Tile2ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
+                            // Solid, visible purple-grey background - NOT transparent
+                            Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
                         }
                         
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(textBackgroundColor)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = textBackgroundColor,
+                            shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -1257,13 +1259,14 @@ fun Tile3ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
+                            // Solid, visible purple-grey background - NOT transparent
+                            Color(0xFFB0A0B0) // Medium purple-grey - clearly visible against white
                         }
                         
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(textBackgroundColor)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = textBackgroundColor,
+                            shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
                         ) {
                             Column(
                                 modifier = Modifier
