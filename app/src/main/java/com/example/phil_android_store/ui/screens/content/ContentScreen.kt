@@ -361,93 +361,9 @@ fun Tile1ContentCard(
             Log.d("Tile1ContentCard", "Final result: hasCard = $hasCard")
         }
         
-        // Braze SDK: Initial check after a short delay
-        scope.launch {
-            delay(500)
-            val allCards = BrazeUserSync.getContentCards(context)
-            Log.d("Tile1ContentCard", "Initial check: Found ${allCards.size} cached Content Cards")
-            
-            var foundCard: Any? = null
-            for (card in allCards) {
-                try {
-                    val isControlMethod = card.javaClass.getMethod("isControlCard")
-                    val isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                    if (isControl) {
-                        Log.d("Tile1ContentCard", "Initial check: Skipping control card")
-                        continue
-                    }
-                    
-                    val getExtrasMethod = card.javaClass.getMethod("getExtras")
-                    val extras = getExtrasMethod.invoke(card) as? Map<*, *>
-                    
-                    // Debug: Log all extras for this card and card ID
-                    try {
-                        val getIdMethod = card.javaClass.getMethod("getId")
-                        val cardId = getIdMethod.invoke(card) as? String
-                        
-                        val getTitleMethod = card.javaClass.getMethod("getTitle")
-                        val title = getTitleMethod.invoke(card) as? String
-                        
-                        Log.d("Tile1ContentCard", "=== Initial Check - Card Details ===")
-                        Log.d("Tile1ContentCard", "Card ID: $cardId")
-                        Log.d("Tile1ContentCard", "Title: $title")
-                        Log.d("Tile1ContentCard", "Extras keys: ${extras?.keys?.joinToString(", ")}")
-                        Log.d("Tile1ContentCard", "Extras full: $extras")
-                        
-                        if (extras != null) {
-                            for ((key, value) in extras) {
-                                Log.d("Tile1ContentCard", "  Extra: '$key' = '$value'")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.d("Tile1ContentCard", "Initial check - Card extras: $extras (could not get card details: ${e.message})")
-                    }
-                    
-                    // Filter by location = tile_1 (match web code approach - check multiple keys)
-                    if (extras != null) {
-                        var locationValue: Any? = null
-                        var cardIdValue: Any? = null
-                        
-                        for ((key, value) in extras) {
-                            val keyStr = key?.toString()?.lowercase()
-                            when (keyStr) {
-                                "location" -> locationValue = value
-                                "card_id", "cardid" -> cardIdValue = value
-                            }
-                        }
-                        
-                        if (locationValue == null) {
-                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
-                        }
-                        if (cardIdValue == null) {
-                            cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
-                        }
-                        
-                        Log.d("Tile1ContentCard", "Initial check - location=$locationValue, card_id=$cardIdValue")
-                        
-                        val matches = locationValue?.toString() == locationKey || 
-                                     cardIdValue?.toString() == locationKey ||
-                                     cardIdValue?.toString()?.contains("tile_1") == true
-                        
-                        if (matches) {
-                            Log.d("Tile1ContentCard", "Initial check: ✓ Found matching card! location=$locationValue, card_id=$cardIdValue")
-                            foundCard = card
-                            break
-                        } else {
-                            Log.d("Tile1ContentCard", "Initial check: ✗ Card does not match - location='$locationValue', card_id='$cardIdValue'")
-                        }
-                    } else {
-                        Log.d("Tile1ContentCard", "Initial check - Card has no extras")
-                    }
-                } catch (e: Exception) {
-                    Log.e("Tile1ContentCard", "Initial check - Error processing card: ${e.message}", e)
-                    continue
-                }
-            }
-            contentCard = foundCard
-            hasCard = foundCard != null
-            Log.d("Tile1ContentCard", "Initial check result: hasCard = $hasCard")
-        }
+        // Braze SDK: Initial check - subscription callback will handle card updates
+        // No need for separate initial check since subscription will fire when cards are available
+        Log.d("Tile1ContentCard", "Subscribed to Content Cards updates - waiting for cards...")
         
         // Braze SDK: Cleanup - unsubscribe when component is removed
         onDispose {

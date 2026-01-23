@@ -506,6 +506,7 @@ object BrazeUserSync {
     
     /**
      * Get all Content Cards from Braze using reflection.
+     * Tries multiple methods to get Content Cards.
      * 
      * @param context Android context
      * @return List of Content Card instances
@@ -514,17 +515,61 @@ object BrazeUserSync {
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         return try {
-            // Braze SDK: Use reflection to call getContentCards
-            val method = brazeInstance.javaClass.getMethod("getContentCards")
-            val cards = method.invoke(brazeInstance)
-            if (cards is List<*>) {
-                @Suppress("UNCHECKED_CAST")
-                cards.filterNotNull() as List<Any>
-            } else {
-                emptyList()
+            // Try multiple possible method names
+            val possibleMethods = listOf(
+                "getContentCards",
+                "getCachedContentCards",
+                "getAllContentCards"
+            )
+            
+            var cards: Any? = null
+            var methodFound = false
+            
+            for (methodName in possibleMethods) {
+                try {
+                    val method = brazeInstance.javaClass.getMethod(methodName)
+                    cards = method.invoke(brazeInstance)
+                    methodFound = true
+                    Log.d("BrazeUserSync", "Successfully called $methodName")
+                    break
+                } catch (e: NoSuchMethodException) {
+                    // Try next method
+                    continue
+                }
+            }
+            
+            if (!methodFound) {
+                // Try accessing through ContentCardsManager if it exists
+                try {
+                    val contentCardsManagerClass = Class.forName("com.braze.ui.contentcards.BrazeContentCardsManager")
+                    val getInstanceMethod = contentCardsManagerClass.getMethod("getInstance", Context::class.java)
+                    val manager = getInstanceMethod.invoke(null, context)
+                    val getCardsMethod = manager.javaClass.getMethod("getContentCards")
+                    cards = getCardsMethod.invoke(manager)
+                    Log.d("BrazeUserSync", "Successfully got cards through ContentCardsManager")
+                } catch (e: Exception) {
+                    Log.w("BrazeUserSync", "Could not get cards through ContentCardsManager: ${e.message}")
+                }
+            }
+            
+            // Process the result
+            when (cards) {
+                is List<*> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    cards.filterNotNull() as List<Any>
+                }
+                null -> {
+                    Log.w("BrazeUserSync", "Content Cards method returned null")
+                    emptyList()
+                }
+                else -> {
+                    Log.w("BrazeUserSync", "Content Cards method returned unexpected type: ${cards.javaClass}")
+                    emptyList()
+                }
             }
         } catch (e: Exception) {
             Log.e("BrazeUserSync", "Error getting Content Cards: ${e.message}", e)
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -586,22 +631,49 @@ object BrazeUserSync {
             val subscriber = java.lang.reflect.Proxy.newProxyInstance(
                 subscriberInterface.classLoader,
                 arrayOf(subscriberInterface)
-            ) { _, method, args ->
-                if (method.name == "trigger" && args != null && args.isNotEmpty()) {
-                    // The event object is passed as the first argument
-                    val event = args[0]
-                    
-                    // Braze SDK: Call getAllCards() on the event
-                    val getAllCardsMethod = eventClass.getMethod("getAllCards")
-                    val cards = getAllCardsMethod.invoke(event)
-                    
-                    if (cards is List<*>) {
-                        @Suppress("UNCHECKED_CAST")
-                        val cardList = cards.filterNotNull() as List<Any>
-                        callback(cardList)
+            ) { proxy, method, args ->
+                when (method.name) {
+                    "trigger" -> {
+                        if (args != null && args.isNotEmpty()) {
+                            // The event object is passed as the first argument
+                            val event = args[0]
+                            
+                            // Braze SDK: Call getAllCards() on the event
+                            val getAllCardsMethod = eventClass.getMethod("getAllCards")
+                            val cards = getAllCardsMethod.invoke(event)
+                            
+                            if (cards is List<*>) {
+                                @Suppress("UNCHECKED_CAST")
+                                val cardList = cards.filterNotNull() as List<Any>
+                                callback(cardList)
+                            }
+                        }
+                        null
+                    }
+                    "equals" -> {
+                        // Properly implement equals for the proxy
+                        val other = args?.getOrNull(0)
+                        other === proxy
+                    }
+                    "hashCode" -> {
+                        // Return a consistent hash code
+                        System.identityHashCode(proxy)
+                    }
+                    "toString" -> {
+                        "IEventSubscriber@${Integer.toHexString(System.identityHashCode(proxy))}"
+                    }
+                    else -> {
+                        // For other methods, return default value based on return type
+                        val returnType = method.returnType
+                        when {
+                            returnType == Boolean::class.javaPrimitiveType || returnType == Boolean::class.java -> false
+                            returnType == Int::class.javaPrimitiveType || returnType == Int::class.java -> 0
+                            returnType == Long::class.javaPrimitiveType || returnType == Long::class.java -> 0L
+                            returnType == Void.TYPE -> null
+                            else -> null
+                        }
                     }
                 }
-                null
             }
             
             // Braze SDK: Subscribe using subscribeToContentCardsUpdates
