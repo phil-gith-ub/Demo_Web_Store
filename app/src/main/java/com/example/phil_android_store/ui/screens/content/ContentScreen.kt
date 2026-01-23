@@ -549,7 +549,7 @@ fun Tile1ContentCard(
                 val textBackgroundColor = if (isDarkTheme) {
                     Color.Transparent
                 } else {
-                    Color(0xFFB8A8B8) // Darker purple-grey background for better contrast
+                    Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
                 }
                 
                 // Adaptive layout based on image aspect ratio
@@ -924,7 +924,7 @@ fun Tile2ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            Color(0xFFB8A8B8) // Darker purple-grey background for better contrast
+                            Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
                         }
                         
                         Box(
@@ -1227,7 +1227,7 @@ fun Tile3ContentCard(
                         val textBackgroundColor = if (isDarkTheme) {
                             Color.Transparent // No background needed in dark theme
                         } else {
-                            Color(0xFFB8A8B8) // Darker purple-grey background for better contrast
+                            Color(0xFF8A7A8A) // Dark purple-grey background for clear contrast with page background
                         }
                         
                         Box(
