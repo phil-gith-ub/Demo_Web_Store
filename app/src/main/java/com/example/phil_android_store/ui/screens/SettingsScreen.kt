@@ -359,7 +359,7 @@ fun SettingsScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                             )
                         ) {
                             Text(
