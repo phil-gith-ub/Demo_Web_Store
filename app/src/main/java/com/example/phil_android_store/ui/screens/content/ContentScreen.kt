@@ -1304,10 +1304,13 @@ fun ContentBanner(
     
     // Request banner refresh and get banner
     LaunchedEffect(placementId) {
+        android.util.Log.d("ContentBanner", "=== Initializing ContentBanner for placement: $placementId ===")
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
+        android.util.Log.d("ContentBanner", "Requested banner refresh")
         kotlinx.coroutines.delay(500)
         
         banner = BrazeUserSync.getBanner(context, placementId)
+        android.util.Log.d("ContentBanner", "Retrieved banner: ${if (banner != null) "exists (${banner!!.javaClass.simpleName})" else "null"}")
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
@@ -1315,12 +1318,16 @@ fun ContentBanner(
                 val isControlMethod = banner!!.javaClass.getMethod("isControl")
                 val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
                 shouldRender = !isControl
+                android.util.Log.d("ContentBanner", "Banner isControl: $isControl, shouldRender: $shouldRender")
             } catch (e: Exception) {
                 shouldRender = true
+                android.util.Log.d("ContentBanner", "Could not check isControl, defaulting shouldRender to true: ${e.message}")
             }
         } else {
             shouldRender = false
+            android.util.Log.d("ContentBanner", "No banner found, shouldRender: false")
         }
+        android.util.Log.d("ContentBanner", "=== Banner initialization complete ===")
     }
     
     // Always render container (2:1 aspect ratio banner layout)
@@ -1341,6 +1348,7 @@ fun ContentBanner(
             contentAlignment = Alignment.Center
         ) {
             if (shouldRender && banner != null) {
+                android.util.Log.d("ContentBanner", "Rendering banner in WebView")
                 // Display banner (same implementation as BrazeBanner)
                 AndroidView(
                     factory = { ctx ->
@@ -1349,19 +1357,31 @@ fun ContentBanner(
                             
                             webViewClient = object : android.webkit.WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                    android.util.Log.d("ContentBanner", "shouldOverrideUrlLoading called with URL: $url")
                                     if (url != null && url.startsWith("philstore://")) {
+                                        android.util.Log.d("ContentBanner", "Deep link detected: $url")
                                         try {
                                             val uri = android.net.Uri.parse(url)
+                                            android.util.Log.d("ContentBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}, path: ${uri.path}")
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                             intent.setPackage(ctx.packageName)
-                                            if (intent.resolveActivity(ctx.packageManager) != null) {
+                                            android.util.Log.d("ContentBanner", "Intent created - package: ${ctx.packageName}, action: ${intent.action}")
+                                            val resolvedActivity = intent.resolveActivity(ctx.packageManager)
+                                            android.util.Log.d("ContentBanner", "Resolved activity: $resolvedActivity")
+                                            if (resolvedActivity != null) {
                                                 ctx.startActivity(intent)
+                                                android.util.Log.d("ContentBanner", "✓ Started activity with deep link: $url")
+                                            } else {
+                                                android.util.Log.w("ContentBanner", "✗ Could not resolve activity for deep link: $url")
                                             }
                                             return true
                                         } catch (e: Exception) {
                                             android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
+                                            e.printStackTrace()
                                         }
+                                    } else {
+                                        android.util.Log.d("ContentBanner", "URL is not a deep link, allowing WebView to handle: $url")
                                     }
                                     return false
                                 }
@@ -1376,16 +1396,25 @@ fun ContentBanner(
                     update = { webView ->
                         // Helper function to handle deep links
                         fun handleDeepLink(url: String) {
+                            android.util.Log.d("ContentBanner", "handleDeepLink called with URL: $url")
                             try {
                                 val uri = android.net.Uri.parse(url)
+                                android.util.Log.d("ContentBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}, path: ${uri.path}")
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                 intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                 intent.setPackage(context.packageName)
-                                if (intent.resolveActivity(context.packageManager) != null) {
+                                android.util.Log.d("ContentBanner", "Intent created - package: ${context.packageName}, action: ${intent.action}")
+                                val resolvedActivity = intent.resolveActivity(context.packageManager)
+                                android.util.Log.d("ContentBanner", "Resolved activity: $resolvedActivity")
+                                if (resolvedActivity != null) {
                                     context.startActivity(intent)
+                                    android.util.Log.d("ContentBanner", "✓ Started activity with deep link: $url")
+                                } else {
+                                    android.util.Log.w("ContentBanner", "✗ Could not resolve activity for deep link: $url")
                                 }
                             } catch (e: Exception) {
                                 android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
+                                e.printStackTrace()
                             }
                         }
                         
@@ -1393,40 +1422,52 @@ fun ContentBanner(
                         class DeepLinkHandler(private val handler: (String) -> Unit) {
                             @android.webkit.JavascriptInterface
                             fun handleDeepLink(url: String) {
+                                android.util.Log.d("ContentBanner", "JavaScript interface handleDeepLink called with URL: $url")
                                 android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    android.util.Log.d("ContentBanner", "Executing deep link handler on main thread")
                                     handler(url)
                                 }
                             }
                         }
                         
                         webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                        android.util.Log.d("ContentBanner", "JavaScript interface 'AndroidDeepLinkHandler' added to WebView")
                         
                         val customWebViewClient = object : android.webkit.WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                android.util.Log.d("ContentBanner", "[update] shouldOverrideUrlLoading called with URL: $url")
                                 if (url != null && url.startsWith("philstore://")) {
+                                    android.util.Log.d("ContentBanner", "[update] Deep link detected, calling handleDeepLink")
                                     handleDeepLink(url)
                                     return true
                                 }
+                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link, returning false")
                                 return false
                             }
                             
                             @android.annotation.SuppressLint("NewApi")
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString()
+                                android.util.Log.d("ContentBanner", "[update] shouldOverrideUrlLoading (new API) called with URL: $url")
                                 if (url != null && url.startsWith("philstore://")) {
+                                    android.util.Log.d("ContentBanner", "[update] Deep link detected (new API), calling handleDeepLink")
                                     handleDeepLink(url)
                                     return true
                                 }
+                                android.util.Log.d("ContentBanner", "[update] URL is not a deep link (new API), returning false")
                                 return false
                             }
                         }
                         
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        android.util.Log.d("ContentBanner", "Custom WebViewClient set on WebView")
                         
                         val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                        android.util.Log.d("ContentBanner", "Current banner: ${if (currentBanner != null) "exists" else "null"}")
                         if (currentBanner != null) {
                             try {
+                                android.util.Log.d("ContentBanner", "Attempting to insert banner into WebView")
                                 val brazeInstance = com.braze.Braze.getInstance(context)
                                 val insertMethod = brazeInstance.javaClass.getMethod(
                                     "insertBanner",
@@ -1434,20 +1475,30 @@ fun ContentBanner(
                                     android.view.View::class.java
                                 )
                                 insertMethod.invoke(brazeInstance, currentBanner, webView)
+                                android.util.Log.d("ContentBanner", "✓ Banner inserted into WebView")
                                 
                                 webView.post {
+                                    android.util.Log.d("ContentBanner", "Re-applying WebViewClient after Braze insertBanner")
                                     webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                     webView.webViewClient = customWebViewClient
                                     
                                     webView.postDelayed({
                                         try {
+                                            android.util.Log.d("ContentBanner", "Injecting JavaScript deep link interceptor")
                                             val jsCode = """
                                                 (function() {
+                                                    console.log('ContentBanner: Deep link interceptor script loaded');
+                                                    
                                                     function handleDeepLink(url) {
+                                                        console.log('ContentBanner: handleDeepLink called with:', url);
                                                         if (url && url.startsWith('philstore://')) {
+                                                            console.log('ContentBanner: Deep link detected:', url);
                                                             if (window.AndroidDeepLinkHandler) {
+                                                                console.log('ContentBanner: Using AndroidDeepLinkHandler');
                                                                 window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                                 return true;
+                                                            } else {
+                                                                console.warn('ContentBanner: AndroidDeepLinkHandler not available, using location.href');
                                                             }
                                                             window.location.href = url;
                                                             return true;
@@ -1461,6 +1512,7 @@ fun ContentBanner(
                                                             target = target.parentElement;
                                                         }
                                                         if (target && target.href) {
+                                                            console.log('ContentBanner: Click detected on link:', target.href);
                                                             if (handleDeepLink(target.href)) {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
@@ -1470,8 +1522,10 @@ fun ContentBanner(
                                                     }, true);
                                                     
                                                     var links = document.querySelectorAll('a[href^="philstore://"]');
+                                                    console.log('ContentBanner: Found', links.length, 'deep link(s) in document');
                                                     links.forEach(function(link) {
                                                         link.addEventListener('click', function(e) {
+                                                            console.log('ContentBanner: Direct link click:', this.href);
                                                             if (handleDeepLink(this.href)) {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
@@ -1485,8 +1539,12 @@ fun ContentBanner(
                                                             mutation.addedNodes.forEach(function(node) {
                                                                 if (node.nodeType === 1) {
                                                                     var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
+                                                                    if (newLinks.length > 0) {
+                                                                        console.log('ContentBanner: Found', newLinks.length, 'new deep link(s)');
+                                                                    }
                                                                     newLinks.forEach(function(link) {
                                                                         link.addEventListener('click', function(e) {
+                                                                            console.log('ContentBanner: Dynamic link click:', this.href);
                                                                             if (handleDeepLink(this.href)) {
                                                                                 e.preventDefault();
                                                                                 e.stopPropagation();
@@ -1499,19 +1557,33 @@ fun ContentBanner(
                                                         });
                                                     });
                                                     observer.observe(document.body, { childList: true, subtree: true });
+                                                    console.log('ContentBanner: MutationObserver set up for dynamic links');
                                                 })();
                                             """.trimIndent()
-                                            webView.evaluateJavascript(jsCode, null)
+                                            webView.evaluateJavascript(jsCode) { result ->
+                                                android.util.Log.d("ContentBanner", "JavaScript injection result: $result")
+                                            }
+                                            android.util.Log.d("ContentBanner", "✓ JavaScript deep link interceptor injected")
                                         } catch (e: Exception) {
                                             android.util.Log.e("ContentBanner", "Error injecting JavaScript: ${e.message}", e)
+                                            e.printStackTrace()
                                         }
                                     }, 500)
                                 }
                             } catch (e: Exception) {
+                                android.util.Log.w("ContentBanner", "insertBanner method failed, trying getHtml: ${e.message}")
                                 try {
                                     val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                     val htmlContent = htmlMethod.invoke(currentBanner) as? String
+                                    android.util.Log.d("ContentBanner", "Retrieved HTML content: ${if (htmlContent != null) "${htmlContent.length} chars" else "null"}")
                                     if (htmlContent != null) {
+                                        // Log if HTML contains deep links
+                                        if (htmlContent.contains("philstore://")) {
+                                            android.util.Log.d("ContentBanner", "✓ HTML contains philstore:// deep links")
+                                        } else {
+                                            android.util.Log.d("ContentBanner", "✗ HTML does not contain philstore:// deep links")
+                                        }
+                                        
                                         webView.webViewClient = customWebViewClient
                                         val wrappedHtml = """
                                             <!DOCTYPE html>
@@ -1542,9 +1614,13 @@ fun ContentBanner(
                                             </html>
                                         """.trimIndent()
                                         webView.loadDataWithBaseURL(null, wrappedHtml, "text/html", "UTF-8", null)
+                                        android.util.Log.d("ContentBanner", "✓ Loaded HTML content with custom WebViewClient")
+                                    } else {
+                                        android.util.Log.w("ContentBanner", "✗ HTML content is null")
                                     }
                                 } catch (e2: Exception) {
-                                    android.util.Log.e("ContentBanner", "Error loading banner: ${e2.message}", e2)
+                                    android.util.Log.e("ContentBanner", "✗ Error loading banner HTML: ${e2.message}", e2)
+                                    e2.printStackTrace()
                                 }
                             }
                         }
