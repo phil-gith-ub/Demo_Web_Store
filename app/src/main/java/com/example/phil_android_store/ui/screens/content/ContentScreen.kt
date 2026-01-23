@@ -47,6 +47,7 @@ import androidx.compose.foundation.Image
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -215,6 +216,14 @@ fun ContentScreen() {
                     modifier = Modifier.weight(1f)
                 )
             }
+            
+            // Banner: Content Banner (2:1 banner layout, non-collapsing)
+            // Always displays container - shows placeholder when no banner is available
+            ContentBanner(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+            )
             
             // Additional space for future Content Cards or Banners
             Box(
@@ -1271,6 +1280,299 @@ fun Tile3ContentCard(
                     )
                     Text(
                         text = "location = $locationKey",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Banner: Content Banner (2:1 Banner Layout, Non-Collapsing)
+ * 
+ * Custom Braze Banner implementation that always displays a container:
+ * - Uses placement ID: content_banner
+ * - Displays banner when available (same as store page banner)
+ * - Shows placeholder when no banner is available (does not collapse)
+ * - Placeholder displays "Banner" and "Placement ID: content_banner"
+ */
+@Composable
+fun ContentBanner(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+    val placementId = "content_banner"
+    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    var shouldRender by remember(placementId) { mutableStateOf(false) }
+    
+    // Request banner refresh and get banner
+    LaunchedEffect(placementId) {
+        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
+        kotlinx.coroutines.delay(500)
+        
+        banner = BrazeUserSync.getBanner(context, placementId)
+        
+        // Check if banner exists and is not a control variant
+        if (banner != null) {
+            try {
+                val isControlMethod = banner!!.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                shouldRender = !isControl
+            } catch (e: Exception) {
+                shouldRender = true
+            }
+        } else {
+            shouldRender = false
+        }
+    }
+    
+    // Always render container (2:1 aspect ratio banner layout)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(2f) // 2:1 banner (width:height)
+            .clip(RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        color = if (shouldRender && banner != null) colorScheme.surface else colorScheme.surfaceVariant,
+        border = if (!shouldRender || banner == null) {
+            androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
+        } else null,
+        shadowElevation = if (shouldRender && banner != null) 4.dp else 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (shouldRender && banner != null) {
+                // Display banner (same implementation as BrazeBanner)
+                AndroidView(
+                    factory = { ctx ->
+                        android.webkit.WebView(ctx).apply {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            
+                            webViewClient = object : android.webkit.WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                    if (url != null && url.startsWith("philstore://")) {
+                                        try {
+                                            val uri = android.net.Uri.parse(url)
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                            intent.setPackage(ctx.packageName)
+                                            if (intent.resolveActivity(ctx.packageManager) != null) {
+                                                ctx.startActivity(intent)
+                                            }
+                                            return true
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
+                                        }
+                                    }
+                                    return false
+                                }
+                            }
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.loadWithOverviewMode = true
+                            settings.useWideViewPort = true
+                            settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                        }
+                    },
+                    update = { webView ->
+                        // Helper function to handle deep links
+                        fun handleDeepLink(url: String) {
+                            try {
+                                val uri = android.net.Uri.parse(url)
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                intent.setPackage(context.packageName)
+                                if (intent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(intent)
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("ContentBanner", "Error handling deep link: ${e.message}", e)
+                            }
+                        }
+                        
+                        // JavaScript interface for deep links
+                        class DeepLinkHandler(private val handler: (String) -> Unit) {
+                            @android.webkit.JavascriptInterface
+                            fun handleDeepLink(url: String) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    handler(url)
+                                }
+                            }
+                        }
+                        
+                        webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                        
+                        val customWebViewClient = object : android.webkit.WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                if (url != null && url.startsWith("philstore://")) {
+                                    handleDeepLink(url)
+                                    return true
+                                }
+                                return false
+                            }
+                            
+                            @android.annotation.SuppressLint("NewApi")
+                            override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString()
+                                if (url != null && url.startsWith("philstore://")) {
+                                    handleDeepLink(url)
+                                    return true
+                                }
+                                return false
+                            }
+                        }
+                        
+                        webView.webViewClient = customWebViewClient
+                        webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        
+                        val currentBanner = BrazeUserSync.getBanner(context, placementId)
+                        if (currentBanner != null) {
+                            try {
+                                val brazeInstance = com.braze.Braze.getInstance(context)
+                                val insertMethod = brazeInstance.javaClass.getMethod(
+                                    "insertBanner",
+                                    currentBanner.javaClass,
+                                    android.view.View::class.java
+                                )
+                                insertMethod.invoke(brazeInstance, currentBanner, webView)
+                                
+                                webView.post {
+                                    webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                    webView.webViewClient = customWebViewClient
+                                    
+                                    webView.postDelayed({
+                                        try {
+                                            val jsCode = """
+                                                (function() {
+                                                    function handleDeepLink(url) {
+                                                        if (url && url.startsWith('philstore://')) {
+                                                            if (window.AndroidDeepLinkHandler) {
+                                                                window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                                return true;
+                                                            }
+                                                            window.location.href = url;
+                                                            return true;
+                                                        }
+                                                        return false;
+                                                    }
+                                                    
+                                                    document.addEventListener('click', function(e) {
+                                                        var target = e.target;
+                                                        while (target && target.tagName !== 'A') {
+                                                            target = target.parentElement;
+                                                        }
+                                                        if (target && target.href) {
+                                                            if (handleDeepLink(target.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                    }, true);
+                                                    
+                                                    var links = document.querySelectorAll('a[href^="philstore://"]');
+                                                    links.forEach(function(link) {
+                                                        link.addEventListener('click', function(e) {
+                                                            if (handleDeepLink(this.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                return false;
+                                                            }
+                                                        }, true);
+                                                    });
+                                                    
+                                                    var observer = new MutationObserver(function(mutations) {
+                                                        mutations.forEach(function(mutation) {
+                                                            mutation.addedNodes.forEach(function(node) {
+                                                                if (node.nodeType === 1) {
+                                                                    var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
+                                                                    newLinks.forEach(function(link) {
+                                                                        link.addEventListener('click', function(e) {
+                                                                            if (handleDeepLink(this.href)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }, true);
+                                                                    });
+                                                                }
+                                                            });
+                                                        });
+                                                    });
+                                                    observer.observe(document.body, { childList: true, subtree: true });
+                                                })();
+                                            """.trimIndent()
+                                            webView.evaluateJavascript(jsCode, null)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("ContentBanner", "Error injecting JavaScript: ${e.message}", e)
+                                        }
+                                    }, 500)
+                                }
+                            } catch (e: Exception) {
+                                try {
+                                    val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
+                                    val htmlContent = htmlMethod.invoke(currentBanner) as? String
+                                    if (htmlContent != null) {
+                                        webView.webViewClient = customWebViewClient
+                                        val wrappedHtml = """
+                                            <!DOCTYPE html>
+                                            <html>
+                                            <head>
+                                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                                <style>
+                                                    body {
+                                                        margin: 0;
+                                                        padding: 0;
+                                                        display: flex;
+                                                        justify-content: center;
+                                                        align-items: center;
+                                                        min-height: 100%;
+                                                        background-color: transparent;
+                                                    }
+                                                    html {
+                                                        background-color: transparent;
+                                                    }
+                                                    * {
+                                                        max-width: 100%;
+                                                    }
+                                                </style>
+                                            </head>
+                                            <body>
+                                                $htmlContent
+                                            </body>
+                                            </html>
+                                        """.trimIndent()
+                                        webView.loadDataWithBaseURL(null, wrappedHtml, "text/html", "UTF-8", null)
+                                    }
+                                } catch (e2: Exception) {
+                                    android.util.Log.e("ContentBanner", "Error loading banner: ${e2.message}", e2)
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                // Placeholder: Displayed when no banner is available
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Banner",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Placement ID: $placementId",
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
