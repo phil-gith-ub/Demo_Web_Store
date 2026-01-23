@@ -66,7 +66,7 @@ fun ContentScreen() {
     val settingsManager = remember { BrazeSettingsManager(context) }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
-    // Braze SDK: Auto-refresh Content Cards when entering this screen (if enabled in settings)
+    // Braze SDK: Auto-refresh Content Cards and Banner when entering this screen
     LaunchedEffect(Unit) {
         val autoRefresh = settingsManager.getAutoRefreshContentCards()
         if (autoRefresh) {
@@ -75,6 +75,10 @@ fun ContentScreen() {
         } else {
             Log.d("ContentScreen", "Auto-refresh disabled: Skipping Content Cards refresh")
         }
+        
+        // Always refresh banner when entering content screen
+        Log.d("ContentScreen", "Requesting banner refresh for content_banner")
+        BrazeUserSync.requestBannerRefresh(context, listOf("content_banner"))
     }
     
     Box(
@@ -1302,13 +1306,17 @@ fun ContentBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner
+    // Request banner refresh and get banner (same pattern as BrazeBanner)
     LaunchedEffect(placementId) {
         android.util.Log.d("ContentBanner", "=== Initializing ContentBanner for placement: $placementId ===")
+        // Braze SDK: Request refresh for this placement
         BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
         android.util.Log.d("ContentBanner", "Requested banner refresh")
+        
+        // Small delay to allow banner to be fetched
         kotlinx.coroutines.delay(500)
         
+        // Braze SDK: Get the banner
         banner = BrazeUserSync.getBanner(context, placementId)
         android.util.Log.d("ContentBanner", "Retrieved banner: ${if (banner != null) "exists (${banner!!.javaClass.simpleName})" else "null"}")
         
@@ -1320,6 +1328,7 @@ fun ContentBanner(
                 shouldRender = !isControl
                 android.util.Log.d("ContentBanner", "Banner isControl: $isControl, shouldRender: $shouldRender")
             } catch (e: Exception) {
+                // If isControl method doesn't exist, assume we should render
                 shouldRender = true
                 android.util.Log.d("ContentBanner", "Could not check isControl, defaulting shouldRender to true: ${e.message}")
             }
@@ -1327,7 +1336,7 @@ fun ContentBanner(
             shouldRender = false
             android.util.Log.d("ContentBanner", "No banner found, shouldRender: false")
         }
-        android.util.Log.d("ContentBanner", "=== Banner initialization complete ===")
+        android.util.Log.d("ContentBanner", "=== Banner initialization complete - shouldRender: $shouldRender, banner: ${if (banner != null) "exists" else "null"} ===")
     }
     
     // Always render container (2:1 aspect ratio banner layout)
@@ -1463,8 +1472,9 @@ fun ContentBanner(
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         android.util.Log.d("ContentBanner", "Custom WebViewClient set on WebView")
                         
+                        // Braze SDK: Get the current banner (same as BrazeBanner)
                         val currentBanner = BrazeUserSync.getBanner(context, placementId)
-                        android.util.Log.d("ContentBanner", "Current banner: ${if (currentBanner != null) "exists" else "null"}")
+                        android.util.Log.d("ContentBanner", "Current banner in update block: ${if (currentBanner != null) "exists (${currentBanner.javaClass.simpleName})" else "null"}")
                         if (currentBanner != null) {
                             try {
                                 android.util.Log.d("ContentBanner", "Attempting to insert banner into WebView")
