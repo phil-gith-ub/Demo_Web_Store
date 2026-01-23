@@ -535,7 +535,16 @@ fun Tile1ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        color = if (hasCard) {
+            // Use a solid background color instead of potentially transparent surface
+            if (isSystemInDarkTheme()) {
+                colorScheme.surface
+            } else {
+                Color.White // Solid white background in light theme
+            }
+        } else {
+            colorScheme.surfaceVariant
+        },
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -892,7 +901,16 @@ fun Tile2ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        color = if (hasCard) {
+            // Use a solid background color instead of potentially transparent surface
+            if (isSystemInDarkTheme()) {
+                colorScheme.surface
+            } else {
+                Color.White // Solid white background in light theme
+            }
+        } else {
+            colorScheme.surfaceVariant
+        },
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
@@ -1195,7 +1213,16 @@ fun Tile3ContentCard(
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        color = if (hasCard) colorScheme.surface else colorScheme.surfaceVariant,
+        color = if (hasCard) {
+            // Use a solid background color instead of potentially transparent surface
+            if (isSystemInDarkTheme()) {
+                colorScheme.surface
+            } else {
+                Color.White // Solid white background in light theme
+            }
+        } else {
+            colorScheme.surfaceVariant
+        },
         border = if (!hasCard) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
