@@ -302,9 +302,13 @@ private fun LogEntryCard(
     }
     
     val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
-    
-    // Parse event to find clickable event name (e.g., 'purchase' in logPurchaseEvent('purchase'))
     val eventText = logEntry.event
+    
+    // Parse different clickable patterns:
+    // 1. logPurchaseEvent('purchase') - clickable event name
+    // 2. matchCard(location='tile_2') - clickable location
+    // 3. getContentCards() → [2 cards] - clickable card count
+    
     val clickableEventName = if (hasPayload && eventText.contains("('") && eventText.contains("')")) {
         val startIdx = eventText.indexOf("('") + 2
         val endIdx = eventText.indexOf("')", startIdx)
@@ -313,35 +317,112 @@ private fun LogEntryCard(
         } else null
     } else null
     
-    // Build annotated string with clickable event name
-    val annotatedText = if (clickableEventName != null) {
-        buildAnnotatedString {
-            val clickablePattern = "('$clickableEventName')"
-            val patternIdx = eventText.indexOf(clickablePattern)
-            if (patternIdx >= 0) {
-                val beforeClickable = eventText.substring(0, patternIdx + 1) // Include the opening parenthesis
-                val clickablePart = "'$clickableEventName'"
-                val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
-                
-                append(beforeClickable)
-                withStyle(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline
-                    )
-                ) {
-                    append(clickablePart)
+    // Check for matchCard(location='tile_X') pattern
+    val matchCardLocation = if (hasPayload && eventText.startsWith("matchCard(location='") && eventText.contains("')")) {
+        val startIdx = eventText.indexOf("location='") + 10
+        val endIdx = eventText.indexOf("')", startIdx)
+        if (startIdx > 9 && endIdx > startIdx) {
+            eventText.substring(startIdx, endIdx)
+        } else null
+    } else null
+    
+    // Check for getContentCards() → [X cards] pattern
+    val cardCountText = if (hasPayload && eventText.contains(" → [") && eventText.contains(" cards]")) {
+        val startIdx = eventText.indexOf(" → [") + 4
+        val endIdx = eventText.indexOf(" cards]", startIdx)
+        if (startIdx > 3 && endIdx > startIdx) {
+            eventText.substring(startIdx, endIdx)
+        } else null
+    } else null
+    
+    // Build annotated string with appropriate clickable parts
+    val annotatedText = when {
+        clickableEventName != null -> {
+            buildAnnotatedString {
+                val clickablePattern = "('$clickableEventName')"
+                val patternIdx = eventText.indexOf(clickablePattern)
+                if (patternIdx >= 0) {
+                    val beforeClickable = eventText.substring(0, patternIdx + 1)
+                    val clickablePart = "'$clickableEventName'"
+                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
+                    
+                    append(beforeClickable)
+                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
+                    withStyle(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ) {
+                        append(clickablePart)
+                    }
+                    pop()
+                    append(afterClickable)
+                } else {
+                    append(eventText)
                 }
-                append(afterClickable)
-            } else {
+            }
+        }
+        matchCardLocation != null -> {
+            buildAnnotatedString {
+                val clickablePattern = "location='$matchCardLocation'"
+                val patternIdx = eventText.indexOf(clickablePattern)
+                if (patternIdx >= 0) {
+                    val beforeClickable = eventText.substring(0, patternIdx + 9) // "location='"
+                    val clickablePart = matchCardLocation
+                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
+                    
+                    append(beforeClickable)
+                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
+                    withStyle(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ) {
+                        append(clickablePart)
+                    }
+                    pop()
+                    append(afterClickable)
+                } else {
+                    append(eventText)
+                }
+            }
+        }
+        cardCountText != null -> {
+            buildAnnotatedString {
+                val clickablePattern = "[$cardCountText cards]"
+                val patternIdx = eventText.indexOf(clickablePattern)
+                if (patternIdx >= 0) {
+                    val beforeClickable = eventText.substring(0, patternIdx + 1) // Include "["
+                    val clickablePart = "$cardCountText cards]"
+                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
+                    
+                    append(beforeClickable)
+                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
+                    withStyle(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.primary,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ) {
+                        append(clickablePart)
+                    }
+                    pop()
+                    append(afterClickable)
+                } else {
+                    append(eventText)
+                }
+            }
+        }
+        else -> {
+            buildAnnotatedString {
                 append(eventText)
             }
         }
-    } else {
-        buildAnnotatedString {
-            append(eventText)
-        }
     }
+    
+    val hasClickable = clickableEventName != null || matchCardLocation != null || cardCountText != null
     
     // Build full log line text for copying
     val fullLogLine = "${logEntry.formattedTime} ${logEntry.type.name.take(3).lowercase()} ${logEntry.event}"
@@ -392,8 +473,8 @@ private fun LogEntryCard(
                 )
             }
             
-            // Event (main content) - with clickable event name if payload exists
-            if (clickableEventName != null) {
+            // Event (main content) - with clickable parts if payload exists
+            if (hasClickable) {
                 Text(
                     annotatedText,
                     style = MaterialTheme.typography.bodySmall,

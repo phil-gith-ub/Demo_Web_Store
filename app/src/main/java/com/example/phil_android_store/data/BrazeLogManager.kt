@@ -118,11 +118,28 @@ object BrazeLogManager {
     /**
      * Log content cards received
      */
-    fun logContentCardsReceived(count: Int) {
+    fun logContentCardsReceived(count: Int, cards: List<Any>? = null) {
+        // Build payload with card data if available
+        val payload = cards?.mapIndexed { index, card ->
+            try {
+                val getIdMethod = card.javaClass.getMethod("getId")
+                val cardId = getIdMethod.invoke(card) as? String ?: "unknown"
+                val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                "card_$index" to mapOf(
+                    "id" to cardId,
+                    "extras" to (extras?.mapKeys { it.key?.toString() ?: "unknown" } ?: emptyMap())
+                )
+            } catch (e: Exception) {
+                "card_$index" to mapOf("error" to e.message ?: "unknown")
+            }
+        }?.associate { it.first to it.second }
+        
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
             event = "getContentCards() → [$count cards]",
-            type = BrazeLogEntry.LogType.RESPONSE
+            type = BrazeLogEntry.LogType.RESPONSE,
+            payload = payload
         ))
     }
     
@@ -130,11 +147,13 @@ object BrazeLogManager {
      * Log content card matched
      */
     fun logContentCardMatched(locationKey: String, cardId: String? = null) {
-        val idStr = cardId?.let { " id='$it'" } ?: ""
+        // Store card ID in payload instead of inline
+        val payload = cardId?.let { mapOf("card_id" to it) }
         addLog(BrazeLogEntry(
             timestamp = System.currentTimeMillis(),
-            event = "matchCard(location='$locationKey'$idStr)",
-            type = BrazeLogEntry.LogType.RESPONSE
+            event = "matchCard(location='$locationKey')",
+            type = BrazeLogEntry.LogType.RESPONSE,
+            payload = payload
         ))
     }
     

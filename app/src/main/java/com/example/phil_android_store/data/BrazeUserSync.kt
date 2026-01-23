@@ -683,7 +683,7 @@ object BrazeUserSync {
                             if (cards is List<*>) {
                                 @Suppress("UNCHECKED_CAST")
                                 val cardList = cards.filterNotNull() as List<Any>
-                                BrazeLogManager.logContentCardsReceived(cardList.size)
+                                BrazeLogManager.logContentCardsReceived(cardList.size, cardList)
                                 callback(cardList)
                             }
                         }
