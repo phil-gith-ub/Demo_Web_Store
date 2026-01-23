@@ -994,25 +994,13 @@ fun ContentBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner (with one retry if needed)
+    // Request banner refresh and get banner (simple method - refresh happens at screen level)
     LaunchedEffect(placementId) {
-        // Braze SDK: Request refresh for this placement
-        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        // Try to get banner with one retry if needed
-        var retryCount = 0
-        val maxRetries = 1
-        while (retryCount <= maxRetries && banner == null) {
-            // Delay: 500ms for first attempt, 1000ms for retry
-            kotlinx.coroutines.delay(500L * (retryCount + 1))
-            
-            // Braze SDK: Get the banner
-            banner = BrazeUserSync.getBanner(context, placementId)
-            
-            if (banner != null) {
-                break
-            }
-            retryCount++
-        }
+        // Small delay to allow banner refresh from screen level to complete
+        kotlinx.coroutines.delay(500)
+        
+        // Braze SDK: Get the banner
+        banner = BrazeUserSync.getBanner(context, placementId)
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
