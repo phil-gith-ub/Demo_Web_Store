@@ -335,41 +335,36 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Text(
+                            text = "Push Sender ID",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Button(
+                            onClick = {
+                                isLoadingToken = true
+                                showPushTokenDialog = true
+                                pushToken = null
+                                // Get FCM token
+                                scope.launch {
+                                    try {
+                                        val token = FirebaseMessaging.getInstance().token.await()
+                                        pushToken = token
+                                    } catch (e: Exception) {
+                                        pushToken = "Error: ${e.message}"
+                                    } finally {
+                                        isLoadingToken = false
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
                         ) {
                             Text(
-                                text = "Push Sender ID",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                text = "Show Push Token",
+                                style = MaterialTheme.typography.bodySmall
                             )
-                            Button(
-                                onClick = {
-                                    isLoadingToken = true
-                                    showPushTokenDialog = true
-                                    pushToken = null
-                                    // Get FCM token
-                                    scope.launch {
-                                        try {
-                                            val token = FirebaseMessaging.getInstance().token.await()
-                                            pushToken = token
-                                        } catch (e: Exception) {
-                                            pushToken = "Error: ${e.message}"
-                                        } finally {
-                                            isLoadingToken = false
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            ) {
-                                Text(
-                                    text = "Show Push Token",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
                         }
                         IconButton(
                             onClick = {
