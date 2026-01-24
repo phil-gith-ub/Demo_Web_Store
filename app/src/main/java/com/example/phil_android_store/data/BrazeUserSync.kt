@@ -337,6 +337,25 @@ object BrazeUserSync {
     }
     
     /**
+     * Force a new session with the current user.
+     * Per Braze docs: "You can also force a new session by calling the changeUser() method."
+     * This calls changeUser() with the current user ID to start a new session.
+     */
+    fun forceNewSession(context: Context, userId: String) {
+        // Braze SDK: Get Braze instance
+        val brazeInstance = Braze.getInstance(context)
+        
+        // Braze SDK: Force a new session by calling changeUser with the same user ID
+        // Per Braze docs: "You can also force a new session by calling the changeUser() method."
+        brazeInstance.changeUser(userId)
+        BrazeLogManager.logUserIdentified(userId, isAnonymous = false)
+        
+        // Clear cache and refresh content for the new session
+        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        com.example.phil_android_store.data.BrazeContentManager.preloadAllContent(context)
+    }
+    
+    /**
      * Log custom event: enabled_dark_mode
      * Triggered when user enables dark mode in profile settings
      */

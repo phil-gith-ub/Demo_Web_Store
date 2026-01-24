@@ -138,15 +138,35 @@ fun ProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Profile title
-        Text(
-            text = "Profile",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+        // Profile header with title and New Session button
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        )
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            
+            // New Session button (only shown when logged in)
+            if (isLoggedIn && currentUserId != null) {
+                TextButton(
+                    onClick = {
+                        // Force a new session with current user
+                        BrazeUserSync.forceNewSession(context, currentUserId)
+                    }
+                ) {
+                    Text(
+                        text = "New Session",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
