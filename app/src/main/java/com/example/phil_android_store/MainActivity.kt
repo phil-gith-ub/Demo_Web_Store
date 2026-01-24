@@ -193,6 +193,7 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @androidx.compose.foundation.ExperimentalFoundationApi
 @androidx.compose.ui.ExperimentalComposeUiApi
+@androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 @PreviewScreenSizes
 @Composable
 fun Phil_Android_StoreApp(
