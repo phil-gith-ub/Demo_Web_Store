@@ -127,9 +127,9 @@ object BrazeUserSync {
         // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
         
-        // Refresh all banners and content cards after changeUser
+        // Pre-load banners and content cards for the new session
         // Includes retry logic with delays to handle latency
-        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
+        com.example.phil_android_store.data.BrazeContentManager.preloadAllContent(context)
     }
     
     /**
