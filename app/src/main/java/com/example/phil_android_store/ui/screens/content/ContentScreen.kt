@@ -1045,7 +1045,7 @@ fun ContentBanner(
         border = if (!shouldRender || banner == null) {
             androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.5f))
         } else null,
-        shadowElevation = if (shouldRender && banner != null) 4.dp else 0.dp
+        shadowElevation = 0.dp // No shadow - banner provides its own styling
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
