@@ -1267,9 +1267,22 @@ fun ContentBanner(
                                                         var target = e.target;
                                                         var link = null;
                                                         
+                                                        // Check if clicked element is an image or inside a link
                                                         while (target && target !== document.body) {
                                                             if (target.tagName === 'A' && target.href) {
                                                                 link = target;
+                                                                break;
+                                                            }
+                                                            // Also check if image is inside a clickable element
+                                                            if (target.tagName === 'IMG') {
+                                                                var parent = target.parentElement;
+                                                                while (parent && parent !== document.body) {
+                                                                    if (parent.tagName === 'A' || parent.onclick || parent.getAttribute('onclick')) {
+                                                                        link = parent;
+                                                                        break;
+                                                                    }
+                                                                    parent = parent.parentElement;
+                                                                }
                                                                 break;
                                                             }
                                                             target = target.parentElement;
@@ -1297,9 +1310,10 @@ fun ContentBanner(
                                                             } else if (href && href.includes('philstore://')) {
                                                                 deepLink = href;
                                                             } else {
+                                                                // For images and other elements, check parent elements more thoroughly
                                                                 var parent = clicked.parentElement;
                                                                 var depth = 0;
-                                                                while (parent && depth < 5) {
+                                                                while (parent && depth < 10) {
                                                                     var parentOnclick = parent.getAttribute('onclick');
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
@@ -1341,7 +1355,8 @@ fun ContentBanner(
                                                             window._bannerDeepLink = matches[0];
                                                         }
                                                         
-                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                        // Find all clickable elements including images with onclick
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick], img[onclick], img[onclick*="philstore://"]');
                                                         clickableElements.forEach(function(el) {
                                                             el.addEventListener('click', function(e) {
                                                                 var storedDeepLink = window._bannerDeepLink;
@@ -1350,13 +1365,73 @@ fun ContentBanner(
                                                                     window._bannerDeepLink = storedDeepLink;
                                                                 }
                                                                 
-                                                                if (storedDeepLink) {
-                                                                    if (handleDeepLink(storedDeepLink)) {
+                                                                // Check element's own onclick first
+                                                                var elementOnclick = el.getAttribute('onclick');
+                                                                var elementDataHref = el.getAttribute('data-href');
+                                                                var elementHref = el.href;
+                                                                var foundDeepLink = null;
+                                                                
+                                                                if (elementOnclick && elementOnclick.includes('philstore://')) {
+                                                                    var match = elementOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (match) foundDeepLink = match[0];
+                                                                } else if (elementDataHref && elementDataHref.includes('philstore://')) {
+                                                                    foundDeepLink = elementDataHref;
+                                                                } else if (elementHref && elementHref.includes('philstore://')) {
+                                                                    foundDeepLink = elementHref;
+                                                                } else if (storedDeepLink) {
+                                                                    foundDeepLink = storedDeepLink;
+                                                                }
+                                                                
+                                                                if (foundDeepLink) {
+                                                                    if (handleDeepLink(foundDeepLink)) {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
                                                                         e.stopImmediatePropagation();
                                                                         return false;
                                                                     }
+                                                                }
+                                                            }, true);
+                                                        });
+                                                        
+                                                        // Also attach to all images to check for parent clickable elements
+                                                        var images = document.querySelectorAll('img');
+                                                        images.forEach(function(img) {
+                                                            img.addEventListener('click', function(e) {
+                                                                var parent = img.parentElement;
+                                                                var depth = 0;
+                                                                while (parent && depth < 10) {
+                                                                    var parentOnclick = parent.getAttribute('onclick');
+                                                                    var parentDataHref = parent.getAttribute('data-href');
+                                                                    var parentHref = parent.href;
+                                                                    
+                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) {
+                                                                            if (handleDeepLink(match[0])) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }
+                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        if (handleDeepLink(parentDataHref)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        if (handleDeepLink(parentHref)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    parent = parent.parentElement;
+                                                                    depth++;
                                                                 }
                                                             }, true);
                                                         });
@@ -2028,9 +2103,22 @@ fun TileBanner(
                                                         var target = e.target;
                                                         var link = null;
                                                         
+                                                        // Check if clicked element is an image or inside a link
                                                         while (target && target !== document.body) {
                                                             if (target.tagName === 'A' && target.href) {
                                                                 link = target;
+                                                                break;
+                                                            }
+                                                            // Also check if image is inside a clickable element
+                                                            if (target.tagName === 'IMG') {
+                                                                var parent = target.parentElement;
+                                                                while (parent && parent !== document.body) {
+                                                                    if (parent.tagName === 'A' || parent.onclick || parent.getAttribute('onclick')) {
+                                                                        link = parent;
+                                                                        break;
+                                                                    }
+                                                                    parent = parent.parentElement;
+                                                                }
                                                                 break;
                                                             }
                                                             target = target.parentElement;
@@ -2058,9 +2146,10 @@ fun TileBanner(
                                                             } else if (href && href.includes('philstore://')) {
                                                                 deepLink = href;
                                                             } else {
+                                                                // For images and other elements, check parent elements more thoroughly
                                                                 var parent = clicked.parentElement;
                                                                 var depth = 0;
-                                                                while (parent && depth < 5) {
+                                                                while (parent && depth < 10) {
                                                                     var parentOnclick = parent.getAttribute('onclick');
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
@@ -2102,7 +2191,8 @@ fun TileBanner(
                                                             window._bannerDeepLink = matches[0];
                                                         }
                                                         
-                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                        // Find all clickable elements including images with onclick
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick], img[onclick], img[onclick*="philstore://"]');
                                                         clickableElements.forEach(function(el) {
                                                             el.addEventListener('click', function(e) {
                                                                 var storedDeepLink = window._bannerDeepLink;
@@ -2111,13 +2201,73 @@ fun TileBanner(
                                                                     window._bannerDeepLink = storedDeepLink;
                                                                 }
                                                                 
-                                                                if (storedDeepLink) {
-                                                                    if (handleDeepLink(storedDeepLink)) {
+                                                                // Check element's own onclick first
+                                                                var elementOnclick = el.getAttribute('onclick');
+                                                                var elementDataHref = el.getAttribute('data-href');
+                                                                var elementHref = el.href;
+                                                                var foundDeepLink = null;
+                                                                
+                                                                if (elementOnclick && elementOnclick.includes('philstore://')) {
+                                                                    var match = elementOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (match) foundDeepLink = match[0];
+                                                                } else if (elementDataHref && elementDataHref.includes('philstore://')) {
+                                                                    foundDeepLink = elementDataHref;
+                                                                } else if (elementHref && elementHref.includes('philstore://')) {
+                                                                    foundDeepLink = elementHref;
+                                                                } else if (storedDeepLink) {
+                                                                    foundDeepLink = storedDeepLink;
+                                                                }
+                                                                
+                                                                if (foundDeepLink) {
+                                                                    if (handleDeepLink(foundDeepLink)) {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
                                                                         e.stopImmediatePropagation();
                                                                         return false;
                                                                     }
+                                                                }
+                                                            }, true);
+                                                        });
+                                                        
+                                                        // Also attach to all images to check for parent clickable elements
+                                                        var images = document.querySelectorAll('img');
+                                                        images.forEach(function(img) {
+                                                            img.addEventListener('click', function(e) {
+                                                                var parent = img.parentElement;
+                                                                var depth = 0;
+                                                                while (parent && depth < 10) {
+                                                                    var parentOnclick = parent.getAttribute('onclick');
+                                                                    var parentDataHref = parent.getAttribute('data-href');
+                                                                    var parentHref = parent.href;
+                                                                    
+                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) {
+                                                                            if (handleDeepLink(match[0])) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                e.stopImmediatePropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }
+                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        if (handleDeepLink(parentDataHref)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        if (handleDeepLink(parentHref)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    parent = parent.parentElement;
+                                                                    depth++;
                                                                 }
                                                             }, true);
                                                         });
