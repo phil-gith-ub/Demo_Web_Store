@@ -69,8 +69,8 @@ class PhilAndroidStoreApplication : Application() {
                         
                         Log.d("BrazeDeeplinkHandler", "Handling deep link: $uriString")
                         
-                        // Check if it's a philstore:// deep link
-                        if (uriString.startsWith("philstore://")) {
+                        // Check if it's a demostore:// deep link
+                        if (uriString.startsWith("demostore://")) {
                             // Create intent to open MainActivity with the deep link
                             val intent = Intent(Intent.ACTION_VIEW, uri)
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -84,7 +84,7 @@ class PhilAndroidStoreApplication : Application() {
                                 Log.w("BrazeDeeplinkHandler", "Could not resolve activity for deep link: $uriString")
                             }
                         } else {
-                            // For non-philstore URLs, use default Braze behavior
+                            // For non-demostore URLs, use default Braze behavior
                             val executeMethod = uriAction.javaClass.getMethod("execute", android.content.Context::class.java)
                             executeMethod.invoke(uriAction, context)
                         }

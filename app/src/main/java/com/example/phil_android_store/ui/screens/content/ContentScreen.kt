@@ -550,7 +550,7 @@ fun Tile1ContentCard(
                 }
                 val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
-                    if (cardUrl.startsWith("philstore://")) {
+                    if (cardUrl.startsWith("demostore://")) {
                         try {
                             val uri = Uri.parse(cardUrl)
                             val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -945,7 +945,7 @@ fun Tile2ContentCard(
                 }
                 val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
-                    if (cardUrl.startsWith("philstore://")) {
+                    if (cardUrl.startsWith("demostore://")) {
                         try {
                             val uri = Uri.parse(cardUrl)
                             val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -1131,8 +1131,8 @@ fun ContentBanner(
                             
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                    // Check if the URL is a philstore deep link
-                                    if (url != null && url.startsWith("philstore://")) {
+                                    // Check if the URL is a demostore deep link
+                                    if (url != null && url.startsWith("demostore://")) {
                                         try {
                                             val uri = Uri.parse(url)
                                             val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -1197,7 +1197,7 @@ fun ContentBanner(
                         
                         val customWebViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                if (url != null && url.startsWith("philstore://")) {
+                                if (url != null && url.startsWith("demostore://")) {
                                     handleDeepLink(url)
                                     return true
                                 }
@@ -1207,7 +1207,7 @@ fun ContentBanner(
                             @android.annotation.SuppressLint("NewApi")
                             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString()
-                                if (url != null && url.startsWith("philstore://")) {
+                                if (url != null && url.startsWith("demostore://")) {
                                     handleDeepLink(url)
                                     return true
                                 }
@@ -1226,7 +1226,7 @@ fun ContentBanner(
                                         val jsCode = """
                                             (function() {
                                                 function handleDeepLink(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (window.AndroidDeepLinkHandler) {
                                                             window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                             return true;
@@ -1242,21 +1242,21 @@ fun ContentBanner(
                                                 window._originalReplace = window.location.replace;
                                                 
                                                 window.open = function(url, target, features) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return null;
                                                     }
                                                     return originalOpen.apply(window, arguments);
                                                 };
                                                 
                                                 window.location.assign = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalAssign?.apply(window.location, arguments);
                                                 };
                                                 
                                                 window.location.replace = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalReplace?.apply(window.location, arguments);
@@ -1302,12 +1302,12 @@ fun ContentBanner(
                                                             var dataHref = clicked.getAttribute('data-href');
                                                             var href = clicked.href;
                                                             
-                                                            if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                                var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                            if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                                var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                                 if (match) deepLink = match[0];
-                                                            } else if (dataHref && dataHref.includes('philstore://')) {
+                                                            } else if (dataHref && dataHref.includes('demostore://')) {
                                                                 deepLink = dataHref;
-                                                            } else if (href && href.includes('philstore://')) {
+                                                            } else if (href && href.includes('demostore://')) {
                                                                 deepLink = href;
                                                             } else {
                                                                 // For images and other elements, check parent elements more thoroughly
@@ -1318,16 +1318,16 @@ fun ContentBanner(
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
                                                                     
-                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                        var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                         if (match) {
                                                                             deepLink = match[0];
                                                                             break;
                                                                         }
-                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                    } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                         deepLink = parentDataHref;
                                                                         break;
-                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                    } else if (parentHref && parentHref.includes('demostore://')) {
                                                                         deepLink = parentHref;
                                                                         break;
                                                                     }
@@ -1349,14 +1349,14 @@ fun ContentBanner(
                                                     
                                                     function attachToLinks() {
                                                         var htmlContent = document.documentElement.innerHTML || '';
-                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                         var matches = htmlContent.match(regex);
                                                         if (matches && matches.length > 0) {
                                                             window._bannerDeepLink = matches[0];
                                                         }
                                                         
                                                         // Find all clickable elements including images with onclick
-                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick], img[onclick], img[onclick*="philstore://"]');
+                                                        var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick], img[onclick], img[onclick*="demostore://"]');
                                                         clickableElements.forEach(function(el) {
                                                             el.addEventListener('click', function(e) {
                                                                 var storedDeepLink = window._bannerDeepLink;
@@ -1371,12 +1371,12 @@ fun ContentBanner(
                                                                 var elementHref = el.href;
                                                                 var foundDeepLink = null;
                                                                 
-                                                                if (elementOnclick && elementOnclick.includes('philstore://')) {
-                                                                    var match = elementOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (elementOnclick && elementOnclick.includes('demostore://')) {
+                                                                    var match = elementOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                     if (match) foundDeepLink = match[0];
-                                                                } else if (elementDataHref && elementDataHref.includes('philstore://')) {
+                                                                } else if (elementDataHref && elementDataHref.includes('demostore://')) {
                                                                     foundDeepLink = elementDataHref;
-                                                                } else if (elementHref && elementHref.includes('philstore://')) {
+                                                                } else if (elementHref && elementHref.includes('demostore://')) {
                                                                     foundDeepLink = elementHref;
                                                                 } else if (storedDeepLink) {
                                                                     foundDeepLink = storedDeepLink;
@@ -1404,8 +1404,8 @@ fun ContentBanner(
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
                                                                     
-                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                        var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                         if (match) {
                                                                             if (handleDeepLink(match[0])) {
                                                                                 e.preventDefault();
@@ -1414,14 +1414,14 @@ fun ContentBanner(
                                                                                 return false;
                                                                             }
                                                                         }
-                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                    } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                         if (handleDeepLink(parentDataHref)) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
                                                                             e.stopImmediatePropagation();
                                                                             return false;
                                                                         }
-                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                    } else if (parentHref && parentHref.includes('demostore://')) {
                                                                         if (handleDeepLink(parentHref)) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -1486,7 +1486,7 @@ fun ContentBanner(
                                     val preloadJs = """
                                         (function() {
                                             function handleDeepLink(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (window.AndroidDeepLinkHandler) {
                                                         window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                         return true;
@@ -1498,21 +1498,21 @@ fun ContentBanner(
                                             
                                             window._originalOpen = window.open;
                                             window.open = function(url, target, features) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return null;
                                                 }
                                                 return window._originalOpen.apply(window, arguments);
                                             };
                                             
                                             window.location.assign = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalAssign?.apply(window.location, arguments);
                                             };
                                             
                                             window.location.replace = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalReplace?.apply(window.location, arguments);
@@ -1521,7 +1521,7 @@ fun ContentBanner(
                                             document.addEventListener('DOMContentLoaded', function() {
                                                 function findDeepLinkInDocument() {
                                                     var htmlContent = document.documentElement.innerHTML || '';
-                                                    var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                    var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                     var matches = htmlContent.match(regex);
                                                     if (matches && matches.length > 0) {
                                                         return matches[0];
@@ -1592,7 +1592,7 @@ fun ContentBanner(
                                             val jsCode = """
                                                 (function() {
                                                     function handleDeepLink(url) {
-                                                        if (url && url.startsWith('philstore://')) {
+                                                        if (url && url.startsWith('demostore://')) {
                                                             if (window.AndroidDeepLinkHandler) {
                                                                 window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                                 return true;
@@ -1630,12 +1630,12 @@ fun ContentBanner(
                                                                 var dataHref = clicked.getAttribute('data-href');
                                                                 var href = clicked.href;
                                                                 
-                                                                if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                                    var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                                    var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                                     if (match) deepLink = match[0];
-                                                                } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                } else if (dataHref && dataHref.includes('demostore://')) {
                                                                     deepLink = dataHref;
-                                                                } else if (href && href.includes('philstore://')) {
+                                                                } else if (href && href.includes('demostore://')) {
                                                                     deepLink = href;
                                                                 } else {
                                                                     var parent = clicked.parentElement;
@@ -1645,16 +1645,16 @@ fun ContentBanner(
                                                                         var parentDataHref = parent.getAttribute('data-href');
                                                                         var parentHref = parent.href;
                                                                         
-                                                                        if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                            var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                            var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                             if (match) {
                                                                                 deepLink = match[0];
                                                                                 break;
                                                                             }
-                                                                        } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                             deepLink = parentDataHref;
                                                                             break;
-                                                                        } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        } else if (parentHref && parentHref.includes('demostore://')) {
                                                                             deepLink = parentHref;
                                                                             break;
                                                                         }
@@ -1676,13 +1676,13 @@ fun ContentBanner(
                                                         
                                                         function attachToLinks() {
                                                             var htmlContent = document.documentElement.innerHTML || '';
-                                                            var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                            var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                             var matches = htmlContent.match(regex);
                                                             if (matches && matches.length > 0) {
                                                                 window._bannerDeepLink = matches[0];
                                                             }
                                                             
-                                                            var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                            var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick]');
                                                             clickableElements.forEach(function(el) {
                                                                 el.addEventListener('click', function(e) {
                                                                     var storedDeepLink = window._bannerDeepLink;
@@ -1854,7 +1854,7 @@ fun TileBanner(
             } catch (e: Exception) {
             }
             
-            if (bannerClickUrl!!.startsWith("philstore://")) {
+            if (bannerClickUrl!!.startsWith("demostore://")) {
                 try {
                     val uri = Uri.parse(bannerClickUrl!!)
                     val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -1897,8 +1897,8 @@ fun TileBanner(
                             
                             webViewClient = object : android.webkit.WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
-                                    // Check if the URL is a philstore deep link
-                                    if (url != null && url.startsWith("philstore://")) {
+                                    // Check if the URL is a demostore deep link
+                                    if (url != null && url.startsWith("demostore://")) {
                                         try {
                                             // Parse the URI (handles URL encoding automatically)
                                             val uri = android.net.Uri.parse(url)
@@ -1922,7 +1922,7 @@ fun TileBanner(
                                 @android.annotation.SuppressLint("NewApi")
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                     val url = request?.url?.toString()
-                                    if (url != null && url.startsWith("philstore://")) {
+                                    if (url != null && url.startsWith("demostore://")) {
                                         try {
                                             val uri = android.net.Uri.parse(url)
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
@@ -1988,7 +1988,7 @@ fun TileBanner(
                         
                         val customWebViewClient = object : android.webkit.WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
-                                if (url != null && url.startsWith("philstore://")) {
+                                if (url != null && url.startsWith("demostore://")) {
                                     handleDeepLink(url)
                                     return true
                                 }
@@ -1998,7 +1998,7 @@ fun TileBanner(
                             @android.annotation.SuppressLint("NewApi")
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString()
-                                if (url != null && url.startsWith("philstore://")) {
+                                if (url != null && url.startsWith("demostore://")) {
                                     handleDeepLink(url)
                                     return true
                                 }
@@ -2031,7 +2031,7 @@ fun TileBanner(
                                                 var bannerClickUrl = ${if (bannerClickUrl != null) "'$bannerClickUrl'" else "null"};
                                                 
                                                 function handleDeepLink(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (window.AndroidDeepLinkHandler) {
                                                             window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                             return true;
@@ -2078,21 +2078,21 @@ fun TileBanner(
                                                 window._originalReplace = window.location.replace;
                                                 
                                                 window.open = function(url, target, features) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return null;
                                                     }
                                                     return originalOpen.apply(window, arguments);
                                                 };
                                                 
                                                 window.location.assign = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalAssign?.apply(window.location, arguments);
                                                 };
                                                 
                                                 window.location.replace = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalReplace?.apply(window.location, arguments);
@@ -2138,12 +2138,12 @@ fun TileBanner(
                                                             var dataHref = clicked.getAttribute('data-href');
                                                             var href = clicked.href;
                                                             
-                                                            if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                                var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                            if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                                var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                                 if (match) deepLink = match[0];
-                                                            } else if (dataHref && dataHref.includes('philstore://')) {
+                                                            } else if (dataHref && dataHref.includes('demostore://')) {
                                                                 deepLink = dataHref;
-                                                            } else if (href && href.includes('philstore://')) {
+                                                            } else if (href && href.includes('demostore://')) {
                                                                 deepLink = href;
                                                             } else {
                                                                 // For images and other elements, check parent elements more thoroughly
@@ -2154,16 +2154,16 @@ fun TileBanner(
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
                                                                     
-                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                        var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                         if (match) {
                                                                             deepLink = match[0];
                                                                             break;
                                                                         }
-                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                    } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                         deepLink = parentDataHref;
                                                                         break;
-                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                    } else if (parentHref && parentHref.includes('demostore://')) {
                                                                         deepLink = parentHref;
                                                                         break;
                                                                     }
@@ -2185,14 +2185,14 @@ fun TileBanner(
                                                     
                                                     function attachToLinks() {
                                                         var htmlContent = document.documentElement.innerHTML || '';
-                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                         var matches = htmlContent.match(regex);
                                                         if (matches && matches.length > 0) {
                                                             window._bannerDeepLink = matches[0];
                                                         }
                                                         
                                                         // Find all clickable elements including images with onclick
-                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick], img[onclick], img[onclick*="philstore://"]');
+                                                        var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick], img[onclick], img[onclick*="demostore://"]');
                                                         clickableElements.forEach(function(el) {
                                                             el.addEventListener('click', function(e) {
                                                                 var storedDeepLink = window._bannerDeepLink;
@@ -2207,12 +2207,12 @@ fun TileBanner(
                                                                 var elementHref = el.href;
                                                                 var foundDeepLink = null;
                                                                 
-                                                                if (elementOnclick && elementOnclick.includes('philstore://')) {
-                                                                    var match = elementOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (elementOnclick && elementOnclick.includes('demostore://')) {
+                                                                    var match = elementOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                     if (match) foundDeepLink = match[0];
-                                                                } else if (elementDataHref && elementDataHref.includes('philstore://')) {
+                                                                } else if (elementDataHref && elementDataHref.includes('demostore://')) {
                                                                     foundDeepLink = elementDataHref;
-                                                                } else if (elementHref && elementHref.includes('philstore://')) {
+                                                                } else if (elementHref && elementHref.includes('demostore://')) {
                                                                     foundDeepLink = elementHref;
                                                                 } else if (storedDeepLink) {
                                                                     foundDeepLink = storedDeepLink;
@@ -2240,8 +2240,8 @@ fun TileBanner(
                                                                     var parentDataHref = parent.getAttribute('data-href');
                                                                     var parentHref = parent.href;
                                                                     
-                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                        var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                         if (match) {
                                                                             if (handleDeepLink(match[0])) {
                                                                                 e.preventDefault();
@@ -2250,14 +2250,14 @@ fun TileBanner(
                                                                                 return false;
                                                                             }
                                                                         }
-                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                    } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                         if (handleDeepLink(parentDataHref)) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
                                                                             e.stopImmediatePropagation();
                                                                             return false;
                                                                         }
-                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                    } else if (parentHref && parentHref.includes('demostore://')) {
                                                                         if (handleDeepLink(parentHref)) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -2337,7 +2337,7 @@ fun TileBanner(
                                                 var bannerClickUrl = ${if (bannerClickUrl != null) "'$bannerClickUrl'" else "null"};
                                                 
                                                 function handleDeepLink(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (window.AndroidDeepLinkHandler) {
                                                             window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                             return true;
@@ -2357,21 +2357,21 @@ fun TileBanner(
                                                 window._originalReplace = window.location.replace;
                                                 
                                                 window.open = function(url, target, features) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return null;
                                                     }
                                                     return window._originalOpen.apply(window, arguments);
                                                 };
                                                 
                                                 window.location.assign = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalAssign?.apply(window.location, arguments);
                                                 };
                                                 
                                                 window.location.replace = function(url) {
-                                                    if (url && url.startsWith('philstore://')) {
+                                                    if (url && url.startsWith('demostore://')) {
                                                         if (handleDeepLink(url)) return;
                                                     }
                                                     return window._originalReplace?.apply(window.location, arguments);
@@ -2380,7 +2380,7 @@ fun TileBanner(
                                                 document.addEventListener('DOMContentLoaded', function() {
                                                     function findDeepLinkInDocument() {
                                                         var htmlContent = document.documentElement.innerHTML || '';
-                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                         var matches = htmlContent.match(regex);
                                                         if (matches && matches.length > 0) {
                                                             return matches[0];
@@ -2474,7 +2474,7 @@ fun TileBanner(
                                                 val jsCode = """
                                                     (function() {
                                                         function handleDeepLink(url) {
-                                                            if (url && url.startsWith('philstore://')) {
+                                                            if (url && url.startsWith('demostore://')) {
                                                                 if (window.AndroidDeepLinkHandler) {
                                                                     window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                                     return true;
@@ -2512,12 +2512,12 @@ fun TileBanner(
                                                                     var dataHref = clicked.getAttribute('data-href');
                                                                     var href = clicked.href;
                                                                     
-                                                                    if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                                        var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                                        var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                                         if (match) deepLink = match[0];
-                                                                    } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                    } else if (dataHref && dataHref.includes('demostore://')) {
                                                                         deepLink = dataHref;
-                                                                    } else if (href && href.includes('philstore://')) {
+                                                                    } else if (href && href.includes('demostore://')) {
                                                                         deepLink = href;
                                                                     } else {
                                                                         var parent = clicked.parentElement;
@@ -2527,16 +2527,16 @@ fun TileBanner(
                                                                             var parentDataHref = parent.getAttribute('data-href');
                                                                             var parentHref = parent.href;
                                                                             
-                                                                            if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                                var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                            if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                                var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                                 if (match) {
                                                                                     deepLink = match[0];
                                                                                     break;
                                                                                 }
-                                                                            } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                            } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                                 deepLink = parentDataHref;
                                                                                 break;
-                                                                            } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                            } else if (parentHref && parentHref.includes('demostore://')) {
                                                                                 deepLink = parentHref;
                                                                                 break;
                                                                             }
@@ -2558,13 +2558,13 @@ fun TileBanner(
                                                             
                                                             function attachToLinks() {
                                                                 var htmlContent = document.documentElement.innerHTML || '';
-                                                                var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                                var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                                 var matches = htmlContent.match(regex);
                                                                 if (matches && matches.length > 0) {
                                                                     window._bannerDeepLink = matches[0];
                                                                 }
                                                                 
-                                                                var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                                var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick]');
                                                                 clickableElements.forEach(function(el) {
                                                                     el.addEventListener('click', function(e) {
                                                                         var storedDeepLink = window._bannerDeepLink;

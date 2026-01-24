@@ -28,40 +28,40 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="login" />
+                <data android:scheme="demostore" android:host="login" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="profile" />
+                <data android:scheme="demostore" android:host="profile" />
             </intent-filter>
             <!-- Deep link for VIP products tab -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="vip" />
+                <data android:scheme="demostore" android:host="vip" />
             </intent-filter>
             <!-- Deep link for cart page -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="cart" />
+                <data android:scheme="demostore" android:host="cart" />
             </intent-filter>
             <!-- Deep link for purchase history page -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="purchase-history" />
+                <data android:scheme="demostore" android:host="purchase-history" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="philstore" android:host="history" />
+                <data android:scheme="demostore" android:host="history" />
             </intent-filter>
         </activity>
         

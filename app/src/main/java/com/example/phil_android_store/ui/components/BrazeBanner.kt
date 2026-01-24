@@ -87,8 +87,8 @@ fun BrazeBanner(
                         // Custom WebViewClient to intercept deep links
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                // Check if the URL is a philstore deep link
-                                if (url != null && url.startsWith("philstore://")) {
+                                // Check if the URL is a demostore deep link
+                                if (url != null && url.startsWith("demostore://")) {
                                     try {
                                         Log.d("BrazeBanner", "Intercepted deep link: $url")
                                         
@@ -183,8 +183,8 @@ fun BrazeBanner(
                     // Create custom WebViewClient to handle deep links (matching in-app message handler)
                     val customWebViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                            // Check if the URL is a philstore deep link
-                            if (url != null && url.startsWith("philstore://")) {
+                            // Check if the URL is a demostore deep link
+                            if (url != null && url.startsWith("demostore://")) {
                                 handleDeepLink(url)
                                 // Return true to indicate we handled the URL
                                 return true
@@ -197,7 +197,7 @@ fun BrazeBanner(
                         @android.annotation.SuppressLint("NewApi")
                         override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                             val url = request?.url?.toString()
-                            if (url != null && url.startsWith("philstore://")) {
+                            if (url != null && url.startsWith("demostore://")) {
                                 handleDeepLink(url)
                                 return true
                             }
@@ -218,7 +218,7 @@ fun BrazeBanner(
                                     val jsCode = """
                                         (function() {
                                             function handleDeepLink(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (window.AndroidDeepLinkHandler) {
                                                         window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                         return true;
@@ -234,21 +234,21 @@ fun BrazeBanner(
                                             window._originalReplace = window.location.replace;
                                             
                                             window.open = function(url, target, features) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return null;
                                                 }
                                                 return originalOpen.apply(window, arguments);
                                             };
                                             
                                             window.location.assign = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalAssign?.apply(window.location, arguments);
                                             };
                                             
                                             window.location.replace = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalReplace?.apply(window.location, arguments);
@@ -281,12 +281,12 @@ fun BrazeBanner(
                                                         var dataHref = clicked.getAttribute('data-href');
                                                         var href = clicked.href;
                                                         
-                                                        if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                            var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                        if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                            var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                             if (match) deepLink = match[0];
-                                                        } else if (dataHref && dataHref.includes('philstore://')) {
+                                                        } else if (dataHref && dataHref.includes('demostore://')) {
                                                             deepLink = dataHref;
-                                                        } else if (href && href.includes('philstore://')) {
+                                                        } else if (href && href.includes('demostore://')) {
                                                             deepLink = href;
                                                         } else {
                                                             var parent = clicked.parentElement;
@@ -296,16 +296,16 @@ fun BrazeBanner(
                                                                 var parentDataHref = parent.getAttribute('data-href');
                                                                 var parentHref = parent.href;
                                                                 
-                                                                if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                    var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                    var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                     if (match) {
                                                                         deepLink = match[0];
                                                                         break;
                                                                     }
-                                                                } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                     deepLink = parentDataHref;
                                                                     break;
-                                                                } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                } else if (parentHref && parentHref.includes('demostore://')) {
                                                                     deepLink = parentHref;
                                                                     break;
                                                                 }
@@ -327,13 +327,13 @@ fun BrazeBanner(
                                                 
                                                 function attachToLinks() {
                                                     var htmlContent = document.documentElement.innerHTML || '';
-                                                    var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                    var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                     var matches = htmlContent.match(regex);
                                                     if (matches && matches.length > 0) {
                                                         window._bannerDeepLink = matches[0];
                                                     }
                                                     
-                                                    var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                    var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick]');
                                                     clickableElements.forEach(function(el) {
                                                         el.addEventListener('click', function(e) {
                                                             var storedDeepLink = window._bannerDeepLink;
@@ -409,7 +409,7 @@ fun BrazeBanner(
                                     val preloadJs = """
                                         (function() {
                                             function handleDeepLink(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (window.AndroidDeepLinkHandler) {
                                                         window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                         return true;
@@ -424,21 +424,21 @@ fun BrazeBanner(
                                             window._originalReplace = window.location.replace;
                                             
                                             window.open = function(url, target, features) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return null;
                                                 }
                                                 return window._originalOpen.apply(window, arguments);
                                             };
                                             
                                             window.location.assign = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalAssign?.apply(window.location, arguments);
                                             };
                                             
                                             window.location.replace = function(url) {
-                                                if (url && url.startsWith('philstore://')) {
+                                                if (url && url.startsWith('demostore://')) {
                                                     if (handleDeepLink(url)) return;
                                                 }
                                                 return window._originalReplace?.apply(window.location, arguments);
@@ -447,7 +447,7 @@ fun BrazeBanner(
                                             document.addEventListener('DOMContentLoaded', function() {
                                                 function findDeepLinkInDocument() {
                                                     var htmlContent = document.documentElement.innerHTML || '';
-                                                    var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                    var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                     var matches = htmlContent.match(regex);
                                                     if (matches && matches.length > 0) {
                                                         return matches[0];
@@ -519,7 +519,7 @@ fun BrazeBanner(
                                             val jsCode = """
                                                 (function() {
                                                     function handleDeepLink(url) {
-                                                        if (url && url.startsWith('philstore://')) {
+                                                        if (url && url.startsWith('demostore://')) {
                                                             if (window.AndroidDeepLinkHandler) {
                                                                 window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                                 return true;
@@ -557,12 +557,12 @@ fun BrazeBanner(
                                                                 var dataHref = clicked.getAttribute('data-href');
                                                                 var href = clicked.href;
                                                                 
-                                                                if (onclickAttr && onclickAttr.includes('philstore://')) {
-                                                                    var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (onclickAttr && onclickAttr.includes('demostore://')) {
+                                                                    var match = onclickAttr.match(/demostore:\/\/[^"'\s)]+/);
                                                                     if (match) deepLink = match[0];
-                                                                } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                } else if (dataHref && dataHref.includes('demostore://')) {
                                                                     deepLink = dataHref;
-                                                                } else if (href && href.includes('philstore://')) {
+                                                                } else if (href && href.includes('demostore://')) {
                                                                     deepLink = href;
                                                                 } else {
                                                                     var parent = clicked.parentElement;
@@ -572,16 +572,16 @@ fun BrazeBanner(
                                                                         var parentDataHref = parent.getAttribute('data-href');
                                                                         var parentHref = parent.href;
                                                                         
-                                                                        if (parentOnclick && parentOnclick.includes('philstore://')) {
-                                                                            var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (parentOnclick && parentOnclick.includes('demostore://')) {
+                                                                            var match = parentOnclick.match(/demostore:\/\/[^"'\s)]+/);
                                                                             if (match) {
                                                                                 deepLink = match[0];
                                                                                 break;
                                                                             }
-                                                                        } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        } else if (parentDataHref && parentDataHref.includes('demostore://')) {
                                                                             deepLink = parentDataHref;
                                                                             break;
-                                                                        } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        } else if (parentHref && parentHref.includes('demostore://')) {
                                                                             deepLink = parentHref;
                                                                             break;
                                                                         }
@@ -603,13 +603,13 @@ fun BrazeBanner(
                                                         
                                                         function attachToLinks() {
                                                             var htmlContent = document.documentElement.innerHTML || '';
-                                                            var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                            var regex = /demostore:\/\/[^"'\s<>)]+/g;
                                                             var matches = htmlContent.match(regex);
                                                             if (matches && matches.length > 0) {
                                                                 window._bannerDeepLink = matches[0];
                                                             }
                                                             
-                                                            var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                            var clickableElements = document.querySelectorAll('[onclick*="demostore://"], button, [data-href*="demostore://"], [onclick]');
                                                             clickableElements.forEach(function(el) {
                                                                 el.addEventListener('click', function(e) {
                                                                     var storedDeepLink = window._bannerDeepLink;

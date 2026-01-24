@@ -116,12 +116,12 @@ fun SettingsScreen(
     
     // Available deep links
     val deepLinks = listOf(
-        "Store" to "philstore://store",
-        "Cart" to "philstore://cart",
-        "Profile" to "philstore://profile",
-        "VIP Products" to "philstore://vip",
-        "Purchase History" to "philstore://purchase-history",
-        "Purchase History (Alt)" to "philstore://history"
+        "Store" to "demostore://store",
+        "Cart" to "demostore://cart",
+        "Profile" to "demostore://profile",
+        "VIP Products" to "demostore://vip",
+        "Purchase History" to "demostore://purchase-history",
+        "Purchase History (Alt)" to "demostore://history"
     )
     
     // Banner placement IDs

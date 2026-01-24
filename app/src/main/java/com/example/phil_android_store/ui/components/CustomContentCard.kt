@@ -127,7 +127,7 @@ fun CustomContentCard(
                         
                         // Handle click - check if it's a deep link
                         if (cardUrl != null) {
-                            if (cardUrl.startsWith("philstore://")) {
+                            if (cardUrl.startsWith("demostore://")) {
                                 try {
                                     Log.d("CustomContentCard", "Handling deep link: $cardUrl")
                                     val uri = Uri.parse(cardUrl)

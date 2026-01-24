@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
     
     fun handleDeepLink(intent: Intent?): AppDestinations? {
         val data: Uri? = intent?.data
-        if (data != null && "philstore" == data.scheme) {
+        if (data != null && "demostore" == data.scheme) {
             val host = data.host
             android.util.Log.d("MainActivity", "Deep link detected - scheme: ${data.scheme}, host: $host")
             
@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
     
     fun getDeepLinkCategory(intent: Intent?): String? {
         val data: Uri? = intent?.data
-        if (data != null && "philstore" == data.scheme) {
+        if (data != null && "demostore" == data.scheme) {
             val host = data.host
             // Handle host with or without dash (in case of URL encoding issues)
             val normalizedHost = host?.lowercase()?.replace("%2d", "-")?.replace("%2D", "-")
