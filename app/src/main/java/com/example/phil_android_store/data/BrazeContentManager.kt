@@ -95,7 +95,7 @@ object BrazeContentManager {
     /**
      * Refresh all content after an event or changeUser.
      * Always updates cache (even if content is null) to remove old content.
-     * Makes ONE refresh request, then TWO retries for latency - no more to avoid hitting Braze limits.
+     * Makes ONE refresh request, then ONE retry for latency - no more to avoid hitting Braze limits.
      */
     fun refreshAllContent(context: Context, onContentChanged: (() -> Unit)? = null) {
         scope.launch {
@@ -109,14 +109,39 @@ object BrazeContentManager {
                 cacheUpdateTrigger.value++
             }
             
-            // First retry after 1500ms total (additional 1000ms delay) for latency
+            // ONE retry after 1500ms total (additional 1000ms delay) for latency
             delay(1000)
             if (updateCacheFromBraze(context)) {
                 cacheUpdateTrigger.value++
             }
             
-            // Second retry after 3500ms total (additional 2000ms delay) for additional latency
-            delay(2000)
+            // Notify that refresh completed
+            onContentChanged?.invoke()
+        }
+    }
+    
+    /**
+     * Force refresh all content with data flush (for manual pull-to-refresh).
+     * Flushes all Braze data, then refreshes banners and content cards.
+     */
+    fun forceRefreshAllContent(context: Context, onContentChanged: (() -> Unit)? = null) {
+        scope.launch {
+            // Flush all Braze data first (including IAM)
+            val brazeInstance = com.braze.Braze.getInstance(context)
+            brazeInstance.requestImmediateDataFlush()
+            
+            // Request refresh from Braze
+            BrazeUserSync.requestBannerRefresh(context, allBannerPlacementIds)
+            BrazeUserSync.requestContentCardsRefresh(context)
+            
+            // First attempt after 500ms
+            delay(500)
+            if (updateCacheFromBraze(context)) {
+                cacheUpdateTrigger.value++
+            }
+            
+            // ONE retry after 1500ms total (additional 1000ms delay) for latency
+            delay(1000)
             if (updateCacheFromBraze(context)) {
                 cacheUpdateTrigger.value++
             }

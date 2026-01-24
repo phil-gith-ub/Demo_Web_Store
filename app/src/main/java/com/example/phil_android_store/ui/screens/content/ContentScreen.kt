@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,25 +70,48 @@ import androidx.compose.ui.graphics.Color
  * Content screen for demonstrating Braze Content Cards and Banners.
  * This page can be used to manually install content cards and banners for client demonstrations.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContentScreen() {
     val context = LocalContext.current
     val settingsManager = remember { BrazeSettingsManager(context) }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     
     // Braze SDK: Log screen entry (content is pre-loaded, no refresh needed)
     LaunchedEffect(Unit) {
         BrazeLogManager.logScreenEntered("Content Page")
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    // Pull-to-refresh state
+    val pullToRefreshState = rememberPullToRefreshState()
+    
+    // Handle refresh when pulled
+    LaunchedEffect(pullToRefreshState.isRefreshing) {
+        if (pullToRefreshState.isRefreshing) {
+            isRefreshing = true
+            // Force refresh all content with data flush (flushes IAM and all banners)
+            BrazeContentManager.forceRefreshAllContent(context) {
+                isRefreshing = false
+                pullToRefreshState.endRefresh()
+                notificationMessage = "Content refreshed"
+            }
+        }
+    }
+    
+    PullToRefreshBox(
+        state = pullToRefreshState,
+        modifier = Modifier.fillMaxSize()
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
             // Top row with buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -240,6 +266,7 @@ fun ContentScreen() {
             ) {
                 // Empty placeholder for future content
             }
+        }
         }
     }
     
