@@ -95,7 +95,7 @@ object BrazeContentManager {
     /**
      * Refresh all content after an event or changeUser.
      * Always updates cache (even if content is null) to remove old content.
-     * Only makes ONE refresh request, then ONE retry for latency - no more to avoid hitting Braze limits.
+     * Makes ONE refresh request, then TWO retries for latency - no more to avoid hitting Braze limits.
      */
     fun refreshAllContent(context: Context, onContentChanged: (() -> Unit)? = null) {
         scope.launch {
@@ -109,8 +109,14 @@ object BrazeContentManager {
                 cacheUpdateTrigger.value++
             }
             
-            // ONE retry after 1500ms total (additional 1000ms delay) for latency
+            // First retry after 1500ms total (additional 1000ms delay) for latency
             delay(1000)
+            if (updateCacheFromBraze(context)) {
+                cacheUpdateTrigger.value++
+            }
+            
+            // Second retry after 3500ms total (additional 2000ms delay) for additional latency
+            delay(2000)
             if (updateCacheFromBraze(context)) {
                 cacheUpdateTrigger.value++
             }
