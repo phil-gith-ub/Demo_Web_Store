@@ -99,6 +99,9 @@ object BrazeUserSync {
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
+        // Clear cache FIRST to remove old user's content before changeUser
+        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        
         // Braze SDK: Change user to identify them in Braze (this starts a new session for this user)
         brazeInstance.changeUser(userId)
         BrazeLogManager.logUserIdentified(userId, isAnonymous = false)
@@ -119,13 +122,10 @@ object BrazeUserSync {
                 userId,
                 lastSent.copy(activeMember = true)
             )
-            
-        // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
-        brazeInstance.requestImmediateDataFlush()
         }
         
-        // Clear cache immediately to remove old user's content
-        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
         
         // Refresh all banners and content cards after changeUser
         // Includes retry logic with delays to handle latency
@@ -256,6 +256,9 @@ object BrazeUserSync {
      * Does NOT call changeUser or wipeData - user remains identified in Braze.
      */
     fun onUserLogout(context: Context, userId: String) {
+        // Clear cache when user logs out
+        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
