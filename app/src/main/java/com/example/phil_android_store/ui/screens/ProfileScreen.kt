@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.braze.Braze
 import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.FeatureFlags
@@ -190,6 +191,7 @@ fun ProfileScreen(
                     Button(
                         onClick = {
                             if (userId.isNotBlank()) {
+                                // Load local profile first
                                 val profile = profileManager.getProfile(userId)
                                 profileManager.setCurrentUserId(userId)
                                 isLoggedIn = true
@@ -202,13 +204,21 @@ fun ProfileScreen(
                                 favoriteCategory = profile.favoriteProductCategory
                                 paidMembership = profile.paidMembership
                                 isDarkMode = profile.isDarkModeEnabled
-                                // Don't call onDarkModeChanged here - only trigger event when user actually toggles the switch
+                                
+                                // Apply dark mode setting from profile before Braze operations
+                                onDarkModeChanged(profile.isDarkModeEnabled)
                                 
                                 // Braze SDK: Login user to Braze (calls changeUser, sets active_member=true)
+                                // This clears cache and calls changeUser after profile is loaded
                                 BrazeUserSync.loginUserToBraze(context, userId)
                                 
                                 // Braze SDK: Log login event immediately after changeUser
                                 BrazeUserSync.logLoggedIn(context, userId)
+                                
+                                // Braze SDK: Flush data after both active_member and logged_in are set/logged
+                                // This ensures both are sent together to Braze
+                                val brazeInstance = Braze.getInstance(context)
+                                brazeInstance.requestImmediateDataFlush()
                                 
                                 // Braze SDK: Refresh VIP status and sync to Braze
                                 isVip = purchaseManager.isVip(userId)

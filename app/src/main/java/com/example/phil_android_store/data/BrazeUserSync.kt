@@ -124,8 +124,8 @@ object BrazeUserSync {
             )
         }
         
-        // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
-        brazeInstance.requestImmediateDataFlush()
+        // Note: Data flush is done after logged_in event is also logged (in ProfileScreen)
+        // This ensures both active_member and logged_in are sent together
         
         // Pre-load banners and content cards for the new session
         // Includes retry logic with delays to handle latency
@@ -386,9 +386,8 @@ object BrazeUserSync {
             // Braze SDK: Log custom event
             brazeInstance.logCustomEvent("logged_in")
             BrazeLogManager.logCustomEvent("logged_in")
-            // Braze SDK: Flush immediately to ensure event is sent to Braze servers right away
-            // This allows in-app messages triggered by logged_in to display promptly
-            brazeInstance.requestImmediateDataFlush()
+            // Note: Data flush is done after this call (in ProfileScreen)
+            // This ensures both active_member and logged_in are sent together
             
             // Refresh banners and content cards after event (only if content changed)
             com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
