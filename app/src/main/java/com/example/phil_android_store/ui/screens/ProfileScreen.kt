@@ -50,7 +50,7 @@ import com.example.phil_android_store.data.UserProfileManager
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    onDarkModeChanged: (Boolean) -> Unit,
+    onDarkModeChanged: (Boolean, Boolean) -> Unit, // (enabled, shouldLogEvent)
     onLoginStateChanged: () -> Unit = {},
     onNavigateToPurchaseHistory: () -> Unit = {}
 ) {
@@ -205,24 +205,23 @@ fun ProfileScreen(
                                 paidMembership = profile.paidMembership
                                 isDarkMode = profile.isDarkModeEnabled
                                 
-                                // Apply dark mode setting from profile before Braze operations
-                                onDarkModeChanged(profile.isDarkModeEnabled)
+                                // Apply dark mode setting from profile before Braze operations (don't log event)
+                                onDarkModeChanged(profile.isDarkModeEnabled, false)
                                 
                                 // Braze SDK: Login user to Braze (calls changeUser, sets active_member=true)
                                 // This clears cache and calls changeUser after profile is loaded
                                 BrazeUserSync.loginUserToBraze(context, userId)
                                 
-                                // Braze SDK: Log login event immediately after changeUser
-                                BrazeUserSync.logLoggedIn(context, userId)
-                                
-                                // Braze SDK: Flush data after both active_member and logged_in are set/logged
-                                // This ensures both are sent together to Braze
-                                val brazeInstance = Braze.getInstance(context)
-                                brazeInstance.requestImmediateDataFlush()
-                                
-                                // Braze SDK: Refresh VIP status and sync to Braze
+                                // Braze SDK: Sync VIP status to Braze (before logged_in event)
                                 isVip = purchaseManager.isVip(userId)
                                 BrazeUserSync.syncVipStatusToBraze(context, userId, isVip)
+                                
+                                // Braze SDK: Log login event after active_member and vip_status are set
+                                BrazeUserSync.logLoggedIn(context, userId)
+                                
+                                // Braze SDK: Flush data after active_member, vip_status, and logged_in are all set/logged
+                                val brazeInstance = Braze.getInstance(context)
+                                brazeInstance.requestImmediateDataFlush()
                                 
                                 onLoginStateChanged() // Notify MainActivity to refresh StoreScreen
                             }
@@ -354,7 +353,7 @@ fun ProfileScreen(
                             favoriteCategory = ""
                             paidMembership = false
                             isDarkMode = false
-                            onDarkModeChanged(false)
+                            onDarkModeChanged(false, false)
                             
                             // Refresh VIP status and notify MainActivity
                             isVip = false
@@ -452,7 +451,8 @@ fun ProfileScreen(
                             checked = isDarkMode,
                             onCheckedChange = { enabled ->
                                 isDarkMode = enabled
-                                onDarkModeChanged(enabled)
+                                // Log event when user manually toggles the switch
+                                onDarkModeChanged(enabled, true)
                                 
                                 // Save to current user profile if logged in
                                 if (isLoggedIn && userId.isNotBlank()) {

@@ -416,10 +416,10 @@ fun Phil_Android_StoreApp(
                                     }
                                     AppDestinations.PROFILE -> {
                                         ProfileScreen(
-                                            onDarkModeChanged = { enabled ->
+                                            onDarkModeChanged = { enabled, shouldLogEvent ->
                                                 isDarkMode = enabled
-                                                // Braze SDK: Log custom event when dark mode is enabled
-                                                if (enabled) {
+                                                // Braze SDK: Log custom event only when user manually toggles the switch
+                                                if (enabled && shouldLogEvent) {
                                                     BrazeUserSync.logEnabledDarkMode(context)
                                                 }
                                             },

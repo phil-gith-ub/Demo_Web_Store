@@ -421,8 +421,7 @@ object BrazeUserSync {
                 val updatedValues = lastSent.copy(vipMember = isVip)
                 saveLastSentValues(context, userId, updatedValues)
                 
-                // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
-                brazeInstance.requestImmediateDataFlush()
+                // Note: Data flush is done after all attributes and events are set/logged (in ProfileScreen)
             }
         }
     }
