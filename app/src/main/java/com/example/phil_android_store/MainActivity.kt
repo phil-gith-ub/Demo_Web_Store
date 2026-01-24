@@ -42,17 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import kotlin.OptIn
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import androidx.compose.foundation.layout.size
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -85,7 +79,6 @@ class MainActivity : ComponentActivity() {
         val initialVipCategory = getDeepLinkCategory(intent)
         
         setContent {
-            @OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
             Phil_Android_StoreApp(
                 initialDestination = initialDestination,
                 initialVipCategory = initialVipCategory,
@@ -379,21 +372,8 @@ fun Phil_Android_StoreApp(
                             onBack = { showPurchaseHistory = false }
                         )
                     } else {
-                        // Pre-load all screens in background (always composed but hidden when not active)
-                        // This ensures all banners/cards are pre-rendered before user navigates
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            val isHomeVisible = currentDestination == AppDestinations.HOME
-                            val isCartVisible = currentDestination == AppDestinations.CART
-                            val isContentVisible = currentDestination == AppDestinations.CONTENT
-                            
-                            // Pre-load StoreScreen in background
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(if (isHomeVisible) 1f else 0f) // Visible screen on top
-                                    .alpha(if (isHomeVisible) 1f else 0f)
-                                    .then(if (isHomeVisible) Modifier else Modifier.size(1.dp))
-                            ) {
+                        when (currentDestination) {
+                            AppDestinations.HOME -> {
                                 StoreScreen(
                                     bannerContent = bannerContent,
                                     onShowBannerMessage = { }, // No longer needed, handled internally
@@ -406,15 +386,7 @@ fun Phil_Android_StoreApp(
                                     }
                                 )
                             }
-                            
-                            // Pre-load CartScreen in background
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(if (isCartVisible) 1f else 0f) // Visible screen on top
-                                    .alpha(if (isCartVisible) 1f else 0f)
-                                    .then(if (isCartVisible) Modifier else Modifier.size(1.dp))
-                            ) {
+                            AppDestinations.CART -> {
                                 CartScreen(
                                     cartManager = cartManager,
                                     onCartUpdated = {
@@ -423,20 +395,10 @@ fun Phil_Android_StoreApp(
                                     }
                                 )
                             }
-                            
-                            // Pre-load ContentScreen in background
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .zIndex(if (isContentVisible) 1f else 0f) // Visible screen on top
-                                    .alpha(if (isContentVisible) 1f else 0f)
-                                    .then(if (isContentVisible) Modifier else Modifier.size(1.dp))
-                            ) {
+                            AppDestinations.CONTENT -> {
                                 ContentScreen()
                             }
-                            
-                            // Show ProfileScreen when active (not pre-loaded as it's less frequently used)
-                            if (currentDestination == AppDestinations.PROFILE) {
+                            AppDestinations.PROFILE -> {
                                 ProfileScreen(
                                     onDarkModeChanged = { enabled ->
                                         isDarkMode = enabled

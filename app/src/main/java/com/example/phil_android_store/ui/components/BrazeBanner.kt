@@ -50,23 +50,16 @@ fun BrazeBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Update banner when cache changes, or fetch directly if cache is empty
+    // Update state only when cache changes (no direct fetch - cache is pre-loaded)
     LaunchedEffect(cachedBanner) {
-        if (cachedBanner != null) {
-            // Use cached banner
-            banner = cachedBanner
-        } else {
-            // Cache is empty - fetch directly from Braze as fallback
-            banner = BrazeUserSync.getBanner(context, placementId)
-        }
-        
-        onBannerUpdate?.invoke(banner)
+        banner = cachedBanner
+        onBannerUpdate?.invoke(cachedBanner)
         
         // Check if banner exists and is not a control variant
-        if (banner != null) {
+        if (cachedBanner != null) {
             try {
-                val isControlMethod = banner!!.javaClass.getMethod("isControl")
-                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
                 shouldRender = !isControl
             } catch (e: Exception) {
                 // If isControl method doesn't exist, assume we should render

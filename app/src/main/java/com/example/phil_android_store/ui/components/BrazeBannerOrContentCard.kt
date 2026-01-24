@@ -43,19 +43,12 @@ fun BrazeBannerOrContentCard(
     var hasBanner by remember(bannerPlacementId) { mutableStateOf(false) }
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
     
-    // Check cached banner, or fetch directly if cache is empty
+    // Check cached banner (no direct fetch - cache is pre-loaded)
     LaunchedEffect(cachedBanner) {
-        val bannerToCheck = if (cachedBanner != null) {
-            cachedBanner
-        } else {
-            // Cache is empty - fetch directly from Braze as fallback
-            BrazeUserSync.getBanner(context, bannerPlacementId)
-        }
-        
-        if (bannerToCheck != null) {
+        if (cachedBanner != null) {
             try {
-                val isControlMethod = bannerToCheck.javaClass.getMethod("isControl")
-                val isControl = isControlMethod.invoke(bannerToCheck) as? Boolean ?: false
+                val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
                 hasBanner = !isControl
             } catch (e: Exception) {
                 hasBanner = true
