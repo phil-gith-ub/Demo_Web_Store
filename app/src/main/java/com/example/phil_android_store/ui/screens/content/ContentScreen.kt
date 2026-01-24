@@ -51,7 +51,6 @@ import coil.ImageLoader
 import androidx.compose.foundation.Image
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -80,7 +79,6 @@ fun ContentScreen() {
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
-    // Braze SDK: Log screen entry (content is pre-loaded, no refresh needed)
     LaunchedEffect(Unit) {
         BrazeLogManager.logScreenEntered("Content Page")
     }
@@ -90,7 +88,6 @@ fun ContentScreen() {
         onRefresh = {
             isRefreshing = true
             scope.launch {
-                // Force refresh all content with data flush (flushes IAM and all banners)
                 BrazeContentManager.forceRefreshAllContent(context) {
                     isRefreshing = false
                     notificationMessage = "Content refreshed"
@@ -109,15 +106,12 @@ fun ContentScreen() {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-            // Top row with buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Enable Push button on the left
                 Button(
                     onClick = {
-                        // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("enable_push")
                         BrazeLogManager.logCustomEvent("enable_push")
@@ -126,7 +120,7 @@ fun ContentScreen() {
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp), // Fixed minimum height for consistent button size
+                        .heightIn(min = 48.dp),
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
                     Text(
@@ -137,10 +131,8 @@ fun ContentScreen() {
                     )
                 }
                 
-                // Push Notification button in the middle
                 Button(
                     onClick = {
-                        // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("push_notification")
                         BrazeLogManager.logCustomEvent("push_notification")
@@ -149,7 +141,7 @@ fun ContentScreen() {
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp), // Fixed minimum height for consistent button size
+                        .heightIn(min = 48.dp),
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
                     Text(
@@ -160,10 +152,8 @@ fun ContentScreen() {
                     )
                 }
                 
-                // User Action button on the right
                 Button(
                     onClick = {
-                        // Braze SDK: Log custom event to Braze
                         val brazeInstance = Braze.getInstance(context)
                         brazeInstance.logCustomEvent("user_action_button")
                         BrazeLogManager.logCustomEvent("user_action_button")
@@ -172,7 +162,7 @@ fun ContentScreen() {
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp), // Fixed minimum height for consistent button size
+                        .heightIn(min = 48.dp),
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
                     Text(
@@ -184,20 +174,15 @@ fun ContentScreen() {
                 }
             }
             
-            // Content Card: Tile 1 (2:1 banner layout)
-            // Filters Braze Content Cards by key-value pair: location = tile_1
-            // Adaptive layout: Square images display side-by-side, wide images display top-to-bottom
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp)
             ) {
-                // Tile1 card - fixed position
                 Tile1ContentCard(
                     modifier = Modifier.fillMaxWidth()
                 )
                 
-                // Floating notification banner - overlays the top of Tile1
                 notificationMessage?.let { message ->
                     Box(
                         modifier = Modifier
@@ -229,8 +214,6 @@ fun ContentScreen() {
                 }
             }
             
-            // Content Cards: Tile 2 and Tile 3 (1:1 square layout, side-by-side)
-            // Filters by location = tile_2 and tile_3 respectively
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -246,28 +229,23 @@ fun ContentScreen() {
                 )
             }
             
-            // Banner: Content Banner (2:1 banner layout, non-collapsing)
-            // Always displays container - shows placeholder when no banner is available
             ContentBanner(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp)
             )
             
-            // Additional space for future Content Cards or Banners
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Empty placeholder for future content
             }
         }
         }
     }
     
-    // Auto-dismiss notification after duration
     LaunchedEffect(notificationMessage) {
         if (notificationMessage != null) {
             delay(2000L)
@@ -277,29 +255,12 @@ fun ContentScreen() {
 }
 
 /**
- * Content Card Fragment: Tile 1
+ * Content Card: Tile 1
  * 
- * Braze SDK: Custom Content Card implementation
- * - Filters Content Cards by key-value pair: location = tile_1
- * - Displays as 1x2 banner style (full width, 2:1 aspect ratio)
- * - Logs analytics (impressions and clicks) to Braze dashboard
+ * Displays Braze Content Cards filtered by location = tile_1
+ * - 2:1 banner layout with adaptive image positioning
+ * - Logs impressions and clicks to Braze analytics
  * - Shows placeholder when no content is available
- * 
- * Debugging: Check Logcat for "Tile1ContentCard" tag to see:
- * - How many cards are received
- * - All extras for each card
- * - Which card (if any) matches the filter
- * 
- * Common issues:
- * - Card not received: Check if Content Cards are enabled in Braze dashboard
- * - Card filtered out: Verify the extras key is exactly "location" (case-sensitive in Braze dashboard)
- * - Card value mismatch: Verify the value in extras is exactly "tile_1" (no spaces, correct case)
- * 
- * To duplicate this for another card:
- * 1. Copy this function and rename (e.g., Tile2ContentCard)
- * 2. Change the locationKey value (e.g., "tile_2")
- * 3. Update the placeholder text accordingly
- * 4. Add the new component to ContentScreen below this one
  */
 @Composable
 fun Tile1ContentCard(
@@ -309,13 +270,9 @@ fun Tile1ContentCard(
     val colorScheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     
-    // Filter key: Matches Content Cards with location = tile_1 in Braze dashboard
     val locationKey = "tile_1"
-    
-    // Read content cards from cache (pre-loaded on session start, updated after events)
     val cachedCards = rememberCachedContentCards()
     
-    // Initialize state directly from cache (no fallback fetch to prevent flashing)
     var contentCard by remember(locationKey) { 
         mutableStateOf<Any?>(
             BrazeContentManager.getCachedContentCardByPositionId(locationKey)
@@ -353,21 +310,10 @@ fun Tile1ContentCard(
                 continue
             }
             
-            // Extract key-value pairs (extras) from card
             try {
                 val getExtrasMethod = card.javaClass.getMethod("getExtras")
                 val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                 
-                // Log card details for debugging
-                try {
-                    val getIdMethod = card.javaClass.getMethod("getId")
-                    val cardId = getIdMethod.invoke(card) as? String
-                    val getTitleMethod = card.javaClass.getMethod("getTitle")
-                    val title = getTitleMethod.invoke(card) as? String
-                } catch (e: Exception) {
-                }
-                
-                // Match card by location key-value pair (case-insensitive)
                 if (extras != null) {
                     var locationValue: Any? = null
                     var cardIdValue: Any? = null
@@ -380,7 +326,6 @@ fun Tile1ContentCard(
                         }
                     }
                     
-                    // Try direct access with different cases
                     if (locationValue == null) {
                         locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
                     }
@@ -388,7 +333,6 @@ fun Tile1ContentCard(
                         cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
                     }
                     
-                    // Match if location = tile_1 OR card_id matches (for web compatibility)
                     val matches = locationValue?.toString() == locationKey || 
                                  cardIdValue?.toString() == locationKey ||
                                  cardIdValue?.toString()?.contains("tile_1") == true
@@ -442,17 +386,14 @@ fun Tile1ContentCard(
                     continue
                 }
                 
-                // Extract key-value pairs (extras) from card
                 try {
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                     
-                    // Match card by location key-value pair (case-insensitive)
                     if (extras != null) {
                         var locationValue: Any? = null
                         var cardIdValue: Any? = null
                         
-                        // Check for location in extras (case-insensitive key matching)
                         for ((key, value) in extras) {
                             val keyStr = key?.toString()?.lowercase()
                             if (keyStr == "location") {
@@ -463,7 +404,6 @@ fun Tile1ContentCard(
                             }
                         }
                         
-                        // Match if location = tile_1 OR card_id matches (for web compatibility)
                         val matches = locationValue?.toString() == locationKey || 
                                      cardIdValue?.toString() == locationKey ||
                                      cardIdValue?.toString()?.contains("tile_1") == true
@@ -489,14 +429,10 @@ fun Tile1ContentCard(
             hasCard = foundCard != null
         }
             
-        // Cleanup: Unsubscribe when component is removed
         onDispose {
             BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
         }
     }
-    
-    // Extract card properties (title, description, image, URL) using reflection
-    // Handles different Braze card types (ShortNewsCard, CaptionedImage, etc.)
     val cardData = remember(contentCard) {
         if (contentCard != null) {
             try {
@@ -554,14 +490,11 @@ fun Tile1ContentCard(
         }
     }
     
-    // Adaptive layout: Detect image aspect ratio to choose layout
-    // Square images (≤ 1.3): Image left, text right | Wide images (> 1.3): Image top, text bottom
     var imageAspectRatio by remember(cardData?.imageUrl) { mutableStateOf<Float?>(null) }
     var useRowLayout by remember(imageAspectRatio) { 
         mutableStateOf(imageAspectRatio != null && imageAspectRatio!! <= 1.3f)
     }
     
-    // Load image and calculate aspect ratio
     LaunchedEffect(cardData?.imageUrl) {
         val imageUrl = cardData?.imageUrl
         if (imageUrl != null) {
@@ -590,7 +523,6 @@ fun Tile1ContentCard(
         }
     }
     
-    // Log impression to Braze analytics when card is displayed
     LaunchedEffect(contentCard) {
         if (contentCard != null) {
             try {
@@ -602,14 +534,12 @@ fun Tile1ContentCard(
         }
     }
     
-    // Card container: 2:1 aspect ratio banner layout
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(2f) // 2:1 banner (width:height)
+            .aspectRatio(2f)
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = hasCard && cardData?.cardUrl != null) {
-                // Log click to Braze analytics
                 if (contentCard != null) {
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
@@ -618,8 +548,6 @@ fun Tile1ContentCard(
                     } catch (e: Exception) {
                     }
                 }
-                
-                // Handle deep link navigation (philstore://) or external URL
                 val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
                     if (cardUrl.startsWith("philstore://")) {
@@ -652,7 +580,6 @@ fun Tile1ContentCard(
                 color = colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                // Placeholder text - only visible when no content card
                 if (!hasCard || cardData == null) {
                     Column(
                         modifier = Modifier
@@ -677,11 +604,8 @@ fun Tile1ContentCard(
                 }
             }
             
-            // Content card displayed over the placeholder background
             if (hasCard && cardData != null) {
-                // Adaptive layout based on image aspect ratio
                 if (useRowLayout && cardData.imageUrl != null) {
-                    // Row layout: Square images (image left, text right)
                     Row(
                         modifier = Modifier.fillMaxSize(),
                         horizontalArrangement = Arrangement.spacedBy(0.dp)
@@ -695,7 +619,6 @@ fun Tile1ContentCard(
                             contentScale = ContentScale.Crop
                         )
                         
-                        // Text section - displays over grey placeholder background
                         if (cardData.title != null || cardData.description != null) {
                             Column(
                                 modifier = Modifier
@@ -729,7 +652,6 @@ fun Tile1ContentCard(
                         }
                     }
                 } else {
-                    // Column layout: Wide images (image top, text bottom)
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -744,7 +666,6 @@ fun Tile1ContentCard(
                             )
                         }
                         
-                        // Text section - displays over grey placeholder background
                         if (cardData.title != null || cardData.description != null) {
                             Column(
                                 modifier = Modifier
@@ -782,18 +703,12 @@ fun Tile1ContentCard(
 }
 
 /**
- * Content Card: Tile 2 (1:1 Square Layout)
+ * Content Card: Tile 2
  * 
- * Custom Braze Content Card implementation:
- * - Filters Content Cards by key-value pair: location = tile_2
- * - Displays as 1:1 square (equal width and height)
- * - Automatically logs impressions and clicks to Braze analytics
- * - Displays placeholder when no content is available
- * 
- * To duplicate for another card:
- * 1. Copy this function and rename (e.g., Tile4ContentCard)
- * 2. Change locationKey to the new value (e.g., "tile_4")
- * 3. Add the component to ContentScreen layout
+ * Displays Braze Content Cards filtered by location = tile_2
+ * - 1:1 square layout
+ * - Logs impressions and clicks to Braze analytics
+ * - Shows placeholder when no content is available
  */
 @Composable
 fun Tile2ContentCard(
@@ -803,13 +718,9 @@ fun Tile2ContentCard(
     val colorScheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     
-    // Filter key: Matches Content Cards with location = tile_2 in Braze dashboard
     val locationKey = "tile_2"
-    
-    // Read content cards from cache (pre-loaded on session start, updated after events)
     val cachedCards = rememberCachedContentCards()
     
-    // Initialize state directly from cache (no fallback fetch to prevent flashing)
     var contentCard by remember(locationKey) { 
         mutableStateOf<Any?>(
             BrazeContentManager.getCachedContentCardByPositionId(locationKey)
@@ -845,12 +756,10 @@ fun Tile2ContentCard(
             
             if (isControl) continue
             
-            // Extract key-value pairs (extras) from card
             try {
                 val getExtrasMethod = card.javaClass.getMethod("getExtras")
                 val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                 
-                // Match card by location key-value pair (case-insensitive)
                 if (extras != null) {
                     var locationValue: Any? = null
                     for ((key, value) in extras) {
@@ -912,12 +821,10 @@ fun Tile2ContentCard(
                 
                 if (isControl) continue
                 
-                // Extract key-value pairs (extras) from card
                 try {
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                     
-                    // Match card by location key-value pair (case-insensitive)
                     if (extras != null) {
                         var locationValue: Any? = null
                         for ((key, value) in extras) {
@@ -953,13 +860,11 @@ fun Tile2ContentCard(
             hasCard = foundCard != null
         }
         
-        // Cleanup: Unsubscribe when component is removed
         onDispose {
             BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
         }
     }
     
-    // Extract card properties (title, description, image, URL) using reflection
     val cardData = remember(contentCard) {
         if (contentCard != null) {
             try {
@@ -1013,7 +918,6 @@ fun Tile2ContentCard(
         }
     }
     
-    // Log impression to Braze analytics when card is displayed
     LaunchedEffect(contentCard) {
         if (contentCard != null) {
             try {
@@ -1025,14 +929,12 @@ fun Tile2ContentCard(
         }
     }
     
-    // Card container: 1:1 aspect ratio square layout
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // 1:1 square (width:height)
+            .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = hasCard && cardData?.cardUrl != null) {
-                // Log click to Braze analytics
                 if (contentCard != null) {
                     try {
                         val logClickMethod = contentCard!!.javaClass.getMethod("logClick")
@@ -1041,8 +943,6 @@ fun Tile2ContentCard(
                     } catch (e: Exception) {
                     }
                 }
-                
-                // Handle deep link navigation (philstore://) or external URL
                 val cardUrl = cardData?.cardUrl as? String
                 if (cardUrl != null) {
                     if (cardUrl.startsWith("philstore://")) {
@@ -1075,7 +975,6 @@ fun Tile2ContentCard(
                 color = colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                // Placeholder text - only visible when no content card
                 if (!hasCard || cardData == null) {
                     Column(
                         modifier = Modifier
@@ -1100,12 +999,10 @@ fun Tile2ContentCard(
                 }
             }
             
-            // Content card displayed over the placeholder background
             if (hasCard && cardData != null) {
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Image (if available) - fills most of the space
                     if (cardData.imageUrl != null) {
                         Image(
                             painter = rememberAsyncImagePainter(cardData.imageUrl),
@@ -1117,7 +1014,6 @@ fun Tile2ContentCard(
                         )
                     }
                     
-                    // Text section - displays over grey placeholder background
                     if (cardData.title != null || cardData.description != null) {
                         Column(
                             modifier = Modifier
@@ -1154,13 +1050,11 @@ fun Tile2ContentCard(
 }
 
 /**
- * Banner: Content Banner (2:1 Banner Layout, Non-Collapsing)
+ * Banner: Content Banner
  * 
- * Custom Braze Banner implementation that always displays a container:
- * - Uses placement ID: content_banner
- * - Displays banner when available (same as store page banner)
- * - Shows placeholder when no banner is available (does not collapse)
- * - Placeholder displays "Banner" and "Placement ID: content_banner"
+ * Displays Braze Banner with placement ID: content_banner
+ * - 2:1 banner layout, non-collapsing container
+ * - Shows placeholder when no banner is available
  */
 @Composable
 fun ContentBanner(
@@ -1170,10 +1064,8 @@ fun ContentBanner(
     val colorScheme = MaterialTheme.colorScheme
     val placementId = "content_banner"
     
-    // Read banner from cache (pre-loaded on session start, updated after events)
     val cachedBanner = rememberCachedBanner(placementId)
     
-    // Initialize state directly from cache (no fallback fetch to prevent flashing)
     var banner by remember(placementId) { 
         mutableStateOf<Any?>(cachedBanner) 
     }
@@ -1237,40 +1129,25 @@ fun ContentBanner(
                             // Set background to transparent to prevent any color flash
                             setBackgroundColor(android.graphics.Color.TRANSPARENT)
                             
-                            // Custom WebViewClient to intercept deep links
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                                     // Check if the URL is a philstore deep link
                                     if (url != null && url.startsWith("philstore://")) {
                                         try {
-                                            Log.d("BrazeBanner", "Intercepted deep link: $url")
-                                            
-                                            // Parse the URI (handles URL encoding automatically)
                                             val uri = Uri.parse(url)
-                                            Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
-                                            
-                                            // Create an intent to handle the deep link (matching in-app message handler)
                                             val intent = Intent(Intent.ACTION_VIEW, uri)
                                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                             intent.setPackage(ctx.packageName)
                                             
-                                            // Check if MainActivity can handle this intent
                                             if (intent.resolveActivity(ctx.packageManager) != null) {
                                                 ctx.startActivity(intent)
-                                                Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
-                                            } else {
-                                                Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
                                             }
                                             
-                                            // Return true to indicate we handled the URL
                                             return true
                                         } catch (e: Exception) {
-                                            Log.e("BrazeBanner", "Error handling deep link: ${e.message}", e)
-                                            // If something goes wrong, let WebView handle it
                                             return false
                                         }
                                     }
-                                    // For other URLs, let WebView handle them normally
                                     return false
                                 }
                             }
@@ -1278,7 +1155,6 @@ fun ContentBanner(
                             settings.domStorageEnabled = true
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
-                            // Center content horizontally
                             settings.layoutAlgorithm = android.webkit.WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
                         }
                     },
@@ -1294,33 +1170,20 @@ fun ContentBanner(
                         }
                         webView.tag = currentBanner // Mark as loaded
                         
-                        // Helper function to handle deep links (matching in-app message handler)
                         fun handleDeepLink(url: String) {
                             try {
-                                Log.d("BrazeBanner", "Handling deep link: $url")
-                                
-                                // Parse the URI (handles URL encoding automatically)
                                 val uri = Uri.parse(url)
-                                Log.d("BrazeBanner", "Parsed URI - scheme: ${uri.scheme}, host: ${uri.host}")
-                                
-                                // Create an intent to handle the deep link (matching in-app message handler)
                                 val intent = Intent(Intent.ACTION_VIEW, uri)
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                 intent.setPackage(context.packageName)
                                 
-                                // Check if MainActivity can handle this intent
                                 if (intent.resolveActivity(context.packageManager) != null) {
                                     context.startActivity(intent)
-                                    Log.d("BrazeBanner", "Started MainActivity with deep link: $url")
-                                } else {
-                                    Log.w("BrazeBanner", "Could not resolve activity for deep link: $url")
                                 }
                             } catch (e: Exception) {
-                                Log.e("BrazeBanner", "Error handling deep link: ${e.message}", e)
                             }
                         }
                         
-                        // JavaScript interface to handle deep links directly from JavaScript
                         class DeepLinkHandler(private val handler: (String) -> Unit) {
                             @JavascriptInterface
                             fun handleDeepLink(url: String) {
@@ -1330,23 +1193,17 @@ fun ContentBanner(
                             }
                         }
                         
-                        // Add JavaScript interface BEFORE setting WebViewClient
                         webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
                         
-                        // Create custom WebViewClient to handle deep links (matching in-app message handler)
                         val customWebViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                                // Check if the URL is a philstore deep link
                                 if (url != null && url.startsWith("philstore://")) {
                                     handleDeepLink(url)
-                                    // Return true to indicate we handled the URL
                                     return true
                                 }
-                                // For other URLs, let WebView handle them normally
                                 return false
                             }
                             
-                            // Also override the newer API method (Android 24+)
                             @android.annotation.SuppressLint("NewApi")
                             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString()
@@ -1360,12 +1217,10 @@ fun ContentBanner(
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 
-                                // Only inject JavaScript if page is actually loaded (not about:blank)
                                 if (url == null || url == "about:blank" || url.startsWith("data:")) {
                                     return
                                 }
                                 
-                                // Inject JavaScript after page is fully loaded
                                 view?.postDelayed({
                                     try {
                                         val jsCode = """
@@ -1527,18 +1382,15 @@ fun ContentBanner(
                                         """.trimIndent()
                                         view?.evaluateJavascript(jsCode, null)
                                     } catch (e: Exception) {
-                                        // Error injecting JavaScript
                                     }
                                 }, 100)
                             }
                         }
                         
-                        // Set WebViewClient BEFORE calling insertBanner to ensure it's in place
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         
                         try {
-                            // Braze SDK: Try to use insertBanner method (Braze SDK method)
                             val brazeInstance = Braze.getInstance(context)
                             val insertMethod = brazeInstance.javaClass.getMethod(
                                 "insertBanner", 
@@ -1547,14 +1399,11 @@ fun ContentBanner(
                             )
                             insertMethod.invoke(brazeInstance, currentBanner, webView)
                             
-                            // Re-apply WebViewClient after insertBanner (in case Braze replaced it)
                             webView.post {
-                                    webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                    webView.webViewClient = customWebViewClient
-                                    Log.d("BrazeBanner", "Re-applied custom WebViewClient after Braze insertBanner")
-                                }
+                                webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                webView.webViewClient = customWebViewClient
+                            }
                         } catch (e: Exception) {
-                            // If insertBanner doesn't work, try to get HTML content
                             try {
                                 val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                 val htmlContent = htmlMethod.invoke(currentBanner) as? String
@@ -1660,7 +1509,6 @@ fun ContentBanner(
                                         </html>
                                     """.trimIndent()
                                     
-                                    // Set WebViewClient before loading HTML
                                     webView.webViewClient = customWebViewClient
                                     webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
                                     
@@ -1800,15 +1648,10 @@ fun ContentBanner(
                                             """.trimIndent()
                                             webView.evaluateJavascript(jsCode, null)
                                         } catch (e: Exception) {
-                                            // Error injecting JavaScript
                                         }
                                     }, 500)
-                                    
-                                    Log.d("BrazeBanner", "Loaded HTML content with custom WebViewClient")
                                 }
                             } catch (e2: Exception) {
-                                // Both methods failed - banner might not be renderable
-                                Log.e("BrazeBanner", "Error loading banner: ${e2.message}", e2)
                             }
                         }
                 },
@@ -1817,7 +1660,6 @@ fun ContentBanner(
                     .fillMaxSize()
             )
             } else {
-                // Placeholder: Displayed when no banner is available
                 Column(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -1842,13 +1684,11 @@ fun ContentBanner(
 }
 
 /**
- * Banner: Tile Banner (1:1 Square Banner Layout, Non-Collapsing)
+ * Banner: Tile Banner
  * 
- * Custom Braze Banner implementation that always displays a container:
- * - Uses placement ID: tile_banner
- * - Displays banner when available (1:1 square layout)
- * - Shows placeholder when no banner is available (does not collapse)
- * - Placeholder displays "Banner" and "Placement ID: tile_banner"
+ * Displays Braze Banner with placement ID: tile_banner
+ * - 1:1 square layout, non-collapsing container
+ * - Shows placeholder when no banner is available
  */
 @Composable
 fun TileBanner(
@@ -1858,10 +1698,8 @@ fun TileBanner(
     val colorScheme = MaterialTheme.colorScheme
     val placementId = "tile_banner"
     
-    // Read banner from cache (pre-loaded on session start, updated after events)
     val cachedBanner = rememberCachedBanner(placementId)
     
-    // Initialize state directly from cache (no fallback fetch to prevent flashing)
     var banner by remember(placementId) { 
         mutableStateOf<Any?>(cachedBanner) 
     }
@@ -1904,20 +1742,17 @@ fun TileBanner(
     LaunchedEffect(cachedBanner) {
         banner = cachedBanner
         
-        // Check if banner exists and is not a control variant
         if (cachedBanner != null) {
             try {
                 val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
                 val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
                 shouldRender = !isControl
                 
-                // Get banner click URL if available
                 try {
                     val getClickUrlMethod = cachedBanner.javaClass.getMethod("getClickUrl")
                     val clickUrl = getClickUrlMethod.invoke(cachedBanner) as? String
                     bannerClickUrl = clickUrl
                 } catch (e: Exception) {
-                    // Banner doesn't have getClickUrl method, try getUrl
                     try {
                         val getUrlMethod = cachedBanner.javaClass.getMethod("getUrl")
                         val url = getUrlMethod.invoke(cachedBanner) as? String
@@ -1927,7 +1762,6 @@ fun TileBanner(
                     }
                 }
             } catch (e: Exception) {
-                // If isControl method doesn't exist, assume we should render
                 shouldRender = true
             }
         } else {
@@ -1936,19 +1770,15 @@ fun TileBanner(
         }
     }
     
-    // Helper function to handle banner click
     fun handleBannerClick() {
         if (bannerClickUrl != null && banner != null) {
-            // Log click to Braze analytics
             try {
                 val logClickMethod = banner!!.javaClass.getMethod("logClick")
                 logClickMethod.invoke(banner)
                 BrazeLogManager.logClick("Banner", placementId)
             } catch (e: Exception) {
-                // Banner doesn't have logClick method
             }
             
-            // Handle deep link navigation (philstore://) or external URL
             if (bannerClickUrl!!.startsWith("philstore://")) {
                 try {
                     val uri = Uri.parse(bannerClickUrl!!)
@@ -1959,17 +1789,15 @@ fun TileBanner(
                         context.startActivity(intent)
                     }
                 } catch (e: Exception) {
-                    // Error handling deep link
                 }
             }
         }
     }
     
-    // Always render container (1:1 aspect ratio square layout)
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // 1:1 square (width:height)
+            .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = shouldRender && banner != null && bannerClickUrl != null) {
                 handleBannerClick()
@@ -2000,28 +1828,22 @@ fun TileBanner(
                                             // Parse the URI (handles URL encoding automatically)
                                             val uri = android.net.Uri.parse(url)
                                             
-                                            // Create an intent to handle the deep link (matching in-app message handler)
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
                                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                             intent.setPackage(ctx.packageName)
                                             
-                                            // Check if MainActivity can handle this intent
                                             if (intent.resolveActivity(ctx.packageManager) != null) {
                                                 ctx.startActivity(intent)
                                             }
                                             
-                                            // Return true to indicate we handled the URL
                                             return true
                                         } catch (e: Exception) {
-                                            // If something goes wrong, let WebView handle it
                                             return false
                                         }
                                     }
-                                    // For other URLs, let WebView handle them normally
                                     return false
                                 }
                                 
-                                // Also override the newer API method (Android 24+)
                                 @android.annotation.SuppressLint("NewApi")
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                     val url = request?.url?.toString()
@@ -2111,15 +1933,12 @@ fun TileBanner(
                             override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 
-                                // Only inject JavaScript if page is actually loaded (not about:blank)
                                 if (url == null || url == "about:blank" || url.startsWith("data:")) {
                                     return
                                 }
                                 
-                                // Inject JavaScript after page is fully loaded
                                 view?.postDelayed({
                                     try {
-                                        // Get banner click URL for full-banner click handling
                                         val bannerClickUrl = try {
                                             val getClickUrlMethod = currentBanner?.javaClass?.getMethod("getClickUrl")
                                             getClickUrlMethod?.invoke(currentBanner) as? String
@@ -2157,7 +1976,6 @@ fun TileBanner(
                                                         var target = e.target;
                                                         var isClickableElement = false;
                                                         
-                                                        // Check if target or parent is a clickable element
                                                         while (target && target !== document.body) {
                                                             if (target.tagName === 'A' || target.tagName === 'BUTTON' || 
                                                                 target.onclick || target.getAttribute('onclick') ||
@@ -2169,7 +1987,6 @@ fun TileBanner(
                                                             target = target.parentElement;
                                                         }
                                                         
-                                                        // If no clickable element, handle banner click
                                                         if (!isClickableElement) {
                                                             if (handleDeepLink(bannerClickUrl)) {
                                                                 e.preventDefault();
@@ -2326,7 +2143,6 @@ fun TileBanner(
                                         """.trimIndent()
                                         view?.evaluateJavascript(jsCode, null)
                                     } catch (e: Exception) {
-                                        // Error injecting JavaScript
                                     }
                                 }, 100)
                             }
@@ -2335,7 +2151,6 @@ fun TileBanner(
                         webView.webViewClient = customWebViewClient
                         webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         
-                        // Braze SDK: Use the banner from state (already fetched in LaunchedEffect)
                         if (currentBanner != null) {
                             try {
                                 val brazeInstance = com.braze.Braze.getInstance(context)
@@ -2355,7 +2170,6 @@ fun TileBanner(
                                     val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                     val htmlContent = htmlMethod.invoke(currentBanner) as? String
                                     if (htmlContent != null) {
-                                        // Get banner click URL for full-banner click handling
                                         val bannerClickUrl = try {
                                             val getClickUrlMethod = currentBanner.javaClass.getMethod("getClickUrl")
                                             getClickUrlMethod.invoke(currentBanner) as? String
@@ -2431,7 +2245,6 @@ fun TileBanner(
                                                         var target = e.target;
                                                         var isClickableElement = false;
                                                         
-                                                        // Check if target or parent is a clickable element
                                                         while (target && target !== document.body) {
                                                             if (target.tagName === 'A' || target.tagName === 'BUTTON' || 
                                                                 target.onclick || target.getAttribute('onclick') ||
@@ -2443,7 +2256,6 @@ fun TileBanner(
                                                             target = target.parentElement;
                                                         }
                                                         
-                                                        // If no clickable element and banner has click URL, handle banner click
                                                         if (!isClickableElement && bannerClickUrl) {
                                                             if (handleDeepLink(bannerClickUrl)) {
                                                                 e.preventDefault();
@@ -2453,7 +2265,6 @@ fun TileBanner(
                                                             }
                                                         }
                                                         
-                                                        // Otherwise, try stored deep link from HTML
                                                         var storedDeepLink = window._bannerDeepLink;
                                                         if (!storedDeepLink) {
                                                             storedDeepLink = findDeepLinkInDocument();
@@ -2505,7 +2316,6 @@ fun TileBanner(
                                             </html>
                                         """.trimIndent()
                                         
-                                        // Set WebViewClient before loading HTML
                                         webView.webViewClient = customWebViewClient
                                         webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
                                         
@@ -2645,7 +2455,6 @@ fun TileBanner(
                                                 """.trimIndent()
                                                 webView.evaluateJavascript(jsCode, null)
                                             } catch (e: Exception) {
-                                                // Error injecting JavaScript
                                             }
                                         }, 500)
                                     }
@@ -2658,7 +2467,6 @@ fun TileBanner(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Placeholder: Displayed when no banner is available
                 Column(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
