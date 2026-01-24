@@ -1810,6 +1810,7 @@ fun TileBanner(
     val cachedBanner = rememberCachedBanner(placementId)
     var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
+    var bannerClickUrl by remember(placementId) { mutableStateOf<String?>(null) }
     
     // Update banner when cache changes, or fetch directly if cache is empty
     LaunchedEffect(cachedBanner) {
@@ -1827,12 +1828,58 @@ fun TileBanner(
                 val isControlMethod = banner!!.javaClass.getMethod("isControl")
                 val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
                 shouldRender = !isControl
+                
+                // Get banner click URL if available
+                try {
+                    val getClickUrlMethod = banner!!.javaClass.getMethod("getClickUrl")
+                    val clickUrl = getClickUrlMethod.invoke(banner) as? String
+                    bannerClickUrl = clickUrl
+                } catch (e: Exception) {
+                    // Banner doesn't have getClickUrl method, try getUrl
+                    try {
+                        val getUrlMethod = banner!!.javaClass.getMethod("getUrl")
+                        val url = getUrlMethod.invoke(banner) as? String
+                        bannerClickUrl = url
+                    } catch (e2: Exception) {
+                        bannerClickUrl = null
+                    }
+                }
             } catch (e: Exception) {
                 // If isControl method doesn't exist, assume we should render
                 shouldRender = true
             }
         } else {
             shouldRender = false
+            bannerClickUrl = null
+        }
+    }
+    
+    // Helper function to handle banner click
+    fun handleBannerClick() {
+        if (bannerClickUrl != null && banner != null) {
+            // Log click to Braze analytics
+            try {
+                val logClickMethod = banner!!.javaClass.getMethod("logClick")
+                logClickMethod.invoke(banner)
+                BrazeLogManager.logClick("Banner", placementId)
+            } catch (e: Exception) {
+                // Banner doesn't have logClick method
+            }
+            
+            // Handle deep link navigation (philstore://) or external URL
+            if (bannerClickUrl!!.startsWith("philstore://")) {
+                try {
+                    val uri = Uri.parse(bannerClickUrl!!)
+                    val intent = Intent(Intent.ACTION_VIEW, uri)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    intent.setPackage(context.packageName)
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(intent)
+                    }
+                } catch (e: Exception) {
+                    // Error handling deep link
+                }
+            }
         }
     }
     
@@ -1841,7 +1888,10 @@ fun TileBanner(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f) // 1:1 square (width:height)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = shouldRender && banner != null && bannerClickUrl != null) {
+                handleBannerClick()
+            },
         shape = RoundedCornerShape(12.dp),
         color = if (shouldRender && banner != null) Color.Transparent else colorScheme.surfaceVariant,
         border = if (!shouldRender || banner == null) {
@@ -1987,8 +2037,23 @@ fun TileBanner(
                                 // Inject JavaScript after page is fully loaded
                                 view?.postDelayed({
                                     try {
+                                        // Get banner click URL for full-banner click handling
+                                        val bannerClickUrl = try {
+                                            val getClickUrlMethod = currentBanner?.javaClass?.getMethod("getClickUrl")
+                                            getClickUrlMethod?.invoke(currentBanner) as? String
+                                        } catch (e: Exception) {
+                                            try {
+                                                val getUrlMethod = currentBanner?.javaClass?.getMethod("getUrl")
+                                                getUrlMethod?.invoke(currentBanner) as? String
+                                            } catch (e2: Exception) {
+                                                null
+                                            }
+                                        }
+                                        
                                         val jsCode = """
                                             (function() {
+                                                var bannerClickUrl = ${if (bannerClickUrl != null) "'$bannerClickUrl'" else "null"};
+                                                
                                                 function handleDeepLink(url) {
                                                     if (url && url.startsWith('philstore://')) {
                                                         if (window.AndroidDeepLinkHandler) {
@@ -1999,6 +2064,39 @@ fun TileBanner(
                                                         return true;
                                                     }
                                                     return false;
+                                                }
+                                                
+                                                // Make entire banner clickable if there's a click URL
+                                                if (bannerClickUrl) {
+                                                    // Add click handler to document body
+                                                    document.body.style.cursor = 'pointer';
+                                                    document.body.addEventListener('click', function(e) {
+                                                        // Only handle if no other clickable element was clicked
+                                                        var target = e.target;
+                                                        var isClickableElement = false;
+                                                        
+                                                        // Check if target or parent is a clickable element
+                                                        while (target && target !== document.body) {
+                                                            if (target.tagName === 'A' || target.tagName === 'BUTTON' || 
+                                                                target.onclick || target.getAttribute('onclick') ||
+                                                                target.href || target.getAttribute('href') ||
+                                                                target.getAttribute('data-href')) {
+                                                                isClickableElement = true;
+                                                                break;
+                                                            }
+                                                            target = target.parentElement;
+                                                        }
+                                                        
+                                                        // If no clickable element, handle banner click
+                                                        if (!isClickableElement) {
+                                                            if (handleDeepLink(bannerClickUrl)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                    }, true);
                                                 }
                                                 
                                                 var originalOpen = window.open;
@@ -2175,8 +2273,23 @@ fun TileBanner(
                                     val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                     val htmlContent = htmlMethod.invoke(currentBanner) as? String
                                     if (htmlContent != null) {
+                                        // Get banner click URL for full-banner click handling
+                                        val bannerClickUrl = try {
+                                            val getClickUrlMethod = currentBanner.javaClass.getMethod("getClickUrl")
+                                            getClickUrlMethod.invoke(currentBanner) as? String
+                                        } catch (e: Exception) {
+                                            try {
+                                                val getUrlMethod = currentBanner.javaClass.getMethod("getUrl")
+                                                getUrlMethod.invoke(currentBanner) as? String
+                                            } catch (e2: Exception) {
+                                                null
+                                            }
+                                        }
+                                        
                                         val preloadJs = """
                                             (function() {
+                                                var bannerClickUrl = ${if (bannerClickUrl != null) "'$bannerClickUrl'" else "null"};
+                                                
                                                 function handleDeepLink(url) {
                                                     if (url && url.startsWith('philstore://')) {
                                                         if (window.AndroidDeepLinkHandler) {
@@ -2186,6 +2299,11 @@ fun TileBanner(
                                                         return false;
                                                     }
                                                     return false;
+                                                }
+                                                
+                                                // Make entire banner clickable if there's a click URL
+                                                if (bannerClickUrl) {
+                                                    document.body.style.cursor = 'pointer';
                                                 }
                                                 
                                                 window._originalOpen = window.open;
@@ -2228,6 +2346,32 @@ fun TileBanner(
                                                     window._bannerDeepLink = deepLinkUrl;
                                                     
                                                     document.addEventListener('click', function(e) {
+                                                        var target = e.target;
+                                                        var isClickableElement = false;
+                                                        
+                                                        // Check if target or parent is a clickable element
+                                                        while (target && target !== document.body) {
+                                                            if (target.tagName === 'A' || target.tagName === 'BUTTON' || 
+                                                                target.onclick || target.getAttribute('onclick') ||
+                                                                target.href || target.getAttribute('href') ||
+                                                                target.getAttribute('data-href')) {
+                                                                isClickableElement = true;
+                                                                break;
+                                                            }
+                                                            target = target.parentElement;
+                                                        }
+                                                        
+                                                        // If no clickable element and banner has click URL, handle banner click
+                                                        if (!isClickableElement && bannerClickUrl) {
+                                                            if (handleDeepLink(bannerClickUrl)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                        
+                                                        // Otherwise, try stored deep link from HTML
                                                         var storedDeepLink = window._bannerDeepLink;
                                                         if (!storedDeepLink) {
                                                             storedDeepLink = findDeepLinkInDocument();
