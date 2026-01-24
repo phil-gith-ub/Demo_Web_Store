@@ -335,6 +335,17 @@ object BrazeUserSync {
     }
     
     /**
+     * Log custom event: enabled_dark_mode
+     * Triggered when user enables dark mode in profile settings
+     */
+    fun logEnabledDarkMode(context: Context) {
+        // Braze SDK: Get Braze instance and log custom event
+        val brazeInstance = Braze.getInstance(context)
+        brazeInstance.logCustomEvent("enabled_dark_mode")
+        BrazeLogManager.logCustomEvent("enabled_dark_mode")
+    }
+    
+    /**
      * Log custom event: logged_in
      * Triggered when user clicks login button (only if userId is populated)
      * IMPORTANT: This should be called AFTER changeUser() is called in loginUserToBraze()

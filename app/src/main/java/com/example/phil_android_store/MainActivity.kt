@@ -401,6 +401,10 @@ fun Phil_Android_StoreApp(
                         AppDestinations.PROFILE -> ProfileScreen(
                             onDarkModeChanged = { enabled ->
                                 isDarkMode = enabled
+                                // Braze SDK: Log custom event when dark mode is enabled
+                                if (enabled) {
+                                    BrazeUserSync.logEnabledDarkMode(context)
+                                }
                                 },
                                 onLoginStateChanged = {
                                     refreshKey++ // Trigger refresh in StoreScreen
