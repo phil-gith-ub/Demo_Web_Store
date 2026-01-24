@@ -126,7 +126,7 @@ fun ProfileScreen(
             favoriteCategory = profile.favoriteProductCategory
             paidMembership = profile.paidMembership
             isDarkMode = profile.isDarkModeEnabled
-            onDarkModeChanged(isDarkMode)
+            // Don't call onDarkModeChanged here - only trigger event when user actually toggles the switch
         }
     }
 
@@ -182,7 +182,7 @@ fun ProfileScreen(
                                 favoriteCategory = profile.favoriteProductCategory
                                 paidMembership = profile.paidMembership
                                 isDarkMode = profile.isDarkModeEnabled
-                                onDarkModeChanged(isDarkMode)
+                                // Don't call onDarkModeChanged here - only trigger event when user actually toggles the switch
                                 
                                 // Braze SDK: Login user to Braze (calls changeUser, sets active_member=true)
                                 BrazeUserSync.loginUserToBraze(context, userId)

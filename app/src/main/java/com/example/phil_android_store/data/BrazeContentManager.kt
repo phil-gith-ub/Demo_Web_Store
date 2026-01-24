@@ -95,11 +95,11 @@ object BrazeContentManager {
     /**
      * Refresh all content after an event or changeUser.
      * Always updates cache (even if content is null) to remove old content.
-     * Includes retry logic with delays to handle latency.
+     * Only makes ONE refresh request, then ONE retry for latency - no more to avoid hitting Braze limits.
      */
     fun refreshAllContent(context: Context, onContentChanged: (() -> Unit)? = null) {
         scope.launch {
-            // Request refresh from Braze
+            // Request refresh from Braze (ONCE)
             BrazeUserSync.requestBannerRefresh(context, allBannerPlacementIds)
             BrazeUserSync.requestContentCardsRefresh(context)
             
@@ -109,25 +109,13 @@ object BrazeContentManager {
                 cacheUpdateTrigger.value++
             }
             
-            // Second attempt after 1000ms total (additional 500ms delay)
-            delay(500)
-            if (updateCacheFromBraze(context)) {
-                cacheUpdateTrigger.value++
-            }
-            
-            // Third attempt after 2000ms total (additional 1000ms delay)
+            // ONE retry after 1500ms total (additional 1000ms delay) for latency
             delay(1000)
             if (updateCacheFromBraze(context)) {
                 cacheUpdateTrigger.value++
             }
             
-            // Final attempt after 3000ms total (additional 1000ms delay)
-            delay(1000)
-            if (updateCacheFromBraze(context)) {
-                cacheUpdateTrigger.value++
-            }
-            
-            // Final notification that refresh completed
+            // Notify that refresh completed
             onContentChanged?.invoke()
         }
     }
