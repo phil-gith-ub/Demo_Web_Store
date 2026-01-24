@@ -43,10 +43,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -371,32 +373,49 @@ fun Phil_Android_StoreApp(
                             onBack = { showPurchaseHistory = false }
                         )
                     } else {
-                        when (currentDestination) {
-                            AppDestinations.HOME -> {
-                                StoreScreen(
-                                    bannerContent = bannerContent,
-                                    onShowBannerMessage = { }, // No longer needed, handled internally
-                                    initialCategory = if (showVipTab) "VIP" else null,
-                                    refreshKey = refreshKey,
-                                    cartManager = cartManager,
-                                    onCartUpdated = {
-                                        // Update cart count immediately when item is added
-                                        cartItemCount = cartManager.cartItemCount
-                                    }
-                                )
-                            }
-                            AppDestinations.CART -> {
-                                CartScreen(
-                                    cartManager = cartManager,
-                                    onCartUpdated = {
-                                        // Update cart count immediately when cart changes
-                                        cartItemCount = cartManager.cartItemCount
-                                    }
-                                )
-                            }
-                            AppDestinations.CONTENT -> {
+                        // Pre-load ContentScreen in background (always composed but hidden when not active)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Pre-load ContentScreen in background (off-screen, but composed and ready)
+                            // This ensures all banners/cards are pre-rendered before user navigates
+                            val isContentVisible = currentDestination == AppDestinations.CONTENT
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .alpha(if (isContentVisible) 1f else 0f)
+                                    .then(if (isContentVisible) Modifier else Modifier.size(1.dp))
+                            ) {
                                 ContentScreen()
                             }
+                            
+                            // Show other destinations on top when active
+                            if (!isContentVisible) {
+                                when (currentDestination) {
+                                    AppDestinations.HOME -> {
+                                        StoreScreen(
+                                            bannerContent = bannerContent,
+                                            onShowBannerMessage = { }, // No longer needed, handled internally
+                                            initialCategory = if (showVipTab) "VIP" else null,
+                                            refreshKey = refreshKey,
+                                            cartManager = cartManager,
+                                            onCartUpdated = {
+                                                // Update cart count immediately when item is added
+                                                cartItemCount = cartManager.cartItemCount
+                                            }
+                                        )
+                                    }
+                                    AppDestinations.CART -> {
+                                        CartScreen(
+                                            cartManager = cartManager,
+                                            onCartUpdated = {
+                                                // Update cart count immediately when cart changes
+                                                cartItemCount = cartManager.cartItemCount
+                                            }
+                                        )
+                                    }
+                                    else -> { }
+                                }
+                            }
+                        }
                         AppDestinations.PROFILE -> ProfileScreen(
                             onDarkModeChanged = { enabled ->
                                 isDarkMode = enabled
