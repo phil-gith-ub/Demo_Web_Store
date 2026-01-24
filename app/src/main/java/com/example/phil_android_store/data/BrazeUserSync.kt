@@ -229,43 +229,25 @@ object BrazeUserSync {
     
     /**
      * Initialize anonymous user session.
-     * Sets the user to anonymous_user and active_member to false.
-     * Only sends if active_member has changed.
+     * Per Braze best practices: Do NOT call changeUser() for anonymous users.
+     * Braze automatically handles anonymous users until changeUser() is called with a real user ID.
      * This should be called on app startup if no user is logged in.
      */
     fun initializeAnonymousSession(context: Context) {
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
-        // Braze SDK: Change to anonymous user to start a session
-        brazeInstance.changeUser(ANONYMOUS_USER_ID)
-        BrazeLogManager.logUserIdentified(ANONYMOUS_USER_ID, isAnonymous = true)
-        
-        // Check if active_member needs to be updated
-        val lastSent = loadLastSentValues(context, ANONYMOUS_USER_ID)
-        if (lastSent.activeMember != false) {
-            brazeInstance.currentUser?.let { user ->
-                // Braze SDK: Set custom user attribute
-                user.setCustomUserAttribute("active_member", false)
-            }
-            
-            // Update last sent values
-            saveLastSentValues(
-                context,
-                ANONYMOUS_USER_ID,
-                LastSentValues(activeMember = false)
-            )
-            
-        // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
-        brazeInstance.requestImmediateDataFlush()
-        }
+        // Braze SDK: Do NOT call changeUser() for anonymous users
+        // Braze automatically handles anonymous users - they will be anonymous until changeUser() is called
+        // Calling changeUser() with a static default ID violates Braze best practices
+        BrazeLogManager.logUserIdentified("anonymous", isAnonymous = true)
         
         // Clear cache immediately to remove old user's content
         com.example.phil_android_store.data.BrazeContentManager.clearCache()
         
-        // Refresh all banners and content cards after changeUser
+        // Pre-load banners and content cards for anonymous session
         // Includes retry logic with delays to handle latency
-        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
+        com.example.phil_android_store.data.BrazeContentManager.preloadAllContent(context)
     }
     
     /**
