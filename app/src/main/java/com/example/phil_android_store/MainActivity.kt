@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlin.OptIn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +80,7 @@ class MainActivity : ComponentActivity() {
         val initialVipCategory = getDeepLinkCategory(intent)
         
         setContent {
+            @OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
             Phil_Android_StoreApp(
                 initialDestination = initialDestination,
                 initialVipCategory = initialVipCategory,
