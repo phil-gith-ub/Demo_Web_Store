@@ -1178,6 +1178,181 @@ fun ContentBanner(
                                 }
                                 return false
                             }
+                            
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                
+                                // Only inject JavaScript if page is actually loaded (not about:blank)
+                                if (url == null || url == "about:blank" || url.startsWith("data:")) {
+                                    return
+                                }
+                                
+                                // Inject JavaScript after page is fully loaded
+                                view?.postDelayed({
+                                    try {
+                                        val jsCode = """
+                                            (function() {
+                                                function handleDeepLink(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (window.AndroidDeepLinkHandler) {
+                                                            window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                            return true;
+                                                        }
+                                                        window.location.href = url;
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                
+                                                var originalOpen = window.open;
+                                                window._originalAssign = window.location.assign;
+                                                window._originalReplace = window.location.replace;
+                                                
+                                                window.open = function(url, target, features) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return null;
+                                                    }
+                                                    return originalOpen.apply(window, arguments);
+                                                };
+                                                
+                                                window.location.assign = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalAssign?.apply(window.location, arguments);
+                                                };
+                                                
+                                                window.location.replace = function(url) {
+                                                    if (url && url.startsWith('philstore://')) {
+                                                        if (handleDeepLink(url)) return;
+                                                    }
+                                                    return window._originalReplace?.apply(window.location, arguments);
+                                                };
+                                                
+                                                function setupClickInterceptors() {
+                                                    document.addEventListener('click', function(e) {
+                                                        var target = e.target;
+                                                        var link = null;
+                                                        
+                                                        while (target && target !== document.body) {
+                                                            if (target.tagName === 'A' && target.href) {
+                                                                link = target;
+                                                                break;
+                                                            }
+                                                            target = target.parentElement;
+                                                        }
+                                                        
+                                                        if (link && link.href) {
+                                                            if (handleDeepLink(link.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                e.stopImmediatePropagation();
+                                                                return false;
+                                                            }
+                                                        } else {
+                                                            var clicked = e.target;
+                                                            var deepLink = null;
+                                                            var onclickAttr = clicked.getAttribute('onclick');
+                                                            var dataHref = clicked.getAttribute('data-href');
+                                                            var href = clicked.href;
+                                                            
+                                                            if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                if (match) deepLink = match[0];
+                                                            } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                deepLink = dataHref;
+                                                            } else if (href && href.includes('philstore://')) {
+                                                                deepLink = href;
+                                                            } else {
+                                                                var parent = clicked.parentElement;
+                                                                var depth = 0;
+                                                                while (parent && depth < 5) {
+                                                                    var parentOnclick = parent.getAttribute('onclick');
+                                                                    var parentDataHref = parent.getAttribute('data-href');
+                                                                    var parentHref = parent.href;
+                                                                    
+                                                                    if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                        var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                        if (match) {
+                                                                            deepLink = match[0];
+                                                                            break;
+                                                                        }
+                                                                    } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                        deepLink = parentDataHref;
+                                                                        break;
+                                                                    } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                        deepLink = parentHref;
+                                                                        break;
+                                                                    }
+                                                                    parent = parent.parentElement;
+                                                                    depth++;
+                                                                }
+                                                            }
+                                                            
+                                                            if (deepLink) {
+                                                                if (handleDeepLink(deepLink)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
+                                                                }
+                                                            }
+                                                        }
+                                                    }, true);
+                                                    
+                                                    function attachToLinks() {
+                                                        var htmlContent = document.documentElement.innerHTML || '';
+                                                        var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                        var matches = htmlContent.match(regex);
+                                                        if (matches && matches.length > 0) {
+                                                            window._bannerDeepLink = matches[0];
+                                                        }
+                                                        
+                                                        var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                        clickableElements.forEach(function(el) {
+                                                            el.addEventListener('click', function(e) {
+                                                                var storedDeepLink = window._bannerDeepLink;
+                                                                if (!storedDeepLink) {
+                                                                    storedDeepLink = htmlContent.match(regex)?.[0];
+                                                                    window._bannerDeepLink = storedDeepLink;
+                                                                }
+                                                                
+                                                                if (storedDeepLink) {
+                                                                    if (handleDeepLink(storedDeepLink)) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                }
+                                                            }, true);
+                                                        });
+                                                    }
+                                                    
+                                                    if (document.readyState === 'loading') {
+                                                        document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                    } else {
+                                                        attachToLinks();
+                                                    }
+                                                    
+                                                    setTimeout(attachToLinks, 500);
+                                                    setTimeout(attachToLinks, 1000);
+                                                    setTimeout(attachToLinks, 2000);
+                                                }
+                                                
+                                                if (document.readyState === 'loading') {
+                                                    document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                } else {
+                                                    setupClickInterceptors();
+                                                }
+                                            })();
+                                        """.trimIndent()
+                                        view?.evaluateJavascript(jsCode, null)
+                                    } catch (e: Exception) {
+                                        // Error injecting JavaScript
+                                    }
+                                }, 100)
+                            }
                         }
                         
                         // Set WebViewClient BEFORE calling insertBanner to ensure it's in place
@@ -1199,82 +1374,6 @@ fun ContentBanner(
                                     webView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                     webView.webViewClient = customWebViewClient
                                     Log.d("BrazeBanner", "Re-applied custom WebViewClient after Braze insertBanner")
-                                    
-                                    // Inject JavaScript to intercept clicks and use our handler
-                                    webView.postDelayed({
-                                        try {
-                                            val jsCode = """
-                                                (function() {
-                                                    // Function to handle deep links
-                                                    function handleDeepLink(url) {
-                                                        if (url && url.startsWith('philstore://')) {
-                                                            // Try JavaScript interface first
-                                                            if (window.AndroidDeepLinkHandler) {
-                                                                window.AndroidDeepLinkHandler.handleDeepLink(url);
-                                                                return true;
-                                                            }
-                                                            // Fallback to location change (will be caught by WebViewClient)
-                                                            window.location.href = url;
-                                                            return true;
-                                                        }
-                                                        return false;
-                                                    }
-                                                    
-                                                    // Intercept all clicks
-                                                    document.addEventListener('click', function(e) {
-                                                        var target = e.target;
-                                                        while (target && target.tagName !== 'A') {
-                                                            target = target.parentElement;
-                                                        }
-                                                        if (target && target.href) {
-                                                            if (handleDeepLink(target.href)) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                return false;
-                                                            }
-                                                        }
-                                                    }, true);
-                                                    
-                                                    // Also intercept all existing links
-                                                    var links = document.querySelectorAll('a[href^="philstore://"]');
-                                                    links.forEach(function(link) {
-                                                        link.addEventListener('click', function(e) {
-                                                            if (handleDeepLink(this.href)) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                return false;
-                                                            }
-                                                        }, true);
-                                                    });
-                                                    
-                                                    // Monitor for dynamically added links
-                                                    var observer = new MutationObserver(function(mutations) {
-                                                        mutations.forEach(function(mutation) {
-                                                            mutation.addedNodes.forEach(function(node) {
-                                                                if (node.nodeType === 1) {
-                                                                    var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
-                                                                    newLinks.forEach(function(link) {
-                                                                        link.addEventListener('click', function(e) {
-                                                                            if (handleDeepLink(this.href)) {
-                                                                                e.preventDefault();
-                                                                                e.stopPropagation();
-                                                                                return false;
-                                                                            }
-                                                                        }, true);
-                                                                    });
-                                                                }
-                                                            });
-                                                        });
-                                                    });
-                                                    observer.observe(document.body, { childList: true, subtree: true });
-                                                })();
-                                            """.trimIndent()
-                                            webView.evaluateJavascript(jsCode, null)
-                                            Log.d("BrazeBanner", "Injected JavaScript click interceptor with deep link handler")
-                                        } catch (e: Exception) {
-                                            Log.e("BrazeBanner", "Error injecting JavaScript: ${e.message}", e)
-                                        }
-                                    }, 500)
                                 }
                         } catch (e: Exception) {
                             // If insertBanner doesn't work, try to get HTML content
@@ -1282,16 +1381,83 @@ fun ContentBanner(
                                 val htmlMethod = currentBanner.javaClass.getMethod("getHtml")
                                 val htmlContent = htmlMethod.invoke(currentBanner) as? String
                                 if (htmlContent != null) {
-                                    // Set WebViewClient before loading HTML
-                                    webView.webViewClient = customWebViewClient
+                                    val preloadJs = """
+                                        (function() {
+                                            function handleDeepLink(url) {
+                                                if (url && url.startsWith('philstore://')) {
+                                                    if (window.AndroidDeepLinkHandler) {
+                                                        window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                        return true;
+                                                    }
+                                                    return false;
+                                                }
+                                                return false;
+                                            }
+                                            
+                                            window._originalOpen = window.open;
+                                            window.open = function(url, target, features) {
+                                                if (url && url.startsWith('philstore://')) {
+                                                    if (handleDeepLink(url)) return null;
+                                                }
+                                                return window._originalOpen.apply(window, arguments);
+                                            };
+                                            
+                                            window.location.assign = function(url) {
+                                                if (url && url.startsWith('philstore://')) {
+                                                    if (handleDeepLink(url)) return;
+                                                }
+                                                return window._originalAssign?.apply(window.location, arguments);
+                                            };
+                                            
+                                            window.location.replace = function(url) {
+                                                if (url && url.startsWith('philstore://')) {
+                                                    if (handleDeepLink(url)) return;
+                                                }
+                                                return window._originalReplace?.apply(window.location, arguments);
+                                            };
+                                            
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                function findDeepLinkInDocument() {
+                                                    var htmlContent = document.documentElement.innerHTML || '';
+                                                    var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                    var matches = htmlContent.match(regex);
+                                                    if (matches && matches.length > 0) {
+                                                        return matches[0];
+                                                    }
+                                                    return null;
+                                                }
+                                                
+                                                var deepLinkUrl = findDeepLinkInDocument();
+                                                window._bannerDeepLink = deepLinkUrl;
+                                                
+                                                document.addEventListener('click', function(e) {
+                                                    var storedDeepLink = window._bannerDeepLink;
+                                                    if (!storedDeepLink) {
+                                                        storedDeepLink = findDeepLinkInDocument();
+                                                        window._bannerDeepLink = storedDeepLink;
+                                                    }
+                                                    
+                                                    if (storedDeepLink) {
+                                                        if (handleDeepLink(storedDeepLink)) {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            e.stopImmediatePropagation();
+                                                            return false;
+                                                        }
+                                                    }
+                                                }, true);
+                                            });
+                                        })();
+                                    """.trimIndent()
                                     
-                                    // Keep background transparent - let the HTML content handle its own background
-                                    // Wrap HTML to center content and allow dynamic height
-                                    val wrappedHtml = """
+                                    val htmlWithInterceptors = """
                                         <!DOCTYPE html>
                                         <html>
                                         <head>
                                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                            <script>
+                                                $preloadJs
+                                            </script>
                                             <style>
                                                 body {
                                                     margin: 0;
@@ -1315,90 +1481,152 @@ fun ContentBanner(
                                         </body>
                                         </html>
                                     """.trimIndent()
-                                    webView.loadDataWithBaseURL(
-                                        null,
-                                        wrappedHtml,
-                                        "text/html",
-                                        "UTF-8",
-                                        null
-                                    )
-                                    Log.d("BrazeBanner", "Loaded HTML content with custom WebViewClient")
                                     
-                                    // Inject JavaScript after HTML loads (same as insertBanner path)
+                                    // Set WebViewClient before loading HTML
+                                    webView.webViewClient = customWebViewClient
+                                    webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
+                                    
                                     webView.postDelayed({
                                         try {
                                             val jsCode = """
                                                 (function() {
-                                                    // Function to handle deep links
                                                     function handleDeepLink(url) {
                                                         if (url && url.startsWith('philstore://')) {
-                                                            // Try JavaScript interface first
                                                             if (window.AndroidDeepLinkHandler) {
                                                                 window.AndroidDeepLinkHandler.handleDeepLink(url);
                                                                 return true;
                                                             }
-                                                            // Fallback to location change (will be caught by WebViewClient)
                                                             window.location.href = url;
                                                             return true;
                                                         }
                                                         return false;
                                                     }
                                                     
-                                                    // Intercept all clicks
-                                                    document.addEventListener('click', function(e) {
-                                                        var target = e.target;
-                                                        while (target && target.tagName !== 'A') {
-                                                            target = target.parentElement;
-                                                        }
-                                                        if (target && target.href) {
-                                                            if (handleDeepLink(target.href)) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                return false;
+                                                    function setupClickInterceptors() {
+                                                        document.addEventListener('click', function(e) {
+                                                            var target = e.target;
+                                                            var link = null;
+                                                            
+                                                            while (target && target !== document.body) {
+                                                                if (target.tagName === 'A' && target.href) {
+                                                                    link = target;
+                                                                    break;
+                                                                }
+                                                                target = target.parentElement;
                                                             }
-                                                        }
-                                                    }, true);
-                                                    
-                                                    // Also intercept all existing links
-                                                    var links = document.querySelectorAll('a[href^="philstore://"]');
-                                                    links.forEach(function(link) {
-                                                        link.addEventListener('click', function(e) {
-                                                            if (handleDeepLink(this.href)) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                return false;
+                                                            
+                                                            if (link && link.href) {
+                                                                if (handleDeepLink(link.href)) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    e.stopImmediatePropagation();
+                                                                    return false;
+                                                                }
+                                                            } else {
+                                                                var clicked = e.target;
+                                                                var deepLink = null;
+                                                                var onclickAttr = clicked.getAttribute('onclick');
+                                                                var dataHref = clicked.getAttribute('data-href');
+                                                                var href = clicked.href;
+                                                                
+                                                                if (onclickAttr && onclickAttr.includes('philstore://')) {
+                                                                    var match = onclickAttr.match(/philstore:\/\/[^"'\s)]+/);
+                                                                    if (match) deepLink = match[0];
+                                                                } else if (dataHref && dataHref.includes('philstore://')) {
+                                                                    deepLink = dataHref;
+                                                                } else if (href && href.includes('philstore://')) {
+                                                                    deepLink = href;
+                                                                } else {
+                                                                    var parent = clicked.parentElement;
+                                                                    var depth = 0;
+                                                                    while (parent && depth < 5) {
+                                                                        var parentOnclick = parent.getAttribute('onclick');
+                                                                        var parentDataHref = parent.getAttribute('data-href');
+                                                                        var parentHref = parent.href;
+                                                                        
+                                                                        if (parentOnclick && parentOnclick.includes('philstore://')) {
+                                                                            var match = parentOnclick.match(/philstore:\/\/[^"'\s)]+/);
+                                                                            if (match) {
+                                                                                deepLink = match[0];
+                                                                                break;
+                                                                            }
+                                                                        } else if (parentDataHref && parentDataHref.includes('philstore://')) {
+                                                                            deepLink = parentDataHref;
+                                                                            break;
+                                                                        } else if (parentHref && parentHref.includes('philstore://')) {
+                                                                            deepLink = parentHref;
+                                                                            break;
+                                                                        }
+                                                                        parent = parent.parentElement;
+                                                                        depth++;
+                                                                    }
+                                                                }
+                                                                
+                                                                if (deepLink) {
+                                                                    if (handleDeepLink(deepLink)) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        e.stopImmediatePropagation();
+                                                                        return false;
+                                                                    }
+                                                                }
                                                             }
                                                         }, true);
-                                                    });
-                                                    
-                                                    // Monitor for dynamically added links
-                                                    var observer = new MutationObserver(function(mutations) {
-                                                        mutations.forEach(function(mutation) {
-                                                            mutation.addedNodes.forEach(function(node) {
-                                                                if (node.nodeType === 1) {
-                                                                    var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
-                                                                    newLinks.forEach(function(link) {
-                                                                        link.addEventListener('click', function(e) {
-                                                                            if (handleDeepLink(this.href)) {
-                                                                                e.preventDefault();
-                                                                                e.stopPropagation();
-                                                                                return false;
-                                                                            }
-                                                                        }, true);
-                                                                    });
-                                                                }
+                                                        
+                                                        function attachToLinks() {
+                                                            var htmlContent = document.documentElement.innerHTML || '';
+                                                            var regex = /philstore:\/\/[^"'\s<>)]+/g;
+                                                            var matches = htmlContent.match(regex);
+                                                            if (matches && matches.length > 0) {
+                                                                window._bannerDeepLink = matches[0];
+                                                            }
+                                                            
+                                                            var clickableElements = document.querySelectorAll('[onclick*="philstore://"], button, [data-href*="philstore://"], [onclick]');
+                                                            clickableElements.forEach(function(el) {
+                                                                el.addEventListener('click', function(e) {
+                                                                    var storedDeepLink = window._bannerDeepLink;
+                                                                    if (!storedDeepLink) {
+                                                                        storedDeepLink = htmlContent.match(regex)?.[0];
+                                                                        window._bannerDeepLink = storedDeepLink;
+                                                                    }
+                                                                    
+                                                                    if (storedDeepLink) {
+                                                                        if (handleDeepLink(storedDeepLink)) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            e.stopImmediatePropagation();
+                                                                            return false;
+                                                                        }
+                                                                    }
+                                                                }, true);
                                                             });
-                                                        });
-                                                    });
-                                                    observer.observe(document.body, { childList: true, subtree: true });
+                                                        }
+                                                        
+                                                        if (document.readyState === 'loading') {
+                                                            document.addEventListener('DOMContentLoaded', attachToLinks);
+                                                        } else {
+                                                            attachToLinks();
+                                                        }
+                                                        
+                                                        setTimeout(attachToLinks, 500);
+                                                        setTimeout(attachToLinks, 1000);
+                                                        setTimeout(attachToLinks, 2000);
+                                                    }
+                                                    
+                                                    if (document.readyState === 'loading') {
+                                                        document.addEventListener('DOMContentLoaded', setupClickInterceptors);
+                                                    } else {
+                                                        setupClickInterceptors();
+                                                    }
                                                 })();
                                             """.trimIndent()
                                             webView.evaluateJavascript(jsCode, null)
-                                            Log.d("BrazeBanner", "Injected JavaScript for getHtml path")
                                         } catch (e: Exception) {
-                                            Log.e("BrazeBanner", "Error injecting JavaScript for getHtml: ${e.message}", e)
+                                            // Error injecting JavaScript
                                         }
                                     }, 500)
+                                    
+                                    Log.d("BrazeBanner", "Loaded HTML content with custom WebViewClient")
                                 }
                             } catch (e2: Exception) {
                                 // Both methods failed - banner might not be renderable
@@ -1626,6 +1854,9 @@ fun TileBanner(
                                                 }
                                                 
                                                 var originalOpen = window.open;
+                                                window._originalAssign = window.location.assign;
+                                                window._originalReplace = window.location.replace;
+                                                
                                                 window.open = function(url, target, features) {
                                                     if (url && url.startsWith('philstore://')) {
                                                         if (handleDeepLink(url)) return null;
