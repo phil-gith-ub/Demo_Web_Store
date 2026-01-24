@@ -288,14 +288,22 @@ fun Tile1ContentCard(
     // Filter key: Matches Content Cards with location = tile_1 in Braze dashboard
     val locationKey = "tile_1"
     
-    // State: Holds the matched Content Card and whether content is available
-    var contentCard by remember { mutableStateOf<Any?>(null) }
-    var hasCard by remember { mutableStateOf(false) }
-    
     // Read content cards from cache (pre-loaded on session start, updated after events)
     val cachedCards = rememberCachedContentCards()
     
-    // Process cached cards on initial load and when cache updates
+    // Initialize state directly from cache (no fallback fetch to prevent flashing)
+    var contentCard by remember(locationKey) { 
+        mutableStateOf<Any?>(
+            BrazeContentManager.getCachedContentCardByPositionId(locationKey)
+        )
+    }
+    var hasCard by remember(locationKey) { 
+        mutableStateOf(
+            BrazeContentManager.getCachedContentCardByPositionId(locationKey) != null
+        )
+    }
+    
+    // Process cached cards when cache updates
     LaunchedEffect(cachedCards) {
         // Filter cards by location key-value pair from cache
         var foundCard: Any? = null
@@ -774,14 +782,22 @@ fun Tile2ContentCard(
     // Filter key: Matches Content Cards with location = tile_2 in Braze dashboard
     val locationKey = "tile_2"
     
-    // State: Holds the matched Content Card and whether content is available
-    var contentCard by remember { mutableStateOf<Any?>(null) }
-    var hasCard by remember { mutableStateOf(false) }
-    
     // Read content cards from cache (pre-loaded on session start, updated after events)
     val cachedCards = rememberCachedContentCards()
     
-    // Process cached cards on initial load and when cache updates
+    // Initialize state directly from cache (no fallback fetch to prevent flashing)
+    var contentCard by remember(locationKey) { 
+        mutableStateOf<Any?>(
+            BrazeContentManager.getCachedContentCardByPositionId(locationKey)
+        )
+    }
+    var hasCard by remember(locationKey) { 
+        mutableStateOf(
+            BrazeContentManager.getCachedContentCardByPositionId(locationKey) != null
+        )
+    }
+    
+    // Process cached cards when cache updates
     LaunchedEffect(cachedCards) {
         // Filter cards by location key-value pair from cache
         var foundCard: Any? = null
@@ -1132,24 +1148,36 @@ fun ContentBanner(
     
     // Read banner from cache (pre-loaded on session start, updated after events)
     val cachedBanner = rememberCachedBanner(placementId)
-    var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
-    var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Update banner when cache changes, or fetch directly if cache is empty
+    // Initialize state directly from cache (no fallback fetch to prevent flashing)
+    var banner by remember(placementId) { 
+        mutableStateOf<Any?>(cachedBanner) 
+    }
+    var shouldRender by remember(placementId) { 
+        mutableStateOf(
+            if (cachedBanner != null) {
+                try {
+                    val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                    val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
+                    !isControl
+                } catch (e: Exception) {
+                    true // If isControl method doesn't exist, assume we should render
+                }
+            } else {
+                false
+            }
+        )
+    }
+    
+    // Update state only when cache changes (no direct fetch)
     LaunchedEffect(cachedBanner) {
-        if (cachedBanner != null) {
-            // Use cached banner
-            banner = cachedBanner
-        } else {
-            // Cache is empty - fetch directly from Braze as fallback
-            banner = BrazeUserSync.getBanner(context, placementId)
-        }
+        banner = cachedBanner
         
         // Check if banner exists and is not a control variant
-        if (banner != null) {
+        if (cachedBanner != null) {
             try {
-                val isControlMethod = banner!!.javaClass.getMethod("isControl")
-                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
                 shouldRender = !isControl
             } catch (e: Exception) {
                 // If isControl method doesn't exist, assume we should render
@@ -1808,9 +1836,45 @@ fun TileBanner(
     
     // Read banner from cache (pre-loaded on session start, updated after events)
     val cachedBanner = rememberCachedBanner(placementId)
-    var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
-    var shouldRender by remember(placementId) { mutableStateOf(false) }
-    var bannerClickUrl by remember(placementId) { mutableStateOf<String?>(null) }
+    
+    // Initialize state directly from cache (no fallback fetch to prevent flashing)
+    var banner by remember(placementId) { 
+        mutableStateOf<Any?>(cachedBanner) 
+    }
+    var shouldRender by remember(placementId) { 
+        mutableStateOf(
+            if (cachedBanner != null) {
+                try {
+                    val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                    val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
+                    !isControl
+                } catch (e: Exception) {
+                    true // If isControl method doesn't exist, assume we should render
+                }
+            } else {
+                false
+            }
+        )
+    }
+    var bannerClickUrl by remember(placementId) { 
+        mutableStateOf<String?>(
+            if (cachedBanner != null) {
+                try {
+                    val getClickUrlMethod = cachedBanner.javaClass.getMethod("getClickUrl")
+                    getClickUrlMethod.invoke(cachedBanner) as? String
+                } catch (e: Exception) {
+                    try {
+                        val getUrlMethod = cachedBanner.javaClass.getMethod("getUrl")
+                        getUrlMethod.invoke(cachedBanner) as? String
+                    } catch (e2: Exception) {
+                        null
+                    }
+                }
+            } else {
+                null
+            }
+        )
+    }
     
     // Update banner when cache changes, or fetch directly if cache is empty
     LaunchedEffect(cachedBanner) {
