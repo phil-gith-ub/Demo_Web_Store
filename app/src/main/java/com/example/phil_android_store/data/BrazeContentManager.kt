@@ -43,11 +43,11 @@ object BrazeContentManager {
      */
     private data class BannerCacheEntry(
         val banner: Any?,
-        val bannerId: String?,
+        val cachedBannerId: String?,
         val timestamp: Long
     ) {
         fun getBannerId(): String? {
-            return bannerId ?: try {
+            return cachedBannerId ?: try {
                 banner?.javaClass?.getMethod("getId")?.invoke(banner)?.toString()
             } catch (e: Exception) {
                 null
@@ -102,7 +102,7 @@ object BrazeContentManager {
                     // Content changed - update cache
                     bannerCache[placementId] = BannerCacheEntry(
                         banner = newBanner,
-                        bannerId = newBannerId,
+                        cachedBannerId = newBannerId,
                         timestamp = System.currentTimeMillis()
                     )
                     bannersChanged = true
@@ -138,7 +138,7 @@ object BrazeContentManager {
             val bannerId = getBannerId(banner)
             bannerCache[placementId] = BannerCacheEntry(
                 banner = banner,
-                bannerId = bannerId,
+                cachedBannerId = bannerId,
                 timestamp = System.currentTimeMillis()
             )
         }
