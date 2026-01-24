@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.rememberCachedContentCards
 
 /**
  * Composable that displays a Braze Content Card filtered by position_id.
@@ -34,14 +35,37 @@ fun BrazeContentCard(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    
+    // Read content cards from cache (pre-loaded on session start, updated after events)
+    val cachedCards = rememberCachedContentCards()
+    
+    // Find card by position_id from cache
     var contentCard by remember(positionId) { mutableStateOf<Any?>(null) }
     var shouldRender by remember(positionId) { mutableStateOf(false) }
     
-    // Braze SDK: Subscribe to Content Cards updates using proper event-based pattern
-    DisposableEffect(positionId) {
-        // Braze SDK: Request initial refresh
-        BrazeUserSync.requestContentCardsRefresh(context)
+    // Process cached cards on initial load and when cache updates
+    LaunchedEffect(cachedCards, positionId) {
+        val foundCard = com.example.phil_android_store.data.BrazeContentManager.getCachedContentCardByPositionId(positionId)
+        contentCard = foundCard
         
+        // Check if card exists and is not a control variant
+        if (foundCard != null) {
+            try {
+                val isControlMethod = foundCard.javaClass.getMethod("isControlCard")
+                val isControl = isControlMethod.invoke(foundCard) as? Boolean ?: false
+                shouldRender = !isControl
+            } catch (e: Exception) {
+                shouldRender = true
+            }
+        } else {
+            shouldRender = false
+        }
+        
+        onCardUpdate?.invoke(foundCard)
+    }
+    
+    // Braze SDK: Subscribe to Content Cards updates (for real-time updates when cache refreshes)
+    DisposableEffect(positionId) {
         // Braze SDK: Subscribe to Content Cards updates - this will notify us when cards change
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
             // This callback is called whenever Content Cards are updated
@@ -63,42 +87,6 @@ fun BrazeContentCard(
             }
             
             onCardUpdate?.invoke(updatedCard)
-        }
-        
-        // Braze SDK: Get initial Content Card with one retry if needed
-        scope.launch {
-            var retryCount = 0
-            val maxRetries = 1
-            var initialCard: Any? = null
-            
-            while (retryCount <= maxRetries && initialCard == null) {
-                // Delay: 500ms for first attempt, 1000ms for retry
-                kotlinx.coroutines.delay(500L * (retryCount + 1))
-                initialCard = BrazeUserSync.getContentCardByPositionId(context, positionId)
-                
-                if (initialCard != null) {
-                    break
-                }
-                retryCount++
-            }
-            
-            contentCard = initialCard
-            
-            // Check if card exists and is not a control variant
-            if (initialCard != null) {
-                try {
-                    val isControlMethod = initialCard.javaClass.getMethod("isControlCard")
-                    val isControl = isControlMethod.invoke(initialCard) as? Boolean ?: false
-                    shouldRender = !isControl
-                } catch (e: Exception) {
-                    // If isControlCard method doesn't exist, assume we should render
-                    shouldRender = true
-                }
-            } else {
-                shouldRender = false
-            }
-            
-            onCardUpdate?.invoke(initialCard)
         }
         
         // Braze SDK: Unsubscribe when composable is disposed

@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.rememberCachedBanner
+import com.example.phil_android_store.data.rememberCachedContentCards
 import kotlinx.coroutines.launch
 
 /**
@@ -33,16 +35,47 @@ fun BrazeBannerOrContentCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    
+    // Read from cache (pre-loaded on session start, updated after events)
+    val cachedBanner = rememberCachedBanner(bannerPlacementId)
+    val cachedCards = rememberCachedContentCards()
+    
     var hasBanner by remember(bannerPlacementId) { mutableStateOf(false) }
     var hasContentCard by remember(contentCardPositionId) { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    // Braze SDK: Check for banner and content card availability, and subscribe to updates
+    
+    // Check cached banner
+    LaunchedEffect(cachedBanner) {
+        if (cachedBanner != null) {
+            try {
+                val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
+                hasBanner = !isControl
+            } catch (e: Exception) {
+                hasBanner = true
+            }
+        } else {
+            hasBanner = false
+        }
+    }
+    
+    // Check cached content cards
+    LaunchedEffect(cachedCards, contentCardPositionId) {
+        val foundCard = com.example.phil_android_store.data.BrazeContentManager.getCachedContentCardByPositionId(contentCardPositionId)
+        if (foundCard != null) {
+            try {
+                val isControlMethod = foundCard.javaClass.getMethod("isControlCard")
+                val isControl = isControlMethod.invoke(foundCard) as? Boolean ?: false
+                hasContentCard = !isControl
+            } catch (e: Exception) {
+                hasContentCard = true
+            }
+        } else {
+            hasContentCard = false
+        }
+    }
+    
+    // Braze SDK: Subscribe to Content Cards updates (for real-time updates when cache refreshes)
     DisposableEffect(bannerPlacementId, contentCardPositionId) {
-        // Braze SDK: Request refresh for both
-        BrazeUserSync.requestBannerRefresh(context, listOf(bannerPlacementId))
-        BrazeUserSync.requestContentCardsRefresh(context)
-        
         // Braze SDK: Subscribe to Content Cards updates (recommended approach per Braze docs)
         // This will notify us whenever Content Cards are updated
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
@@ -52,63 +85,6 @@ fun BrazeBannerOrContentCard(
                 try {
                     val isControlMethod = updatedCard.javaClass.getMethod("isControlCard")
                     val isControl = isControlMethod.invoke(updatedCard) as? Boolean ?: false
-                    hasContentCard = !isControl
-                } catch (e: Exception) {
-                    hasContentCard = true
-                }
-            } else {
-                hasContentCard = false
-            }
-        }
-        
-        // Braze SDK: Initial check with one retry if needed
-        scope.launch {
-            var retryCount = 0
-            val maxRetries = 1
-            var banner: Any? = null
-            var contentCard: Any? = null
-            
-            // Try to get banner and content card with one retry if needed
-            while (retryCount <= maxRetries && (banner == null || contentCard == null)) {
-                // Delay: 500ms for first attempt, 1000ms for retry
-                kotlinx.coroutines.delay(500L * (retryCount + 1))
-                
-                // Braze SDK: Initial check for banner (only if not found yet)
-                if (banner == null) {
-                    banner = BrazeUserSync.getBanner(context, bannerPlacementId)
-                }
-                
-                // Braze SDK: Initial check for content card (only if not found yet)
-                if (contentCard == null) {
-                    contentCard = BrazeUserSync.getContentCardByPositionId(context, contentCardPositionId)
-                }
-                
-                // If both found, break early
-                if (banner != null && contentCard != null) {
-                    break
-                }
-                
-                retryCount++
-            }
-            
-            // Check if banner exists and is not a control variant
-            if (banner != null) {
-                try {
-                    val isControlMethod = banner.javaClass.getMethod("isControl")
-                    val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
-                    hasBanner = !isControl
-                } catch (e: Exception) {
-                    hasBanner = true
-                }
-            } else {
-                hasBanner = false
-            }
-            
-            // Check if content card exists and is not a control variant
-            if (contentCard != null) {
-                try {
-                    val isControlMethod = contentCard.javaClass.getMethod("isControlCard")
-                    val isControl = isControlMethod.invoke(contentCard) as? Boolean ?: false
                     hasContentCard = !isControl
                 } catch (e: Exception) {
                     hasContentCard = true

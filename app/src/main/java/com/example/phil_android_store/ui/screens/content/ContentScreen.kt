@@ -53,9 +53,12 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
+import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.rememberCachedBanner
+import com.example.phil_android_store.data.rememberCachedContentCards
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
@@ -70,16 +73,9 @@ fun ContentScreen() {
     val settingsManager = remember { BrazeSettingsManager(context) }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     
-    // Braze SDK: Auto-refresh Content Cards and Banner when entering this screen
+    // Braze SDK: Log screen entry (content is pre-loaded, no refresh needed)
     LaunchedEffect(Unit) {
         BrazeLogManager.logScreenEntered("Content Page")
-        val autoRefresh = settingsManager.getAutoRefreshContentCards()
-        if (autoRefresh) {
-            BrazeUserSync.requestContentCardsRefresh(context)
-        }
-        
-        // Always refresh banner when entering content screen
-        BrazeUserSync.requestBannerRefresh(context, listOf("content_banner", "tile_banner"))
     }
     
     Box(
@@ -296,16 +292,14 @@ fun Tile1ContentCard(
     var contentCard by remember { mutableStateOf<Any?>(null) }
     var hasCard by remember { mutableStateOf(false) }
     
-    // Subscribe to Braze Content Cards updates
-    DisposableEffect(Unit) {
-        // Request initial card refresh from Braze
-        BrazeUserSync.requestContentCardsRefresh(context)
-        
-        // Subscribe to receive Content Cards when they update
-        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-            // Filter cards by location key-value pair
-            var foundCard: Any? = null
-            for (card in cards) {
+    // Read content cards from cache (pre-loaded on session start, updated after events)
+    val cachedCards = rememberCachedContentCards()
+    
+    // Process cached cards on initial load and when cache updates
+    LaunchedEffect(cachedCards) {
+        // Filter cards by location key-value pair from cache
+        var foundCard: Any? = null
+        for (card in cachedCards) {
                 // Skip control cards (used for A/B testing, not displayed)
                 var isControl = false
                 try {
@@ -388,9 +382,85 @@ fun Tile1ContentCard(
             hasCard = foundCard != null
         }
         
-        // Cleanup: Unsubscribe when component is removed
-        onDispose {
-            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+        // Subscribe to Braze Content Cards updates (for real-time updates when cache refreshes)
+        DisposableEffect(Unit) {
+            // Subscribe to receive Content Cards when they update
+            val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+                // Filter cards by location key-value pair
+                var foundCard: Any? = null
+                for (card in cards) {
+                    // Skip control cards (used for A/B testing, not displayed)
+                    var isControl = false
+                    try {
+                        val isControlMethod = card.javaClass.getMethod("isControlCard")
+                        isControl = isControlMethod.invoke(card) as? Boolean ?: false
+                    } catch (e: NoSuchMethodException) {
+                        try {
+                            val isControlField = card.javaClass.getDeclaredField("isControl")
+                            isControlField.isAccessible = true
+                            isControl = isControlField.get(card) as? Boolean ?: false
+                        } catch (e2: Exception) {
+                            val className = card.javaClass.simpleName
+                            isControl = className.contains("Control", ignoreCase = true)
+                        }
+                    } catch (e: Exception) {
+                    }
+                    
+                    if (isControl) {
+                        continue
+                    }
+                    
+                    // Extract key-value pairs (extras) from card
+                    try {
+                        val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                        val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                        
+                        // Match card by location key-value pair (case-insensitive)
+                        if (extras != null) {
+                            var locationValue: Any? = null
+                            var cardIdValue: Any? = null
+                            
+                            // Check for location in extras (case-insensitive key matching)
+                            for ((key, value) in extras) {
+                                val keyStr = key?.toString()?.lowercase()
+                                if (keyStr == "location") {
+                                    locationValue = value
+                                }
+                                if (keyStr == "card_id" || keyStr == "cardid") {
+                                    cardIdValue = value
+                                }
+                            }
+                            
+                            // Match if location = tile_1 OR card_id matches (for web compatibility)
+                            val matches = locationValue?.toString() == locationKey || 
+                                         cardIdValue?.toString() == locationKey ||
+                                         cardIdValue?.toString()?.contains("tile_1") == true
+                            
+                            if (matches) {
+                                foundCard = card
+                                try {
+                                    val getIdMethod = card.javaClass.getMethod("getId")
+                                    val cardId = getIdMethod.invoke(card) as? String
+                                    BrazeLogManager.logContentCardMatched(locationKey, cardId)
+                                } catch (e: Exception) {
+                                    BrazeLogManager.logContentCardMatched(locationKey, null)
+                                }
+                                break
+                            }
+                        }
+                    } catch (e: Exception) {
+                        continue
+                    }
+                }
+                
+                contentCard = foundCard
+                hasCard = foundCard != null
+            }
+            
+            // Cleanup: Unsubscribe when component is removed
+            onDispose {
+                BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
+            }
         }
     }
     
@@ -709,11 +779,76 @@ fun Tile2ContentCard(
     var contentCard by remember { mutableStateOf<Any?>(null) }
     var hasCard by remember { mutableStateOf(false) }
     
-    // Subscribe to Braze Content Cards updates
-    DisposableEffect(Unit) {
-        // Request initial card refresh from Braze
-        BrazeUserSync.requestContentCardsRefresh(context)
+    // Read content cards from cache (pre-loaded on session start, updated after events)
+    val cachedCards = rememberCachedContentCards()
+    
+    // Process cached cards on initial load and when cache updates
+    LaunchedEffect(cachedCards) {
+        // Filter cards by location key-value pair from cache
+        var foundCard: Any? = null
+        for (card in cachedCards) {
+            // Skip control cards (used for A/B testing, not displayed)
+            var isControl = false
+            try {
+                val isControlMethod = card.javaClass.getMethod("isControlCard")
+                isControl = isControlMethod.invoke(card) as? Boolean ?: false
+            } catch (e: NoSuchMethodException) {
+                try {
+                    val isControlField = card.javaClass.getDeclaredField("isControl")
+                    isControlField.isAccessible = true
+                    isControl = isControlField.get(card) as? Boolean ?: false
+                } catch (e2: Exception) {
+                    val className = card.javaClass.simpleName
+                    isControl = className.contains("Control", ignoreCase = true)
+                }
+            } catch (e: Exception) {
+            }
+            
+            if (isControl) continue
+            
+            // Extract key-value pairs (extras) from card
+            try {
+                val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                
+                // Match card by location key-value pair (case-insensitive)
+                if (extras != null) {
+                    var locationValue: Any? = null
+                    for ((key, value) in extras) {
+                        val keyStr = key?.toString()?.lowercase()
+                        if (keyStr == "location") {
+                            locationValue = value
+                            break
+                        }
+                    }
+                    
+                    if (locationValue == null) {
+                        locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                    }
+                    
+                    if (locationValue?.toString() == locationKey) {
+                        foundCard = card
+                        try {
+                            val getIdMethod = card.javaClass.getMethod("getId")
+                            val cardId = getIdMethod.invoke(card) as? String
+                            BrazeLogManager.logContentCardMatched(locationKey, cardId)
+                        } catch (e: Exception) {
+                            BrazeLogManager.logContentCardMatched(locationKey, null)
+                        }
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                continue
+            }
+        }
         
+        contentCard = foundCard
+        hasCard = foundCard != null
+    }
+    
+    // Subscribe to Braze Content Cards updates (for real-time updates when cache refreshes)
+    DisposableEffect(Unit) {
         // Subscribe to receive Content Cards when they update
         val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
             // Filter cards by location key-value pair
@@ -995,29 +1130,15 @@ fun ContentBanner(
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val placementId = "content_banner"
-    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    
+    // Read banner from cache (pre-loaded on session start, updated after events)
+    val cachedBanner = rememberCachedBanner(placementId)
+    var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Braze SDK: Request banner refresh when this composable is first displayed (exact same as BrazeBanner)
-    LaunchedEffect(placementId) {
-        // Braze SDK: Request refresh for this placement
-        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        
-        // Try to get banner with one retry if needed
-        var retryCount = 0
-        val maxRetries = 1
-        while (retryCount <= maxRetries && banner == null) {
-            // Delay: 500ms for first attempt, 1000ms for retry
-            kotlinx.coroutines.delay(500L * (retryCount + 1))
-            
-            // Braze SDK: Get the banner
-            banner = BrazeUserSync.getBanner(context, placementId)
-            
-            if (banner != null) {
-                break
-            }
-            retryCount++
-        }
+    // Update banner when cache changes
+    LaunchedEffect(cachedBanner) {
+        banner = cachedBanner
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
@@ -1679,29 +1800,15 @@ fun TileBanner(
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val placementId = "tile_banner"
-    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    
+    // Read banner from cache (pre-loaded on session start, updated after events)
+    val cachedBanner = rememberCachedBanner(placementId)
+    var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Request banner refresh and get banner (with one retry if needed)
-    LaunchedEffect(placementId) {
-        // Braze SDK: Request refresh for this placement
-        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        
-        // Try to get banner with one retry if needed
-        var retryCount = 0
-        val maxRetries = 1
-        while (retryCount <= maxRetries && banner == null) {
-            // Delay: 500ms for first attempt, 1000ms for retry
-            kotlinx.coroutines.delay(500L * (retryCount + 1))
-            
-            // Braze SDK: Get the banner
-            banner = BrazeUserSync.getBanner(context, placementId)
-            
-            if (banner != null) {
-                break
-            }
-            retryCount++
-        }
+    // Update banner when cache changes
+    LaunchedEffect(cachedBanner) {
+        banner = cachedBanner
         
         // Check if banner exists and is not a control variant
         if (banner != null) {

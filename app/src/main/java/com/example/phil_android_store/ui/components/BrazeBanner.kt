@@ -23,7 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.braze.Braze
+import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.rememberCachedBanner
 
 /**
  * Composable that displays a Braze banner for a given placement ID.
@@ -42,29 +44,16 @@ fun BrazeBanner(
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val backgroundColor = colorScheme.surface
-    var banner by remember(placementId) { mutableStateOf<Any?>(null) }
+    
+    // Read banner from cache (pre-loaded on session start, updated after events)
+    val cachedBanner = rememberCachedBanner(placementId)
+    var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Braze SDK: Request banner refresh when this composable is first displayed
-    LaunchedEffect(placementId) {
-        // Braze SDK: Request refresh for this placement
-        BrazeUserSync.requestBannerRefresh(context, listOf(placementId))
-        
-        // Try to get banner with one retry if needed
-        var retryCount = 0
-        val maxRetries = 1
-        while (retryCount <= maxRetries && banner == null) {
-            // Delay: 500ms for first attempt, 1000ms for retry
-            kotlinx.coroutines.delay(500L * (retryCount + 1))
-            
-            // Braze SDK: Get the banner
-            banner = BrazeUserSync.getBanner(context, placementId)
-            
-            if (banner != null) {
-                break
-            }
-            retryCount++
-        }
+    // Update banner when cache changes
+    LaunchedEffect(cachedBanner) {
+        banner = cachedBanner
+        onBannerUpdate?.invoke(banner)
         
         // Check if banner exists and is not a control variant
         if (banner != null) {
@@ -79,8 +68,6 @@ fun BrazeBanner(
         } else {
             shouldRender = false
         }
-        
-        onBannerUpdate?.invoke(banner)
     }
     
     // Only render if banner is available and not a control variant

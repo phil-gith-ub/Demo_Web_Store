@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
+import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
 import com.example.phil_android_store.data.CartManager
 import com.example.phil_android_store.data.PurchaseManager
@@ -275,11 +276,9 @@ fun Phil_Android_StoreApp(
             BrazeUserSync.initializeAnonymousSession(context)
         }
         
-        // Braze SDK: Request banner refresh for all banner placements on app startup
-        BrazeUserSync.requestBannerRefresh(context, listOf("store_page_banner", "cart_banner"))
-        
-        // Braze SDK: Request Content Cards refresh on app startup
-        BrazeUserSync.requestContentCardsRefresh(context)
+        // Braze SDK: Pre-load all banners and content cards on session start
+        // This caches content to minimize refreshes - components will read from cache
+        BrazeContentManager.preloadAllContent(context)
     }
     var bannerContent by remember { mutableStateOf<String?>(null) } // Can be set to a string to show banner
     

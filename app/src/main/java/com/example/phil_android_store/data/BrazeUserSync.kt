@@ -123,6 +123,10 @@ object BrazeUserSync {
             // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
+        
+        // Refresh all banners and content cards after changeUser
+        // Only updates cache if content actually changed
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
@@ -252,6 +256,10 @@ object BrazeUserSync {
             // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
             brazeInstance.requestImmediateDataFlush()
         }
+        
+        // Refresh all banners and content cards after changeUser
+        // Only updates cache if content actually changed
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
@@ -321,6 +329,9 @@ object BrazeUserSync {
         ))
         // Braze SDK: Flush data to ensure event is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
+        
+        // Refresh banners and content cards after event (only if content changed)
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
@@ -332,6 +343,9 @@ object BrazeUserSync {
         val brazeInstance = Braze.getInstance(context)
         brazeInstance.logCustomEvent("viewed_vip_products")
         BrazeLogManager.logCustomEvent("viewed_vip_products")
+        
+        // Refresh banners and content cards after event (only if content changed)
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
@@ -343,6 +357,9 @@ object BrazeUserSync {
         val brazeInstance = Braze.getInstance(context)
         brazeInstance.logCustomEvent("enabled_dark_mode")
         BrazeLogManager.logCustomEvent("enabled_dark_mode")
+        
+        // Refresh banners and content cards after event (only if content changed)
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
@@ -362,6 +379,9 @@ object BrazeUserSync {
             // Braze SDK: Flush immediately to ensure event is sent to Braze servers right away
             // This allows in-app messages triggered by logged_in to display promptly
             brazeInstance.requestImmediateDataFlush()
+            
+            // Refresh banners and content cards after event (only if content changed)
+            com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
         }
     }
     
@@ -456,6 +476,9 @@ object BrazeUserSync {
         
         // Braze SDK: Flush data to ensure purchase is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
+        
+        // Refresh banners and content cards after purchase event (only if content changed)
+        com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
     /**
