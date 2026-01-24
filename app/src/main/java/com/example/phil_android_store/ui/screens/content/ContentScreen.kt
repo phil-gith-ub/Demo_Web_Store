@@ -1876,33 +1876,27 @@ fun TileBanner(
         )
     }
     
-    // Update banner when cache changes, or fetch directly if cache is empty
+    // Update state only when cache changes (no direct fetch)
     LaunchedEffect(cachedBanner) {
-        if (cachedBanner != null) {
-            // Use cached banner
-            banner = cachedBanner
-        } else {
-            // Cache is empty - fetch directly from Braze as fallback
-            banner = BrazeUserSync.getBanner(context, placementId)
-        }
+        banner = cachedBanner
         
         // Check if banner exists and is not a control variant
-        if (banner != null) {
+        if (cachedBanner != null) {
             try {
-                val isControlMethod = banner!!.javaClass.getMethod("isControl")
-                val isControl = isControlMethod.invoke(banner) as? Boolean ?: false
+                val isControlMethod = cachedBanner.javaClass.getMethod("isControl")
+                val isControl = isControlMethod.invoke(cachedBanner) as? Boolean ?: false
                 shouldRender = !isControl
                 
                 // Get banner click URL if available
                 try {
-                    val getClickUrlMethod = banner!!.javaClass.getMethod("getClickUrl")
-                    val clickUrl = getClickUrlMethod.invoke(banner) as? String
+                    val getClickUrlMethod = cachedBanner.javaClass.getMethod("getClickUrl")
+                    val clickUrl = getClickUrlMethod.invoke(cachedBanner) as? String
                     bannerClickUrl = clickUrl
                 } catch (e: Exception) {
                     // Banner doesn't have getClickUrl method, try getUrl
                     try {
-                        val getUrlMethod = banner!!.javaClass.getMethod("getUrl")
-                        val url = getUrlMethod.invoke(banner) as? String
+                        val getUrlMethod = cachedBanner.javaClass.getMethod("getUrl")
+                        val url = getUrlMethod.invoke(cachedBanner) as? String
                         bannerClickUrl = url
                     } catch (e2: Exception) {
                         bannerClickUrl = null
