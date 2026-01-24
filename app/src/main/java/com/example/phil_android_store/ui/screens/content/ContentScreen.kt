@@ -300,6 +300,95 @@ fun Tile1ContentCard(
         // Filter cards by location key-value pair from cache
         var foundCard: Any? = null
         for (card in cachedCards) {
+            // Skip control cards (used for A/B testing, not displayed)
+            var isControl = false
+            try {
+                val isControlMethod = card.javaClass.getMethod("isControlCard")
+                isControl = isControlMethod.invoke(card) as? Boolean ?: false
+            } catch (e: NoSuchMethodException) {
+                try {
+                    val isControlField = card.javaClass.getDeclaredField("isControl")
+                    isControlField.isAccessible = true
+                    isControl = isControlField.get(card) as? Boolean ?: false
+                } catch (e2: Exception) {
+                    val className = card.javaClass.simpleName
+                    isControl = className.contains("Control", ignoreCase = true)
+                }
+            } catch (e: Exception) {
+            }
+            
+            if (isControl) {
+                continue
+            }
+            
+            // Extract key-value pairs (extras) from card
+            try {
+                val getExtrasMethod = card.javaClass.getMethod("getExtras")
+                val extras = getExtrasMethod.invoke(card) as? Map<*, *>
+                
+                // Log card details for debugging
+                try {
+                    val getIdMethod = card.javaClass.getMethod("getId")
+                    val cardId = getIdMethod.invoke(card) as? String
+                    val getTitleMethod = card.javaClass.getMethod("getTitle")
+                    val title = getTitleMethod.invoke(card) as? String
+                } catch (e: Exception) {
+                }
+                
+                // Match card by location key-value pair (case-insensitive)
+                if (extras != null) {
+                    var locationValue: Any? = null
+                    var cardIdValue: Any? = null
+                    
+                    for ((key, value) in extras) {
+                        val keyStr = key?.toString()?.lowercase()
+                        when (keyStr) {
+                            "location" -> locationValue = value
+                            "card_id", "cardid" -> cardIdValue = value
+                        }
+                    }
+                    
+                    // Try direct access with different cases
+                    if (locationValue == null) {
+                        locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
+                    }
+                    if (cardIdValue == null) {
+                        cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
+                    }
+                    
+                    // Match if location = tile_1 OR card_id matches (for web compatibility)
+                    val matches = locationValue?.toString() == locationKey || 
+                                 cardIdValue?.toString() == locationKey ||
+                                 cardIdValue?.toString()?.contains("tile_1") == true
+                    
+                    if (matches) {
+                        foundCard = card
+                        try {
+                            val getIdMethod = card.javaClass.getMethod("getId")
+                            val cardId = getIdMethod.invoke(card) as? String
+                            BrazeLogManager.logContentCardMatched(locationKey, cardId)
+                        } catch (e: Exception) {
+                            BrazeLogManager.logContentCardMatched(locationKey, null)
+                        }
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                continue
+            }
+        }
+        
+        contentCard = foundCard
+        hasCard = foundCard != null
+    }
+    
+    // Subscribe to Braze Content Cards updates (for real-time updates when cache refreshes)
+    DisposableEffect(Unit) {
+        // Subscribe to receive Content Cards when they update
+        val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
+            // Filter cards by location key-value pair
+            var foundCard: Any? = null
+            for (card in cards) {
                 // Skip control cards (used for A/B testing, not displayed)
                 var isControl = false
                 try {
@@ -326,34 +415,20 @@ fun Tile1ContentCard(
                     val getExtrasMethod = card.javaClass.getMethod("getExtras")
                     val extras = getExtrasMethod.invoke(card) as? Map<*, *>
                     
-                    // Log card details for debugging
-                    try {
-                        val getIdMethod = card.javaClass.getMethod("getId")
-                        val cardId = getIdMethod.invoke(card) as? String
-                        val getTitleMethod = card.javaClass.getMethod("getTitle")
-                        val title = getTitleMethod.invoke(card) as? String
-                    } catch (e: Exception) {
-                    }
-                    
                     // Match card by location key-value pair (case-insensitive)
                     if (extras != null) {
                         var locationValue: Any? = null
                         var cardIdValue: Any? = null
                         
+                        // Check for location in extras (case-insensitive key matching)
                         for ((key, value) in extras) {
                             val keyStr = key?.toString()?.lowercase()
-                            when (keyStr) {
-                                "location" -> locationValue = value
-                                "card_id", "cardid" -> cardIdValue = value
+                            if (keyStr == "location") {
+                                locationValue = value
                             }
-                        }
-                        
-                        // Try direct access with different cases
-                        if (locationValue == null) {
-                            locationValue = extras["location"] ?: extras["Location"] ?: extras["LOCATION"]
-                        }
-                        if (cardIdValue == null) {
-                            cardIdValue = extras["card_id"] ?: extras["cardId"] ?: extras["Card_Id"]
+                            if (keyStr == "card_id" || keyStr == "cardid") {
+                                cardIdValue = value
+                            }
                         }
                         
                         // Match if location = tile_1 OR card_id matches (for web compatibility)
@@ -381,86 +456,10 @@ fun Tile1ContentCard(
             contentCard = foundCard
             hasCard = foundCard != null
         }
-        
-        // Subscribe to Braze Content Cards updates (for real-time updates when cache refreshes)
-        DisposableEffect(Unit) {
-            // Subscribe to receive Content Cards when they update
-            val subscription = BrazeUserSync.subscribeToContentCardsUpdates(context) { cards ->
-                // Filter cards by location key-value pair
-                var foundCard: Any? = null
-                for (card in cards) {
-                    // Skip control cards (used for A/B testing, not displayed)
-                    var isControl = false
-                    try {
-                        val isControlMethod = card.javaClass.getMethod("isControlCard")
-                        isControl = isControlMethod.invoke(card) as? Boolean ?: false
-                    } catch (e: NoSuchMethodException) {
-                        try {
-                            val isControlField = card.javaClass.getDeclaredField("isControl")
-                            isControlField.isAccessible = true
-                            isControl = isControlField.get(card) as? Boolean ?: false
-                        } catch (e2: Exception) {
-                            val className = card.javaClass.simpleName
-                            isControl = className.contains("Control", ignoreCase = true)
-                        }
-                    } catch (e: Exception) {
-                    }
-                    
-                    if (isControl) {
-                        continue
-                    }
-                    
-                    // Extract key-value pairs (extras) from card
-                    try {
-                        val getExtrasMethod = card.javaClass.getMethod("getExtras")
-                        val extras = getExtrasMethod.invoke(card) as? Map<*, *>
-                        
-                        // Match card by location key-value pair (case-insensitive)
-                        if (extras != null) {
-                            var locationValue: Any? = null
-                            var cardIdValue: Any? = null
-                            
-                            // Check for location in extras (case-insensitive key matching)
-                            for ((key, value) in extras) {
-                                val keyStr = key?.toString()?.lowercase()
-                                if (keyStr == "location") {
-                                    locationValue = value
-                                }
-                                if (keyStr == "card_id" || keyStr == "cardid") {
-                                    cardIdValue = value
-                                }
-                            }
-                            
-                            // Match if location = tile_1 OR card_id matches (for web compatibility)
-                            val matches = locationValue?.toString() == locationKey || 
-                                         cardIdValue?.toString() == locationKey ||
-                                         cardIdValue?.toString()?.contains("tile_1") == true
-                            
-                            if (matches) {
-                                foundCard = card
-                                try {
-                                    val getIdMethod = card.javaClass.getMethod("getId")
-                                    val cardId = getIdMethod.invoke(card) as? String
-                                    BrazeLogManager.logContentCardMatched(locationKey, cardId)
-                                } catch (e: Exception) {
-                                    BrazeLogManager.logContentCardMatched(locationKey, null)
-                                }
-                                break
-                            }
-                        }
-                    } catch (e: Exception) {
-                        continue
-                    }
-                }
-                
-                contentCard = foundCard
-                hasCard = foundCard != null
-            }
             
-            // Cleanup: Unsubscribe when component is removed
-            onDispose {
-                BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
-            }
+        // Cleanup: Unsubscribe when component is removed
+        onDispose {
+            BrazeUserSync.unsubscribeFromContentCardsUpdates(context, subscription)
         }
     }
     
