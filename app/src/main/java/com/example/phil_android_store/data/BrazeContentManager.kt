@@ -94,8 +94,8 @@ object BrazeContentManager {
     
     /**
      * Refresh all content after an event or changeUser.
-     * Only updates cache if content actually changed.
-     * Returns true if content changed, false otherwise.
+     * Always updates cache (even if content is null) to remove old content.
+     * Includes retry logic with delays to handle latency.
      */
     fun refreshAllContent(context: Context, onContentChanged: (() -> Unit)? = null) {
         scope.launch {
@@ -103,47 +103,80 @@ object BrazeContentManager {
             BrazeUserSync.requestBannerRefresh(context, allBannerPlacementIds)
             BrazeUserSync.requestContentCardsRefresh(context)
             
-            // Wait a bit, then check for changes
+            // First attempt after 500ms
             delay(500)
-            
-            var bannersChanged = false
-            var cardsChanged = false
-            
-            // Check banners for changes
-            for (placementId in allBannerPlacementIds) {
-                val newBanner = BrazeUserSync.getBanner(context, placementId)
-                val cachedEntry = bannerCache[placementId]
-                val newBannerId = getBannerId(newBanner)
-                
-                if (newBannerId != cachedEntry?.getBannerId()) {
-                    // Content changed - update cache
-                    bannerCache[placementId] = BannerCacheEntry(
-                        banner = newBanner,
-                        cachedBannerId = newBannerId,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    bannersChanged = true
-                }
-            }
-            
-            // Check content cards for changes
-            val newCards = BrazeUserSync.getContentCards(context)
-            val newCardsIds = newCards.mapNotNull { getCardId(it) }.sorted()
-            val cachedCardsIds = contentCardsCache.mapNotNull { getCardId(it) }.sorted()
-            
-            if (newCardsIds != cachedCardsIds) {
-                // Content changed - update cache
-                contentCardsCache = newCards
-                contentCardsCacheTimestamp = System.currentTimeMillis()
-                cardsChanged = true
-            }
-            
-            // Notify if any content changed
-            if (bannersChanged || cardsChanged) {
+            if (updateCacheFromBraze(context)) {
                 cacheUpdateTrigger.value++
-                onContentChanged?.invoke()
+            }
+            
+            // Second attempt after 1000ms total (additional 500ms delay)
+            delay(500)
+            if (updateCacheFromBraze(context)) {
+                cacheUpdateTrigger.value++
+            }
+            
+            // Third attempt after 2000ms total (additional 1000ms delay)
+            delay(1000)
+            if (updateCacheFromBraze(context)) {
+                cacheUpdateTrigger.value++
+            }
+            
+            // Final attempt after 3000ms total (additional 1000ms delay)
+            delay(1000)
+            if (updateCacheFromBraze(context)) {
+                cacheUpdateTrigger.value++
+            }
+            
+            // Final notification that refresh completed
+            onContentChanged?.invoke()
+        }
+    }
+    
+    /**
+     * Internal method to update cache from Braze (always updates, even if null)
+     * Returns true if cache was updated, false otherwise
+     */
+    private fun updateCacheFromBraze(context: Context): Boolean {
+        var updated = false
+        
+        // Always update banners (even if null - removes old content)
+        for (placementId in allBannerPlacementIds) {
+            val newBanner = BrazeUserSync.getBanner(context, placementId)
+            val newBannerId = getBannerId(newBanner)
+            val cachedEntry = bannerCache[placementId]
+            
+            // Always update cache (even if null) to remove old banners
+            // Only mark as updated if banner actually changed
+            if (newBannerId != cachedEntry?.getBannerId()) {
+                bannerCache[placementId] = BannerCacheEntry(
+                    banner = newBanner,
+                    cachedBannerId = newBannerId,
+                    timestamp = System.currentTimeMillis()
+                )
+                updated = true
+            } else if (newBanner == null && cachedEntry?.banner != null) {
+                // Banner was removed (became null) - always update
+                bannerCache[placementId] = BannerCacheEntry(
+                    banner = null,
+                    cachedBannerId = null,
+                    timestamp = System.currentTimeMillis()
+                )
+                updated = true
             }
         }
+        
+        // Always update content cards (even if empty - removes old content)
+        val newCards = BrazeUserSync.getContentCards(context)
+        val newCardsIds = newCards.mapNotNull { getCardId(it) }.sorted()
+        val cachedCardsIds = contentCardsCache.mapNotNull { getCardId(it) }.sorted()
+        
+        if (newCardsIds != cachedCardsIds) {
+            contentCardsCache = newCards
+            contentCardsCacheTimestamp = System.currentTimeMillis()
+            updated = true
+        }
+        
+        return updated
     }
     
     /**

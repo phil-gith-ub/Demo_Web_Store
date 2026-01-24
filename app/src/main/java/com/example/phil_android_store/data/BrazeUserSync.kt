@@ -120,12 +120,15 @@ object BrazeUserSync {
                 lastSent.copy(activeMember = true)
             )
             
-            // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
-            brazeInstance.requestImmediateDataFlush()
+        // Braze SDK: Flush data to ensure attribute is sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
         }
         
+        // Clear cache immediately to remove old user's content
+        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        
         // Refresh all banners and content cards after changeUser
-        // Only updates cache if content actually changed
+        // Includes retry logic with delays to handle latency
         com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
@@ -253,12 +256,15 @@ object BrazeUserSync {
                 LastSentValues(activeMember = false)
             )
             
-            // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
-            brazeInstance.requestImmediateDataFlush()
+        // Braze SDK: Flush data to ensure attributes are sent to Braze immediately
+        brazeInstance.requestImmediateDataFlush()
         }
         
+        // Clear cache immediately to remove old user's content
+        com.example.phil_android_store.data.BrazeContentManager.clearCache()
+        
         // Refresh all banners and content cards after changeUser
-        // Only updates cache if content actually changed
+        // Includes retry logic with delays to handle latency
         com.example.phil_android_store.data.BrazeContentManager.refreshAllContent(context)
     }
     
