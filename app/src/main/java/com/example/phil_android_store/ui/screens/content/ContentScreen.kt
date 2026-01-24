@@ -1862,19 +1862,49 @@ fun TileBanner(
                             
                             webViewClient = object : android.webkit.WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {
+                                    // Check if the URL is a philstore deep link
+                                    if (url != null && url.startsWith("philstore://")) {
+                                        try {
+                                            // Parse the URI (handles URL encoding automatically)
+                                            val uri = android.net.Uri.parse(url)
+                                            
+                                            // Create an intent to handle the deep link (matching in-app message handler)
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                            intent.setPackage(ctx.packageName)
+                                            
+                                            // Check if MainActivity can handle this intent
+                                            if (intent.resolveActivity(ctx.packageManager) != null) {
+                                                ctx.startActivity(intent)
+                                            }
+                                            
+                                            // Return true to indicate we handled the URL
+                                            return true
+                                        } catch (e: Exception) {
+                                            // If something goes wrong, let WebView handle it
+                                            return false
+                                        }
+                                    }
+                                    // For other URLs, let WebView handle them normally
+                                    return false
+                                }
+                                
+                                // Also override the newer API method (Android 24+)
+                                @android.annotation.SuppressLint("NewApi")
+                                override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                                    val url = request?.url?.toString()
                                     if (url != null && url.startsWith("philstore://")) {
                                         try {
                                             val uri = android.net.Uri.parse(url)
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
-                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
                                             intent.setPackage(ctx.packageName)
-                                            val resolvedActivity = intent.resolveActivity(ctx.packageManager)
-                                            if (resolvedActivity != null) {
+                                            if (intent.resolveActivity(ctx.packageManager) != null) {
                                                 ctx.startActivity(intent)
                                             }
                                             return true
                                         } catch (e: Exception) {
-                                            // Error handling deep link
+                                            return false
                                         }
                                     }
                                     return false
@@ -2159,6 +2189,9 @@ fun TileBanner(
                                                 }
                                                 
                                                 window._originalOpen = window.open;
+                                                window._originalAssign = window.location.assign;
+                                                window._originalReplace = window.location.replace;
+                                                
                                                 window.open = function(url, target, features) {
                                                     if (url && url.startsWith('philstore://')) {
                                                         if (handleDeepLink(url)) return null;
@@ -2246,6 +2279,8 @@ fun TileBanner(
                                             </html>
                                         """.trimIndent()
                                         
+                                        // Set WebViewClient before loading HTML
+                                        webView.webViewClient = customWebViewClient
                                         webView.loadDataWithBaseURL(null, htmlWithInterceptors, "text/html", "UTF-8", null)
                                         
                                         webView.postDelayed({
