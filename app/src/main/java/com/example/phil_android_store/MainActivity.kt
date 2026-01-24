@@ -52,6 +52,8 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -189,6 +191,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@androidx.compose.foundation.ExperimentalFoundationApi
+@androidx.compose.ui.ExperimentalComposeUiApi
 @PreviewScreenSizes
 @Composable
 fun Phil_Android_StoreApp(
