@@ -1323,6 +1323,82 @@ fun ContentBanner(
                                         null
                                     )
                                     Log.d("BrazeBanner", "Loaded HTML content with custom WebViewClient")
+                                    
+                                    // Inject JavaScript after HTML loads (same as insertBanner path)
+                                    webView.postDelayed({
+                                        try {
+                                            val jsCode = """
+                                                (function() {
+                                                    // Function to handle deep links
+                                                    function handleDeepLink(url) {
+                                                        if (url && url.startsWith('philstore://')) {
+                                                            // Try JavaScript interface first
+                                                            if (window.AndroidDeepLinkHandler) {
+                                                                window.AndroidDeepLinkHandler.handleDeepLink(url);
+                                                                return true;
+                                                            }
+                                                            // Fallback to location change (will be caught by WebViewClient)
+                                                            window.location.href = url;
+                                                            return true;
+                                                        }
+                                                        return false;
+                                                    }
+                                                    
+                                                    // Intercept all clicks
+                                                    document.addEventListener('click', function(e) {
+                                                        var target = e.target;
+                                                        while (target && target.tagName !== 'A') {
+                                                            target = target.parentElement;
+                                                        }
+                                                        if (target && target.href) {
+                                                            if (handleDeepLink(target.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                return false;
+                                                            }
+                                                        }
+                                                    }, true);
+                                                    
+                                                    // Also intercept all existing links
+                                                    var links = document.querySelectorAll('a[href^="philstore://"]');
+                                                    links.forEach(function(link) {
+                                                        link.addEventListener('click', function(e) {
+                                                            if (handleDeepLink(this.href)) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                return false;
+                                                            }
+                                                        }, true);
+                                                    });
+                                                    
+                                                    // Monitor for dynamically added links
+                                                    var observer = new MutationObserver(function(mutations) {
+                                                        mutations.forEach(function(mutation) {
+                                                            mutation.addedNodes.forEach(function(node) {
+                                                                if (node.nodeType === 1) {
+                                                                    var newLinks = node.querySelectorAll ? node.querySelectorAll('a[href^="philstore://"]') : [];
+                                                                    newLinks.forEach(function(link) {
+                                                                        link.addEventListener('click', function(e) {
+                                                                            if (handleDeepLink(this.href)) {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                return false;
+                                                                            }
+                                                                        }, true);
+                                                                    });
+                                                                }
+                                                            });
+                                                        });
+                                                    });
+                                                    observer.observe(document.body, { childList: true, subtree: true });
+                                                })();
+                                            """.trimIndent()
+                                            webView.evaluateJavascript(jsCode, null)
+                                            Log.d("BrazeBanner", "Injected JavaScript for getHtml path")
+                                        } catch (e: Exception) {
+                                            Log.e("BrazeBanner", "Error injecting JavaScript for getHtml: ${e.message}", e)
+                                        }
+                                    }, 500)
                                 }
                             } catch (e2: Exception) {
                                 // Both methods failed - banner might not be renderable
