@@ -42,12 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import kotlin.OptIn
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -374,48 +375,64 @@ fun Phil_Android_StoreApp(
                             onBack = { showPurchaseHistory = false }
                         )
                     } else {
-                        when (currentDestination) {
-                            AppDestinations.HOME -> {
-                                StoreScreen(
-                                    bannerContent = bannerContent,
-                                    onShowBannerMessage = { }, // No longer needed, handled internally
-                                    initialCategory = if (showVipTab) "VIP" else null,
-                                    refreshKey = refreshKey,
-                                    cartManager = cartManager,
-                                    onCartUpdated = {
-                                        // Update cart count immediately when item is added
-                                        cartItemCount = cartManager.cartItemCount
-                                    }
-                                )
-                            }
-                            AppDestinations.CART -> {
-                                CartScreen(
-                                    cartManager = cartManager,
-                                    onCartUpdated = {
-                                        // Update cart count immediately when cart changes
-                                        cartItemCount = cartManager.cartItemCount
-                                    }
-                                )
-                            }
-                            AppDestinations.CONTENT -> {
+                        // Pre-load ContentScreen in background (always composed, only refreshes when cache updates)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val isContentVisible = currentDestination == AppDestinations.CONTENT
+                            
+                            // Pre-load ContentScreen in background (always composed, hidden when not active)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .alpha(if (isContentVisible) 1f else 0f)
+                                    .then(if (isContentVisible) Modifier else Modifier.size(1.dp))
+                            ) {
                                 ContentScreen()
                             }
-                            AppDestinations.PROFILE -> {
-                                ProfileScreen(
-                                    onDarkModeChanged = { enabled ->
-                                        isDarkMode = enabled
-                                        // Braze SDK: Log custom event when dark mode is enabled
-                                        if (enabled) {
-                                            BrazeUserSync.logEnabledDarkMode(context)
-                                        }
-                                    },
-                                    onLoginStateChanged = {
-                                        refreshKey++ // Trigger refresh in StoreScreen
-                                    },
-                                    onNavigateToPurchaseHistory = {
-                                        showPurchaseHistory = true
+                            
+                            // Show other screens on top when active
+                            if (!isContentVisible) {
+                                when (currentDestination) {
+                                    AppDestinations.HOME -> {
+                                        StoreScreen(
+                                            bannerContent = bannerContent,
+                                            onShowBannerMessage = { }, // No longer needed, handled internally
+                                            initialCategory = if (showVipTab) "VIP" else null,
+                                            refreshKey = refreshKey,
+                                            cartManager = cartManager,
+                                            onCartUpdated = {
+                                                // Update cart count immediately when item is added
+                                                cartItemCount = cartManager.cartItemCount
+                                            }
+                                        )
                                     }
-                                )
+                                    AppDestinations.CART -> {
+                                        CartScreen(
+                                            cartManager = cartManager,
+                                            onCartUpdated = {
+                                                // Update cart count immediately when cart changes
+                                                cartItemCount = cartManager.cartItemCount
+                                            }
+                                        )
+                                    }
+                                    AppDestinations.PROFILE -> {
+                                        ProfileScreen(
+                                            onDarkModeChanged = { enabled ->
+                                                isDarkMode = enabled
+                                                // Braze SDK: Log custom event when dark mode is enabled
+                                                if (enabled) {
+                                                    BrazeUserSync.logEnabledDarkMode(context)
+                                                }
+                                            },
+                                            onLoginStateChanged = {
+                                                refreshKey++ // Trigger refresh in StoreScreen
+                                            },
+                                            onNavigateToPurchaseHistory = {
+                                                showPurchaseHistory = true
+                                            }
+                                        )
+                                    }
+                                    else -> { }
+                                }
                             }
                         }
                     }
