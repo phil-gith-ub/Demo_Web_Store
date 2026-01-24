@@ -50,9 +50,16 @@ fun BrazeBanner(
     var banner by remember(placementId) { mutableStateOf<Any?>(cachedBanner) }
     var shouldRender by remember(placementId) { mutableStateOf(false) }
     
-    // Update banner when cache changes
+    // Update banner when cache changes, or fetch directly if cache is empty
     LaunchedEffect(cachedBanner) {
-        banner = cachedBanner
+        if (cachedBanner != null) {
+            // Use cached banner
+            banner = cachedBanner
+        } else {
+            // Cache is empty - fetch directly from Braze as fallback
+            banner = BrazeUserSync.getBanner(context, placementId)
+        }
+        
         onBannerUpdate?.invoke(banner)
         
         // Check if banner exists and is not a control variant

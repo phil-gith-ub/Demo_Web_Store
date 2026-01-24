@@ -58,17 +58,34 @@ object BrazeContentManager {
     /**
      * Pre-load all banners and content cards on session start.
      * Should be called once when the app starts or after changeUser.
+     * Caches immediately, then refreshes with multiple retries to catch content as soon as available.
      */
     fun preloadAllContent(context: Context) {
+        // Request refresh immediately
+        BrazeUserSync.requestBannerRefresh(context, allBannerPlacementIds)
+        BrazeUserSync.requestContentCardsRefresh(context)
+        
+        // Cache immediately (may be empty initially, but components will observe updates)
+        cacheAllBanners(context)
+        cacheAllContentCards(context)
+        cacheUpdateTrigger.value++
+        
+        // Retry multiple times with increasing delays to catch content as soon as it's available
         scope.launch {
-            // Pre-load all banners
-            BrazeUserSync.requestBannerRefresh(context, allBannerPlacementIds)
+            // First retry after 300ms
+            delay(300)
+            cacheAllBanners(context)
+            cacheAllContentCards(context)
+            cacheUpdateTrigger.value++
             
-            // Pre-load content cards
-            BrazeUserSync.requestContentCardsRefresh(context)
+            // Second retry after 600ms
+            delay(300)
+            cacheAllBanners(context)
+            cacheAllContentCards(context)
+            cacheUpdateTrigger.value++
             
-            // Wait for initial load, then cache
-            delay(800)
+            // Final retry after 1200ms total
+            delay(600)
             cacheAllBanners(context)
             cacheAllContentCards(context)
             cacheUpdateTrigger.value++
@@ -238,8 +255,10 @@ object BrazeContentManager {
  */
 @Composable
 fun rememberCachedBanner(placementId: String): Any? {
-    val updateTrigger = BrazeContentManager.getUpdateTriggerState()
-    return remember(placementId, updateTrigger.value) {
+    val updateTriggerState = BrazeContentManager.getUpdateTriggerState()
+    // Observe state changes using 'by' to trigger recomposition
+    val updateTrigger by updateTriggerState
+    return remember(placementId, updateTrigger) {
         BrazeContentManager.getCachedBanner(placementId)
     }
 }
@@ -249,8 +268,10 @@ fun rememberCachedBanner(placementId: String): Any? {
  */
 @Composable
 fun rememberCachedContentCards(): List<Any> {
-    val updateTrigger = BrazeContentManager.getUpdateTriggerState()
-    return remember(updateTrigger.value) {
+    val updateTriggerState = BrazeContentManager.getUpdateTriggerState()
+    // Observe state changes using 'by' to trigger recomposition
+    val updateTrigger by updateTriggerState
+    return remember(updateTrigger) {
         BrazeContentManager.getCachedContentCards()
     }
 }
