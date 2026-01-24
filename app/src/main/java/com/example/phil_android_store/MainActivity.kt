@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlin.OptIn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
@@ -52,8 +53,6 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.braze.ui.inappmessage.BrazeInAppMessageManager
 import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -86,6 +85,7 @@ class MainActivity : ComponentActivity() {
         val initialVipCategory = getDeepLinkCategory(intent)
         
         setContent {
+            @OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
             Phil_Android_StoreApp(
                 initialDestination = initialDestination,
                 initialVipCategory = initialVipCategory,
@@ -191,8 +191,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@androidx.compose.foundation.ExperimentalFoundationApi
-@androidx.compose.ui.ExperimentalComposeUiApi
 @androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 @PreviewScreenSizes
 @Composable
@@ -395,7 +393,6 @@ fun Phil_Android_StoreApp(
                                     .zIndex(if (isHomeVisible) 1f else 0f) // Visible screen on top
                                     .alpha(if (isHomeVisible) 1f else 0f)
                                     .then(if (isHomeVisible) Modifier else Modifier.size(1.dp))
-                                    .then(if (!isHomeVisible) Modifier.pointerInteropFilter { true } else Modifier) // Block touch events when hidden
                             ) {
                                 StoreScreen(
                                     bannerContent = bannerContent,
@@ -417,7 +414,6 @@ fun Phil_Android_StoreApp(
                                     .zIndex(if (isCartVisible) 1f else 0f) // Visible screen on top
                                     .alpha(if (isCartVisible) 1f else 0f)
                                     .then(if (isCartVisible) Modifier else Modifier.size(1.dp))
-                                    .then(if (!isCartVisible) Modifier.pointerInteropFilter { true } else Modifier) // Block touch events when hidden
                             ) {
                                 CartScreen(
                                     cartManager = cartManager,
@@ -435,7 +431,6 @@ fun Phil_Android_StoreApp(
                                     .zIndex(if (isContentVisible) 1f else 0f) // Visible screen on top
                                     .alpha(if (isContentVisible) 1f else 0f)
                                     .then(if (isContentVisible) Modifier else Modifier.size(1.dp))
-                                    .then(if (!isContentVisible) Modifier.pointerInteropFilter { true } else Modifier) // Block touch events when hidden
                             ) {
                                 ContentScreen()
                             }
