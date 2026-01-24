@@ -21,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,24 +83,18 @@ fun ContentScreen() {
         BrazeLogManager.logScreenEntered("Content Page")
     }
     
-    // Pull-to-refresh state
-    val pullToRefreshState = rememberPullToRefreshState()
-    
-    // Handle refresh when pulled
-    LaunchedEffect(pullToRefreshState.isRefreshing) {
-        if (pullToRefreshState.isRefreshing) {
-            isRefreshing = true
-            // Force refresh all content with data flush (flushes IAM and all banners)
-            BrazeContentManager.forceRefreshAllContent(context) {
-                isRefreshing = false
-                pullToRefreshState.endRefresh()
-                notificationMessage = "Content refreshed"
-            }
-        }
-    }
-    
     PullToRefreshBox(
-        state = pullToRefreshState,
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            scope.launch {
+                // Force refresh all content with data flush (flushes IAM and all banners)
+                BrazeContentManager.forceRefreshAllContent(context) {
+                    isRefreshing = false
+                    notificationMessage = "Content refreshed"
+                }
+            }
+        },
         modifier = Modifier.fillMaxSize()
     ) {
         Box(
