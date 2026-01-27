@@ -66,6 +66,7 @@ import com.example.phil_android_store.data.BrazeLogEntry
 import com.example.phil_android_store.data.BrazeLogManager
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import org.json.JSONArray
 
 /**
  * Braze SDK Logs screen - displays all SDK interactions in readable format
@@ -189,11 +190,7 @@ fun BrazeLogsScreen(
                                 val typeAbbr = log.type.name.take(3).lowercase()
                                 val baseLine = "${log.formattedTime} $typeAbbr ${log.event}"
                                 if (log.payload != null && log.payload.isNotEmpty()) {
-                                    val payloadJson = try {
-                                        JSONObject(log.payload).toString(2)
-                                    } catch (e: Exception) {
-                                        log.payload.toString()
-                                    }
+                                    val payloadJson = mapToJsonString(log.payload) ?: log.payload.toString()
                                     "$baseLine\n$payloadJson"
                                 } else {
                                     baseLine
@@ -308,6 +305,72 @@ fun BrazeLogsScreen(
 }
 
 /**
+ * Helper function to safely convert Map to JSON string
+ */
+private fun mapToJsonString(payload: Map<String, Any>?): String? {
+    if (payload == null || payload.isEmpty()) return null
+    return try {
+        val jsonObject = JSONObject()
+        payload.forEach { (key, value) ->
+            when (value) {
+                is Map<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    jsonObject.put(key, mapToJsonObject(value as Map<String, Any>))
+                }
+                is List<*> -> {
+                    jsonObject.put(key, listToJsonArray(value))
+                }
+                is String -> jsonObject.put(key, value)
+                is Number -> jsonObject.put(key, value)
+                is Boolean -> jsonObject.put(key, value)
+                else -> jsonObject.put(key, value.toString())
+            }
+        }
+        jsonObject.toString(2)
+    } catch (e: Exception) {
+        payload.toString()
+    }
+}
+
+private fun mapToJsonObject(map: Map<String, Any>): JSONObject {
+    val jsonObject = JSONObject()
+    map.forEach { (key, value) ->
+        when (value) {
+            is Map<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                jsonObject.put(key, mapToJsonObject(value as Map<String, Any>))
+            }
+            is List<*> -> {
+                jsonObject.put(key, listToJsonArray(value))
+            }
+            is String -> jsonObject.put(key, value)
+            is Number -> jsonObject.put(key, value)
+            is Boolean -> jsonObject.put(key, value)
+            else -> jsonObject.put(key, value.toString())
+        }
+    }
+    return jsonObject
+}
+
+private fun listToJsonArray(list: List<*>): JSONArray {
+    val jsonArray = JSONArray()
+    list.forEach { item ->
+        when (item) {
+            is Map<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                jsonArray.put(mapToJsonObject(item as Map<String, Any>))
+            }
+            is List<*> -> jsonArray.put(listToJsonArray(item))
+            is String -> jsonArray.put(item)
+            is Number -> jsonArray.put(item)
+            is Boolean -> jsonArray.put(item)
+            else -> jsonArray.put(item?.toString() ?: "null")
+        }
+    }
+    return jsonArray
+}
+
+/**
  * Individual log entry card - raw code style format
  */
 @Composable
@@ -331,11 +394,7 @@ private fun LogEntryCard(
     
     // Format payload as JSON string
     val payloadJson = if (hasPayload) {
-        try {
-            JSONObject(logEntry.payload).toString(2)
-        } catch (e: Exception) {
-            logEntry.payload.toString()
-        }
+        mapToJsonString(logEntry.payload)
     } else null
     
     // Parse different clickable patterns:
