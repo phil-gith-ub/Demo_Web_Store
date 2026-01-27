@@ -16,12 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.heightIn
@@ -33,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -398,7 +398,6 @@ private fun listToJsonArray(list: List<*>, maxDepth: Int = 10): JSONArray {
 /**
  * Individual log entry card - raw code style format
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LogEntryCard(
     logEntry: BrazeLogEntry,
@@ -601,18 +600,7 @@ private fun LogEntryCard(
     // We'll use a simple truncation approach
     
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {
-                    if (hasPayload) {
-                        onToggleExpand()
-                    }
-                },
-                onLongClick = {
-                    onCopyLine(fullLogLine)
-                }
-            ),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -624,7 +612,15 @@ private fun LogEntryCard(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (hasPayload) {
+                            Modifier.clickable { onToggleExpand() }
+                        } else {
+                            Modifier
+                        }
+                    ),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = if (hasPayload && isExpanded) Alignment.Top else Alignment.CenterVertically
             ) {
@@ -717,6 +713,19 @@ private fun LogEntryCard(
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         overflow = TextOverflow.Ellipsis,
                         maxLines = 1
+                    )
+                }
+                
+                // Copy button (small icon on the right)
+                IconButton(
+                    onClick = { onCopyLine(fullLogLine) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy log line",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
             }
