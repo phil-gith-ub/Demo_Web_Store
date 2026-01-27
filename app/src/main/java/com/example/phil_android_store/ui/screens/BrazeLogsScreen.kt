@@ -32,7 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.CopyAll
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -612,25 +613,20 @@ private fun LogEntryCard(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (hasPayload) {
-                            Modifier.clickable { onToggleExpand() }
-                        } else {
-                            Modifier
-                        }
-                    ),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = if (hasPayload && isExpanded) Alignment.Top else Alignment.CenterVertically
             ) {
-                // Time
+                // Time - clickable to copy
                 Text(
                     text = logEntry.formattedTime,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.width(70.dp),
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    modifier = Modifier
+                        .width(70.dp)
+                        .clickable { onCopyLine(fullLogLine) },
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    textDecoration = TextDecoration.Underline
                 )
                 
                 // Type badge (no gap - spacing handled by Row)
@@ -716,17 +712,34 @@ private fun LogEntryCard(
                     )
                 }
                 
-                // Copy button (small icon on the right)
-                IconButton(
-                    onClick = { onCopyLine(fullLogLine) },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy log line",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                // Expand/collapse arrow (only for entries with payloads)
+                if (hasPayload) {
+                    IconButton(
+                        onClick = { onToggleExpand() },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isExpanded) "Collapse" else "Expand",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+                
+                // Copy icon (only shown when expanded)
+                if (isExpanded) {
+                    IconButton(
+                        onClick = { onCopyLine(fullLogLine) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy log line",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
         }
