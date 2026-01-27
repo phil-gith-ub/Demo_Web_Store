@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import android.util.Log
 import com.example.phil_android_store.data.BrazeLogEntry
 import com.example.phil_android_store.data.BrazeLogManager
 import kotlinx.coroutines.launch
@@ -247,25 +248,57 @@ fun BrazeLogsScreen(
                         items = logs,
                         key = { it.timestamp }
                     ) { logEntry ->
-                        LogEntryCard(
-                            logEntry = logEntry,
-                            onCopyLine = { lineText ->
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("Log Entry", lineText)
-                                clipboard.setPrimaryClip(clip)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Log line copied")
+                        try {
+                            Log.d("BrazeLogsScreen", "Rendering log item: ${logEntry.event}, timestamp: ${logEntry.timestamp}")
+                            val isExpanded = expandedEntries.contains(logEntry.timestamp)
+                            Log.d("BrazeLogsScreen", "Is expanded: $isExpanded, has payload: ${logEntry.payload != null && logEntry.payload.isNotEmpty()}")
+                            
+                            LogEntryCard(
+                                logEntry = logEntry,
+                                onCopyLine = { lineText ->
+                                    try {
+                                        Log.d("BrazeLogsScreen", "Copying line, length: ${lineText.length}")
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = ClipData.newPlainText("Log Entry", lineText)
+                                        clipboard.setPrimaryClip(clip)
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Log line copied")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("BrazeLogsScreen", "Error copying line: ${e.message}", e)
+                                    }
+                                },
+                                isExpanded = isExpanded,
+                                onToggleExpand = {
+                                    try {
+                                        Log.d("BrazeLogsScreen", "Toggling expand for timestamp: ${logEntry.timestamp}")
+                                        expandedEntries = if (expandedEntries.contains(logEntry.timestamp)) {
+                                            expandedEntries - logEntry.timestamp
+                                        } else {
+                                            expandedEntries + logEntry.timestamp
+                                        }
+                                        Log.d("BrazeLogsScreen", "New expanded count: ${expandedEntries.size}")
+                                    } catch (e: Exception) {
+                                        Log.e("BrazeLogsScreen", "Error toggling expand: ${e.message}", e)
+                                    }
                                 }
-                            },
-                            isExpanded = expandedEntries.contains(logEntry.timestamp),
-                            onToggleExpand = {
-                                expandedEntries = if (expandedEntries.contains(logEntry.timestamp)) {
-                                    expandedEntries - logEntry.timestamp
-                                } else {
-                                    expandedEntries + logEntry.timestamp
-                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("BrazeLogsScreen", "Error rendering log entry: ${e.message}", e)
+                            // Render a simple error card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Text(
+                                    text = "Error rendering log: ${e.message}",
+                                    modifier = Modifier.padding(8.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -407,6 +440,13 @@ private fun LogEntryCard(
     onToggleExpand: () -> Unit
 ) {
     val context = LocalContext.current
+    
+    try {
+        Log.d("LogEntryCard", "Rendering log entry: ${logEntry.event}, expanded: $isExpanded")
+    } catch (e: Exception) {
+        Log.e("LogEntryCard", "Error in initial setup: ${e.message}", e)
+    }
+    
     val typeColor = when (logEntry.type) {
         BrazeLogEntry.LogType.INFO -> MaterialTheme.colorScheme.primary
         BrazeLogEntry.LogType.REQUEST -> MaterialTheme.colorScheme.secondary
@@ -415,7 +455,13 @@ private fun LogEntryCard(
         BrazeLogEntry.LogType.ERROR -> MaterialTheme.colorScheme.error
     }
     
-    val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
+    val hasPayload = try {
+        logEntry.payload != null && logEntry.payload.isNotEmpty()
+    } catch (e: Exception) {
+        Log.e("LogEntryCard", "Error checking payload: ${e.message}", e)
+        false
+    }
+    
     val eventText = logEntry.event
     
     // Format payload as JSON string - safely compute during composition
@@ -423,14 +469,18 @@ private fun LogEntryCard(
     val payloadJson = remember(logEntry.payload) {
         try {
             if (hasPayload && logEntry.payload != null) {
-                mapToJsonString(logEntry.payload) ?: logEntry.payload.toString()
+                val json = mapToJsonString(logEntry.payload)
+                Log.d("LogEntryCard", "Payload JSON conversion successful: ${json != null}")
+                json ?: logEntry.payload.toString()
             } else null
         } catch (e: Throwable) {
+            Log.e("LogEntryCard", "Error converting payload to JSON: ${e.message}", e)
             // Fallback to string representation if JSON conversion fails
             // Catch Throwable to catch all possible exceptions including OutOfMemoryError, StackOverflowError, etc.
             try {
                 logEntry.payload?.toString() ?: null
             } catch (e2: Throwable) {
+                Log.e("LogEntryCard", "Error in payload toString fallback: ${e2.message}", e2)
                 null // If even toString fails, just return null
             }
         }
@@ -624,7 +674,14 @@ private fun LogEntryCard(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     modifier = Modifier
                         .width(70.dp)
-                        .clickable { onCopyLine(fullLogLine) },
+                        .clickable { 
+                            try {
+                                Log.d("LogEntryCard", "Timestamp clicked, copying line")
+                                onCopyLine(fullLogLine) 
+                            } catch (e: Exception) {
+                                Log.e("LogEntryCard", "Error copying line: ${e.message}", e)
+                            }
+                        },
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     textDecoration = TextDecoration.Underline
                 )
@@ -714,31 +771,56 @@ private fun LogEntryCard(
                 
                 // Expand/collapse arrow (only for entries with payloads)
                 if (hasPayload) {
-                    IconButton(
-                        onClick = { onToggleExpand() },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+                    try {
+                        Log.d("LogEntryCard", "Rendering expand arrow, hasPayload: $hasPayload, isExpanded: $isExpanded")
+                        IconButton(
+                            onClick = { 
+                                try {
+                                    Log.d("LogEntryCard", "Expand button clicked")
+                                    onToggleExpand() 
+                                } catch (e: Exception) {
+                                    Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("LogEntryCard", "Error rendering expand button: ${e.message}", e)
                     }
+                } else {
+                    Log.d("LogEntryCard", "No payload, not showing expand arrow")
                 }
                 
                 // Copy icon (only shown when expanded)
                 if (isExpanded) {
-                    IconButton(
-                        onClick = { onCopyLine(fullLogLine) },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy log line",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+                    try {
+                        IconButton(
+                            onClick = { 
+                                try {
+                                    Log.d("LogEntryCard", "Copy icon clicked")
+                                    onCopyLine(fullLogLine) 
+                                } catch (e: Exception) {
+                                    Log.e("LogEntryCard", "Error copying from icon: ${e.message}", e)
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy log line",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } catch (e: Exception) {
+                        Log.e("LogEntryCard", "Error rendering copy icon: ${e.message}", e)
                     }
                 }
             }
