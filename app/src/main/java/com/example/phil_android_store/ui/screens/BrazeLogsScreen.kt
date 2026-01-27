@@ -94,7 +94,7 @@ fun BrazeLogsScreen(
     }
     var showClearDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    var expandedEntries by remember { mutableStateOf(setOf<Long>()) }
+    var expandedEntries by remember { mutableStateOf(setOf<String>()) }
     
     // Auto-scroll to top when logs update
     LaunchedEffect(logs.size) {
@@ -246,10 +246,11 @@ fun BrazeLogsScreen(
                 ) {
                     items(
                         items = logs,
-                        key = { it.timestamp }
+                        key = { log -> "${log.timestamp}_${log.event}_${log.type}" }
                     ) { logEntry ->
                         Log.d("BrazeLogsScreen", "Rendering log item: ${logEntry.event}, timestamp: ${logEntry.timestamp}")
-                        val isExpanded = expandedEntries.contains(logEntry.timestamp)
+                        val logKey = "${logEntry.timestamp}_${logEntry.event}_${logEntry.type}"
+                        val isExpanded = expandedEntries.contains(logKey)
                         Log.d("BrazeLogsScreen", "Is expanded: $isExpanded, has payload: ${logEntry.payload != null && logEntry.payload.isNotEmpty()}")
                         
                         LogEntryCard(
@@ -270,11 +271,11 @@ fun BrazeLogsScreen(
                             isExpanded = isExpanded,
                             onToggleExpand = {
                                 try {
-                                    Log.d("BrazeLogsScreen", "Toggling expand for timestamp: ${logEntry.timestamp}")
-                                    expandedEntries = if (expandedEntries.contains(logEntry.timestamp)) {
-                                        expandedEntries - logEntry.timestamp
+                                    Log.d("BrazeLogsScreen", "Toggling expand for key: $logKey")
+                                    expandedEntries = if (expandedEntries.contains(logKey)) {
+                                        expandedEntries - logKey
                                     } else {
-                                        expandedEntries + logEntry.timestamp
+                                        expandedEntries + logKey
                                     }
                                     Log.d("BrazeLogsScreen", "New expanded count: ${expandedEntries.size}")
                                 } catch (e: Exception) {
