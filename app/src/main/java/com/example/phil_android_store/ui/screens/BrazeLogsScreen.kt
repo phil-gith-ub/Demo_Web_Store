@@ -248,16 +248,13 @@ fun BrazeLogsScreen(
                     itemsIndexed(
                         items = logs
                     ) { index, logEntry ->
-                        Log.d("BrazeLogsScreen", "Rendering log item: ${logEntry.event}, timestamp: ${logEntry.timestamp}, index: $index")
                         val logKey = "${logEntry.timestamp}_${logEntry.event}_${logEntry.type}_$index"
                         val isExpanded = expandedEntries.contains(logKey)
-                        Log.d("BrazeLogsScreen", "Is expanded: $isExpanded, has payload: ${logEntry.payload != null && logEntry.payload.isNotEmpty()}")
                         
                         LogEntryCard(
                             logEntry = logEntry,
                             onCopyLine = { lineText ->
                                 try {
-                                    Log.d("BrazeLogsScreen", "Copying line, length: ${lineText.length}")
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("Log Entry", lineText)
                                     clipboard.setPrimaryClip(clip)
@@ -271,13 +268,11 @@ fun BrazeLogsScreen(
                             isExpanded = isExpanded,
                             onToggleExpand = {
                                 try {
-                                    Log.d("BrazeLogsScreen", "Toggling expand for key: $logKey, index: $index")
                                     expandedEntries = if (expandedEntries.contains(logKey)) {
                                         expandedEntries - logKey
                                     } else {
                                         expandedEntries + logKey
                                     }
-                                    Log.d("BrazeLogsScreen", "New expanded count: ${expandedEntries.size}")
                                 } catch (e: Exception) {
                                     Log.e("BrazeLogsScreen", "Error toggling expand: ${e.message}", e)
                                 }
@@ -424,13 +419,6 @@ private fun LogEntryCard(
     onToggleExpand: () -> Unit
 ) {
     val context = LocalContext.current
-    
-    try {
-        Log.d("LogEntryCard", "Rendering log entry: ${logEntry.event}, expanded: $isExpanded")
-    } catch (e: Exception) {
-        Log.e("LogEntryCard", "Error in initial setup: ${e.message}", e)
-    }
-    
     val typeColor = when (logEntry.type) {
         BrazeLogEntry.LogType.INFO -> MaterialTheme.colorScheme.primary
         BrazeLogEntry.LogType.REQUEST -> MaterialTheme.colorScheme.secondary
@@ -439,12 +427,7 @@ private fun LogEntryCard(
         BrazeLogEntry.LogType.ERROR -> MaterialTheme.colorScheme.error
     }
     
-    val hasPayload = try {
-        logEntry.payload != null && logEntry.payload.isNotEmpty()
-    } catch (e: Exception) {
-        Log.e("LogEntryCard", "Error checking payload: ${e.message}", e)
-        false
-    }
+    val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
     
     val eventText = logEntry.event
     
@@ -453,18 +436,14 @@ private fun LogEntryCard(
     val payloadJson = remember(logEntry.payload) {
         try {
             if (hasPayload && logEntry.payload != null) {
-                val json = mapToJsonString(logEntry.payload)
-                Log.d("LogEntryCard", "Payload JSON conversion successful: ${json != null}")
-                json ?: logEntry.payload.toString()
+                mapToJsonString(logEntry.payload) ?: logEntry.payload.toString()
             } else null
         } catch (e: Throwable) {
-            Log.e("LogEntryCard", "Error converting payload to JSON: ${e.message}", e)
             // Fallback to string representation if JSON conversion fails
             // Catch Throwable to catch all possible exceptions including OutOfMemoryError, StackOverflowError, etc.
             try {
                 logEntry.payload?.toString() ?: null
             } catch (e2: Throwable) {
-                Log.e("LogEntryCard", "Error in payload toString fallback: ${e2.message}", e2)
                 null // If even toString fails, just return null
             }
         }
@@ -660,7 +639,6 @@ private fun LogEntryCard(
                         .width(70.dp)
                         .clickable { 
                             try {
-                                Log.d("LogEntryCard", "Timestamp clicked, copying line")
                                 onCopyLine(fullLogLine) 
                             } catch (e: Exception) {
                                 Log.e("LogEntryCard", "Error copying line: ${e.message}", e)
@@ -750,11 +728,9 @@ private fun LogEntryCard(
                 
                 // Expand/collapse arrow (only for entries with payloads) - always visible when payload exists
                 if (hasPayload) {
-                    Log.d("LogEntryCard", "Rendering expand arrow, hasPayload: $hasPayload, isExpanded: $isExpanded")
                     IconButton(
                         onClick = { 
                             try {
-                                Log.d("LogEntryCard", "Expand button clicked")
                                 onToggleExpand() 
                             } catch (e: Exception) {
                                 Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
@@ -769,8 +745,6 @@ private fun LogEntryCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                } else {
-                    Log.d("LogEntryCard", "No payload, not showing expand arrow")
                 }
                 
                 // Copy icon (only shown when expanded)
@@ -778,7 +752,6 @@ private fun LogEntryCard(
                     IconButton(
                         onClick = { 
                             try {
-                                Log.d("LogEntryCard", "Copy icon clicked")
                                 onCopyLine(fullLogLine) 
                             } catch (e: Exception) {
                                 Log.e("LogEntryCard", "Error copying from icon: ${e.message}", e)
