@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -397,6 +398,7 @@ private fun listToJsonArray(list: List<*>, maxDepth: Int = 10): JSONArray {
 /**
  * Individual log entry card - raw code style format
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LogEntryCard(
     logEntry: BrazeLogEntry,
