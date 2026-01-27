@@ -22,9 +22,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -87,6 +89,7 @@ fun BrazeLogsScreen(
     }
     var showClearDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    var expandedEntries by remember { mutableStateOf(setOf<Long>()) }
     
     // Auto-scroll to top when logs update
     LaunchedEffect(logs.size) {
@@ -184,7 +187,17 @@ fun BrazeLogsScreen(
                         onClick = {
                             val allLogsText = logs.joinToString("\n") { log ->
                                 val typeAbbr = log.type.name.take(3).lowercase()
-                                "${log.formattedTime} $typeAbbr ${log.event}"
+                                val baseLine = "${log.formattedTime} $typeAbbr ${log.event}"
+                                if (log.payload != null && log.payload.isNotEmpty()) {
+                                    val payloadJson = try {
+                                        JSONObject(log.payload).toString(2)
+                                    } catch (e: Exception) {
+                                        log.payload.toString()
+                                    }
+                                    "$baseLine\n$payloadJson"
+                                } else {
+                                    baseLine
+                                }
                             }
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Braze SDK Logs", allLogsText)
@@ -230,7 +243,10 @@ fun BrazeLogsScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(logs) { logEntry ->
+                    items(
+                        items = logs,
+                        key = { it.timestamp }
+                    ) { logEntry ->
                         LogEntryCard(
                             logEntry = logEntry,
                             onCopyLine = { lineText ->
@@ -239,6 +255,14 @@ fun BrazeLogsScreen(
                                 clipboard.setPrimaryClip(clip)
                                 scope.launch {
                                     snackbarHostState.showSnackbar("Log line copied")
+                                }
+                            },
+                            isExpanded = expandedEntries.contains(logEntry.timestamp),
+                            onToggleExpand = {
+                                expandedEntries = if (expandedEntries.contains(logEntry.timestamp)) {
+                                    expandedEntries - logEntry.timestamp
+                                } else {
+                                    expandedEntries + logEntry.timestamp
                                 }
                             }
                         )
@@ -289,10 +313,11 @@ fun BrazeLogsScreen(
 @Composable
 private fun LogEntryCard(
     logEntry: BrazeLogEntry,
-    onCopyLine: (String) -> Unit
+    onCopyLine: (String) -> Unit,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit
 ) {
     val context = LocalContext.current
-    var showPayloadDialog by remember { mutableStateOf(false) }
     val typeColor = when (logEntry.type) {
         BrazeLogEntry.LogType.INFO -> MaterialTheme.colorScheme.primary
         BrazeLogEntry.LogType.REQUEST -> MaterialTheme.colorScheme.secondary
@@ -303,6 +328,15 @@ private fun LogEntryCard(
     
     val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
     val eventText = logEntry.event
+    
+    // Format payload as JSON string
+    val payloadJson = if (hasPayload) {
+        try {
+            JSONObject(logEntry.payload).toString(2)
+        } catch (e: Exception) {
+            logEntry.payload.toString()
+        }
+    } else null
     
     // Parse different clickable patterns:
     // 1. logPurchase('productId') - clickable productId (consolidated format)
@@ -458,14 +492,26 @@ private fun LogEntryCard(
     
     val hasClickable = clickableEventName != null || matchCardLocation != null || cardCountText != null
     
-    // Build full log line text for copying
-    val fullLogLine = "${logEntry.formattedTime} ${logEntry.type.name.take(3).lowercase()} ${logEntry.event}"
+    // Build full log line text for copying (always includes payload if present)
+    val fullLogLine = if (hasPayload && payloadJson != null) {
+        "${logEntry.formattedTime} ${logEntry.type.name.take(3).lowercase()} ${logEntry.event}\n$payloadJson"
+    } else {
+        "${logEntry.formattedTime} ${logEntry.type.name.take(3).lowercase()} ${logEntry.event}"
+    }
+    
+    // Calculate available width for payload display (approximate)
+    // We'll use a simple truncation approach
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
                 detectTapGestures(
+                    onTap = {
+                        if (hasPayload) {
+                            onToggleExpand()
+                        }
+                    },
                     onLongPress = {
                         onCopyLine(fullLogLine)
                     }
@@ -476,106 +522,85 @@ private fun LogEntryCard(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            // Time
-            Text(
-                text = logEntry.formattedTime,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.width(70.dp),
-                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-            )
-            
-            // Type badge (no gap - spacing handled by Row)
-            Surface(
-                color = typeColor.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(3.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = if (hasPayload && isExpanded) Alignment.Top else Alignment.CenterVertically
             ) {
+                // Time
                 Text(
-                    text = logEntry.type.name.take(3).lowercase(),
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = typeColor,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                )
-            }
-            
-            // Event (main content) - with clickable parts if payload exists
-            if (hasClickable) {
-                Text(
-                    annotatedText,
+                    text = logEntry.formattedTime,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showPayloadDialog = true },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.width(70.dp),
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                 )
-            } else {
-                Text(
-                    text = logEntry.event,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                )
-            }
-        }
-    }
-    
-    // Payload dialog
-    if (showPayloadDialog && logEntry.payload != null) {
-        val context = LocalContext.current
-        val payloadJson = try {
-            JSONObject(logEntry.payload).toString(2) // Pretty print with 2-space indent
-        } catch (e: Exception) {
-            logEntry.payload.toString()
-        }
-        
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showPayloadDialog = false },
-            title = {
-                Text("Payload", style = MaterialTheme.typography.titleMedium)
-            },
-            text = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clip = ClipData.newPlainText("Payload", payloadJson)
-                                    clipboard.setPrimaryClip(clip)
-                                }
-                            )
-                        }
+                
+                // Type badge (no gap - spacing handled by Row)
+                Surface(
+                    color = typeColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(3.dp)
                 ) {
                     Text(
-                        text = payloadJson,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
+                        text = logEntry.type.name.take(3).lowercase(),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = typeColor,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                     )
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showPayloadDialog = false }
-                ) {
-                    Text("Close")
+                
+                // Event and payload (main content) - show on same row when collapsed
+                if (hasPayload && payloadJson != null) {
+                    // Show event + payload inline, truncated when collapsed
+                    val displayText = if (isExpanded) {
+                        "$eventText\n$payloadJson"
+                    } else {
+                        // Truncate payload to fit in one line
+                        val combined = "$eventText $payloadJson"
+                        if (combined.length > 150) {
+                            combined.take(150) + "..."
+                        } else {
+                            combined
+                        }
+                    }
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 1
+                    )
+                } else if (hasClickable) {
+                    Text(
+                        annotatedText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                } else {
+                    Text(
+                        text = logEntry.event,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1
+                    )
                 }
             }
-        )
+        }
     }
 }
