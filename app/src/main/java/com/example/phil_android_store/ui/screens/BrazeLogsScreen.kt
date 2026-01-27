@@ -600,15 +600,23 @@ private fun LogEntryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(Unit) {
+            .pointerInput(logEntry.timestamp, hasPayload, isExpanded) {
                 detectTapGestures(
                     onTap = {
                         if (hasPayload) {
-                            onToggleExpand()
+                            try {
+                                onToggleExpand()
+                            } catch (e: Exception) {
+                                // Silently handle any state update errors
+                            }
                         }
                     },
                     onLongPress = {
-                        onCopyLine(fullLogLine)
+                        try {
+                            onCopyLine(fullLogLine)
+                        } catch (e: Exception) {
+                            // Silently handle copy errors
+                        }
                     }
                 )
             },
