@@ -312,59 +312,82 @@ private fun mapToJsonString(payload: Map<String, Any>?): String? {
     return try {
         val jsonObject = JSONObject()
         payload.forEach { (key, value) ->
-            when (value) {
-                is Map<*, *> -> {
-                    @Suppress("UNCHECKED_CAST")
-                    jsonObject.put(key, mapToJsonObject(value as Map<String, Any>))
+            try {
+                when (value) {
+                    is Map<*, *> -> {
+                        @Suppress("UNCHECKED_CAST")
+                        jsonObject.put(key, mapToJsonObject(value as Map<String, Any>, maxDepth = 10))
+                    }
+                    is List<*> -> {
+                        jsonObject.put(key, listToJsonArray(value, maxDepth = 10))
+                    }
+                    is String -> jsonObject.put(key, value)
+                    is Number -> jsonObject.put(key, value)
+                    is Boolean -> jsonObject.put(key, value)
+                    null -> jsonObject.put(key, JSONObject.NULL)
+                    else -> jsonObject.put(key, value.toString())
                 }
-                is List<*> -> {
-                    jsonObject.put(key, listToJsonArray(value))
-                }
-                is String -> jsonObject.put(key, value)
-                is Number -> jsonObject.put(key, value)
-                is Boolean -> jsonObject.put(key, value)
-                else -> jsonObject.put(key, value.toString())
+            } catch (e: Exception) {
+                // Skip problematic entries
+                jsonObject.put(key, "[Error: ${e.message}]")
             }
         }
         jsonObject.toString(2)
     } catch (e: Exception) {
+        // Fallback to simple string representation
         payload.toString()
     }
 }
 
-private fun mapToJsonObject(map: Map<String, Any>): JSONObject {
+private fun mapToJsonObject(map: Map<String, Any>, maxDepth: Int = 10): JSONObject {
+    if (maxDepth <= 0) {
+        return JSONObject().apply { put("error", "Max depth exceeded") }
+    }
     val jsonObject = JSONObject()
     map.forEach { (key, value) ->
-        when (value) {
-            is Map<*, *> -> {
-                @Suppress("UNCHECKED_CAST")
-                jsonObject.put(key, mapToJsonObject(value as Map<String, Any>))
+        try {
+            when (value) {
+                is Map<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    jsonObject.put(key, mapToJsonObject(value as Map<String, Any>, maxDepth - 1))
+                }
+                is List<*> -> {
+                    jsonObject.put(key, listToJsonArray(value, maxDepth - 1))
+                }
+                is String -> jsonObject.put(key, value)
+                is Number -> jsonObject.put(key, value)
+                is Boolean -> jsonObject.put(key, value)
+                null -> jsonObject.put(key, JSONObject.NULL)
+                else -> jsonObject.put(key, value.toString())
             }
-            is List<*> -> {
-                jsonObject.put(key, listToJsonArray(value))
-            }
-            is String -> jsonObject.put(key, value)
-            is Number -> jsonObject.put(key, value)
-            is Boolean -> jsonObject.put(key, value)
-            else -> jsonObject.put(key, value.toString())
+        } catch (e: Exception) {
+            jsonObject.put(key, "[Error: ${e.message}]")
         }
     }
     return jsonObject
 }
 
-private fun listToJsonArray(list: List<*>): JSONArray {
+private fun listToJsonArray(list: List<*>, maxDepth: Int = 10): JSONArray {
+    if (maxDepth <= 0) {
+        return JSONArray().apply { put("[Max depth exceeded]") }
+    }
     val jsonArray = JSONArray()
     list.forEach { item ->
-        when (item) {
-            is Map<*, *> -> {
-                @Suppress("UNCHECKED_CAST")
-                jsonArray.put(mapToJsonObject(item as Map<String, Any>))
+        try {
+            when (item) {
+                is Map<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    jsonArray.put(mapToJsonObject(item as Map<String, Any>, maxDepth - 1))
+                }
+                is List<*> -> jsonArray.put(listToJsonArray(item, maxDepth - 1))
+                is String -> jsonArray.put(item)
+                is Number -> jsonArray.put(item)
+                is Boolean -> jsonArray.put(item)
+                null -> jsonArray.put(JSONObject.NULL)
+                else -> jsonArray.put(item?.toString() ?: "null")
             }
-            is List<*> -> jsonArray.put(listToJsonArray(item))
-            is String -> jsonArray.put(item)
-            is Number -> jsonArray.put(item)
-            is Boolean -> jsonArray.put(item)
-            else -> jsonArray.put(item?.toString() ?: "null")
+        } catch (e: Exception) {
+            jsonArray.put("[Error: ${e.message}]")
         }
     }
     return jsonArray
@@ -392,10 +415,23 @@ private fun LogEntryCard(
     val hasPayload = logEntry.payload != null && logEntry.payload.isNotEmpty()
     val eventText = logEntry.event
     
-    // Format payload as JSON string
-    val payloadJson = if (hasPayload) {
-        mapToJsonString(logEntry.payload)
-    } else null
+    // Format payload as JSON string - safely compute during composition
+    // Use remember to cache the result and prevent recomputation issues
+    val payloadJson = remember(logEntry.payload) {
+        try {
+            if (hasPayload && logEntry.payload != null) {
+                mapToJsonString(logEntry.payload) ?: logEntry.payload.toString()
+            } else null
+        } catch (e: Throwable) {
+            // Fallback to string representation if JSON conversion fails
+            // Catch Throwable to catch all possible exceptions including OutOfMemoryError, StackOverflowError, etc.
+            try {
+                logEntry.payload?.toString() ?: null
+            } catch (e2: Throwable) {
+                null // If even toString fails, just return null
+            }
+        }
+    }
     
     // Parse different clickable patterns:
     // 1. logPurchase('productId') - clickable productId (consolidated format)
@@ -623,6 +659,29 @@ private fun LogEntryCard(
                     } else {
                         // Truncate payload to fit in one line
                         val combined = "$eventText $payloadJson"
+                        if (combined.length > 150) {
+                            combined.take(150) + "..."
+                        } else {
+                            combined
+                        }
+                    }
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 1
+                    )
+                } else if (hasPayload) {
+                    // Payload exists but couldn't be converted to JSON - show fallback
+                    val displayText = if (isExpanded) {
+                        "$eventText\n${logEntry.payload?.toString() ?: ""}"
+                    } else {
+                        val combined = "$eventText ${logEntry.payload?.toString() ?: ""}"
                         if (combined.length > 150) {
                             combined.take(150) + "..."
                         } else {
