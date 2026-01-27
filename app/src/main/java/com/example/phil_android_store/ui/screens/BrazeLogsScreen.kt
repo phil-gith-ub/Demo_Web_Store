@@ -628,7 +628,7 @@ private fun LogEntryCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = if (hasPayload && isExpanded) Alignment.Top else Alignment.CenterVertically
+                verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically
             ) {
                 // Time - clickable to copy
                 Text(
@@ -664,46 +664,34 @@ private fun LogEntryCard(
                 }
                 
                 // Event and payload (main content) - with reserved space for arrow
+                // All rows are expandable - show full text when expanded, truncated when collapsed
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp)
                 ) {
-                    if (hasPayload && payloadJson != null) {
-                        // Show event + payload inline, truncated when collapsed
-                        val displayText = if (isExpanded) {
+                    val displayText = if (isExpanded) {
+                        // When expanded, show event + payload if available
+                        if (hasPayload && payloadJson != null) {
                             "$eventText\n$payloadJson"
-                        } else {
-                            // Truncate payload to fit in one line - leave room for arrow
-                            val combined = "$eventText $payloadJson"
-                            combined // Let TextOverflow.Ellipsis handle truncation
-                        }
-                        Text(
-                            text = displayText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
-                        )
-                    } else if (hasPayload) {
-                        // Payload exists but couldn't be converted to JSON - show fallback
-                        val displayText = if (isExpanded) {
+                        } else if (hasPayload) {
                             "$eventText\n${logEntry.payload?.toString() ?: ""}"
                         } else {
-                            "$eventText ${logEntry.payload?.toString() ?: ""}"
+                            eventText
                         }
-                        Text(
-                            text = displayText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
-                        )
-                    } else if (hasClickable) {
+                    } else {
+                        // When collapsed, show event (truncated) + payload preview if available
+                        if (hasPayload && payloadJson != null) {
+                            "$eventText $payloadJson"
+                        } else if (hasPayload) {
+                            "$eventText ${logEntry.payload?.toString() ?: ""}"
+                        } else {
+                            eventText
+                        }
+                    }
+                    
+                    if (hasClickable && !isExpanded) {
+                        // Show annotated text when collapsed and has clickable parts
                         Text(
                             annotatedText,
                             style = MaterialTheme.typography.bodySmall,
@@ -715,57 +703,34 @@ private fun LogEntryCard(
                         )
                     } else {
                         Text(
-                            text = logEntry.event,
+                            text = displayText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.fillMaxWidth(),
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1
+                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
                         )
                     }
                 }
                 
-                // Expand/collapse arrow (only for entries with payloads) - always visible when payload exists
-                if (hasPayload) {
-                    IconButton(
-                        onClick = { 
-                            try {
-                                onToggleExpand() 
-                            } catch (e: Exception) {
-                                Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
-                            }
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                
-                // Copy icon (only shown when expanded)
-                if (isExpanded && hasPayload) {
-                    IconButton(
-                        onClick = { 
-                            try {
-                                onCopyLine(fullLogLine) 
-                            } catch (e: Exception) {
-                                Log.e("LogEntryCard", "Error copying from icon: ${e.message}", e)
-                            }
-                        },
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy log line",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                // Expand/collapse arrow - always visible for all rows
+                IconButton(
+                    onClick = { 
+                        try {
+                            onToggleExpand() 
+                        } catch (e: Exception) {
+                            Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
+                        }
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
