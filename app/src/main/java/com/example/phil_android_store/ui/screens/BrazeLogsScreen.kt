@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -244,12 +245,11 @@ fun BrazeLogsScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(
-                        items = logs,
-                        key = { log -> "${log.timestamp}_${log.event}_${log.type}" }
-                    ) { logEntry ->
-                        Log.d("BrazeLogsScreen", "Rendering log item: ${logEntry.event}, timestamp: ${logEntry.timestamp}")
-                        val logKey = "${logEntry.timestamp}_${logEntry.event}_${logEntry.type}"
+                    itemsIndexed(
+                        items = logs
+                    ) { index, logEntry ->
+                        Log.d("BrazeLogsScreen", "Rendering log item: ${logEntry.event}, timestamp: ${logEntry.timestamp}, index: $index")
+                        val logKey = "${logEntry.timestamp}_${logEntry.event}_${logEntry.type}_$index"
                         val isExpanded = expandedEntries.contains(logKey)
                         Log.d("BrazeLogsScreen", "Is expanded: $isExpanded, has payload: ${logEntry.payload != null && logEntry.payload.isNotEmpty()}")
                         
@@ -271,7 +271,7 @@ fun BrazeLogsScreen(
                             isExpanded = isExpanded,
                             onToggleExpand = {
                                 try {
-                                    Log.d("BrazeLogsScreen", "Toggling expand for key: $logKey")
+                                    Log.d("BrazeLogsScreen", "Toggling expand for key: $logKey, index: $index")
                                     expandedEntries = if (expandedEntries.contains(logKey)) {
                                         expandedEntries - logKey
                                     } else {
@@ -685,75 +685,70 @@ private fun LogEntryCard(
                     )
                 }
                 
-                // Event and payload (main content) - show on same row when collapsed
-                if (hasPayload && payloadJson != null) {
-                    // Show event + payload inline, truncated when collapsed
-                    val displayText = if (isExpanded) {
-                        "$eventText\n$payloadJson"
-                    } else {
-                        // Truncate payload to fit in one line
-                        val combined = "$eventText $payloadJson"
-                        if (combined.length > 150) {
-                            combined.take(150) + "..."
+                // Event and payload (main content) - with reserved space for arrow
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp)
+                ) {
+                    if (hasPayload && payloadJson != null) {
+                        // Show event + payload inline, truncated when collapsed
+                        val displayText = if (isExpanded) {
+                            "$eventText\n$payloadJson"
                         } else {
-                            combined
+                            // Truncate payload to fit in one line - leave room for arrow
+                            val combined = "$eventText $payloadJson"
+                            combined // Let TextOverflow.Ellipsis handle truncation
                         }
-                    }
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp),
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 1
-                    )
-                } else if (hasPayload) {
-                    // Payload exists but couldn't be converted to JSON - show fallback
-                    val displayText = if (isExpanded) {
-                        "$eventText\n${logEntry.payload?.toString() ?: ""}"
-                    } else {
-                        val combined = "$eventText ${logEntry.payload?.toString() ?: ""}"
-                        if (combined.length > 150) {
-                            combined.take(150) + "..."
+                        Text(
+                            text = displayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
+                        )
+                    } else if (hasPayload) {
+                        // Payload exists but couldn't be converted to JSON - show fallback
+                        val displayText = if (isExpanded) {
+                            "$eventText\n${logEntry.payload?.toString() ?: ""}"
                         } else {
-                            combined
+                            "$eventText ${logEntry.payload?.toString() ?: ""}"
                         }
+                        Text(
+                            text = displayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
+                        )
+                    } else if (hasClickable) {
+                        Text(
+                            annotatedText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1
+                        )
+                    } else {
+                        Text(
+                            text = logEntry.event,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1
+                        )
                     }
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp),
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 1
-                    )
-                } else if (hasClickable) {
-                    Text(
-                        annotatedText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                    )
-                } else {
-                    Text(
-                        text = logEntry.event,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1
-                    )
                 }
                 
-                // Expand/collapse arrow (only for entries with payloads)
+                // Expand/collapse arrow (only for entries with payloads) - always visible when payload exists
                 if (hasPayload) {
                     Log.d("LogEntryCard", "Rendering expand arrow, hasPayload: $hasPayload, isExpanded: $isExpanded")
                     IconButton(
@@ -765,12 +760,12 @@ private fun LogEntryCard(
                                 Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
                             }
                         },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                             contentDescription = if (isExpanded) "Collapse" else "Expand",
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -779,7 +774,7 @@ private fun LogEntryCard(
                 }
                 
                 // Copy icon (only shown when expanded)
-                if (isExpanded) {
+                if (isExpanded && hasPayload) {
                     IconButton(
                         onClick = { 
                             try {
@@ -789,12 +784,12 @@ private fun LogEntryCard(
                                 Log.e("LogEntryCard", "Error copying from icon: ${e.message}", e)
                             }
                         },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy log line",
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
