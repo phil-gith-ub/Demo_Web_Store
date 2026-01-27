@@ -60,11 +60,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import android.util.Log
 import com.example.phil_android_store.data.BrazeLogEntry
@@ -449,159 +446,6 @@ private fun LogEntryCard(
         }
     }
     
-    // Parse different clickable patterns:
-    // 1. logPurchase('productId') - clickable productId (consolidated format)
-    // 2. logCustomEvent('eventName') - clickable eventName
-    // 3. matchCard(location='tile_2') - clickable location
-    // 4. getContentCards() → List(X) - clickable card count
-    
-    val clickableEventName = if (hasPayload) {
-        when {
-            // logPurchase('productId') - make productId clickable (consolidated format)
-            eventText.startsWith("logPurchase('") && eventText.endsWith("')") -> {
-                val startIdx = 13 // After "logPurchase('"
-                val endIdx = eventText.length - 2 // Before "')"
-                if (endIdx > startIdx) {
-                    eventText.substring(startIdx, endIdx)
-                } else null
-            }
-            // logCustomEvent('eventName') - make eventName clickable
-            eventText.startsWith("logCustomEvent('") -> {
-                val startIdx = 16 // After "logCustomEvent('"
-                val endIdx = eventText.indexOf("')", startIdx)
-                if (endIdx > startIdx) {
-                    eventText.substring(startIdx, endIdx)
-                } else null
-            }
-            // Other events with ('eventName') pattern
-            eventText.contains("('") && eventText.contains("')") -> {
-                val startIdx = eventText.indexOf("('") + 2
-                val endIdx = eventText.indexOf("')", startIdx)
-                if (startIdx > 1 && endIdx > startIdx) {
-                    eventText.substring(startIdx, endIdx)
-                } else null
-            }
-            else -> null
-        }
-    } else null
-    
-    // Check for matchCard(location='tile_X') pattern
-    val matchCardLocation = if (hasPayload && eventText.startsWith("matchCard(location='") && eventText.contains("')")) {
-        val startIdx = eventText.indexOf("location='") + 10
-        val endIdx = eventText.indexOf("')", startIdx)
-        if (startIdx > 9 && endIdx > startIdx) {
-            eventText.substring(startIdx, endIdx)
-        } else null
-    } else null
-    
-    // Check for getContentCards() → List(X) pattern
-    val cardCountText = if (hasPayload && eventText.contains(" → List(") && eventText.contains(")")) {
-        val startIdx = eventText.indexOf(" → List(") + 8
-        val endIdx = eventText.indexOf(")", startIdx)
-        if (startIdx > 7 && endIdx > startIdx) {
-            eventText.substring(startIdx, endIdx)
-        } else null
-    } else null
-    
-    // Build annotated string with appropriate clickable parts
-    val annotatedText = when {
-        clickableEventName != null -> {
-            buildAnnotatedString {
-                // Find the clickable pattern - could be "('productId'" or "('eventName')"
-                val pattern1 = "('$clickableEventName'"
-                val pattern2 = "('$clickableEventName')"
-                val patternIdx = when {
-                    eventText.contains(pattern2) -> eventText.indexOf(pattern2)
-                    eventText.contains(pattern1) -> eventText.indexOf(pattern1)
-                    else -> -1
-                }
-                
-                if (patternIdx >= 0) {
-                    val beforeClickable = eventText.substring(0, patternIdx + 1)
-                    val clickablePart = "'$clickableEventName'"
-                    val afterClickable = if (eventText.contains(pattern2)) {
-                        eventText.substring(patternIdx + pattern2.length)
-                    } else {
-                        eventText.substring(patternIdx + pattern1.length)
-                    }
-                    
-                    append(beforeClickable)
-                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append(clickablePart)
-                    }
-                    pop()
-                    append(afterClickable)
-                } else {
-                    append(eventText)
-                }
-            }
-        }
-        matchCardLocation != null -> {
-            buildAnnotatedString {
-                val clickablePattern = "location='$matchCardLocation'"
-                val patternIdx = eventText.indexOf(clickablePattern)
-                if (patternIdx >= 0) {
-                    val beforeClickable = eventText.substring(0, patternIdx + 9) // "location='"
-                    val clickablePart = matchCardLocation
-                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
-                    
-                    append(beforeClickable)
-                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append(clickablePart)
-                    }
-                    pop()
-                    append(afterClickable)
-                } else {
-                    append(eventText)
-                }
-            }
-        }
-        cardCountText != null -> {
-            buildAnnotatedString {
-                val clickablePattern = "List($cardCountText)"
-                val patternIdx = eventText.indexOf(clickablePattern)
-                if (patternIdx >= 0) {
-                    val beforeClickable = eventText.substring(0, patternIdx + 5) // Include "List("
-                    val clickablePart = cardCountText
-                    val afterClickable = eventText.substring(patternIdx + clickablePattern.length)
-                    
-                    append(beforeClickable)
-                    pushStringAnnotation(tag = "clickable", annotation = clickablePart)
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append(clickablePart)
-                    }
-                    pop()
-                    append(afterClickable)
-                } else {
-                    append(eventText)
-                }
-            }
-        }
-        else -> {
-            buildAnnotatedString {
-                append(eventText)
-            }
-        }
-    }
-    
-    val hasClickable = clickableEventName != null || matchCardLocation != null || cardCountText != null
     
     // Build full log line text for copying (always includes payload if present)
     val fullLogLine = if (hasPayload && payloadJson != null) {
@@ -623,10 +467,12 @@ private fun LogEntryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 12.dp, vertical = if (isExpanded) 8.dp else 4.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = if (isExpanded) 0.dp else 20.dp, max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically
             ) {
@@ -666,9 +512,7 @@ private fun LogEntryCard(
                 // Event and payload (main content) - with reserved space for arrow
                 // All rows are expandable - show full text when expanded, truncated when collapsed
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(max = if (isExpanded) Int.MAX_VALUE.dp else 20.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
                     val displayText = if (isExpanded) {
                         // When expanded, show event + payload if available
@@ -690,28 +534,15 @@ private fun LogEntryCard(
                         }
                     }
                     
-                    if (hasClickable && !isExpanded) {
-                        // Show annotated text when collapsed and has clickable parts
-                        Text(
-                            annotatedText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1
-                        )
-                    } else {
-                        Text(
-                            text = displayText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.fillMaxWidth(),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                            maxLines = if (isExpanded) Int.MAX_VALUE else 1
-                        )
-                    }
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                        maxLines = if (isExpanded) Int.MAX_VALUE else 1
+                    )
                 }
                 
                 // Expand/collapse arrow - always visible for all rows
