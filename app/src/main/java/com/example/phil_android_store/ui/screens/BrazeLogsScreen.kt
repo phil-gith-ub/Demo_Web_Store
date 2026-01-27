@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.heightIn
@@ -600,26 +601,16 @@ private fun LogEntryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(logEntry.timestamp, hasPayload, isExpanded) {
-                detectTapGestures(
-                    onTap = {
-                        if (hasPayload) {
-                            try {
-                                onToggleExpand()
-                            } catch (e: Exception) {
-                                // Silently handle any state update errors
-                            }
-                        }
-                    },
-                    onLongPress = {
-                        try {
-                            onCopyLine(fullLogLine)
-                        } catch (e: Exception) {
-                            // Silently handle copy errors
-                        }
+            .combinedClickable(
+                onClick = {
+                    if (hasPayload) {
+                        onToggleExpand()
                     }
-                )
-            },
+                },
+                onLongClick = {
+                    onCopyLine(fullLogLine)
+                }
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
