@@ -1,9 +1,11 @@
 package com.example.phil_android_store.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -39,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeLogManager
@@ -338,13 +341,21 @@ fun ProfileScreen(
                         )
                     }
 
-                    if (hasUnsavedChanges) {
-                        Text(
-                            text = "Profile not saved",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Red,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hasUnsavedChanges) {
+                            Text(
+                                text = "Profile not saved",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                     
                     // Save button to update profile
