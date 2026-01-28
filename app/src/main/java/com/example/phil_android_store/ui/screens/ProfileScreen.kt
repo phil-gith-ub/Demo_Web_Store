@@ -39,6 +39,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -343,8 +345,10 @@ fun ProfileScreen(
 
                     Box(
                         modifier = Modifier
+                            .zIndex(1f)
                             .fillMaxWidth()
-                            .height(2.dp),
+                            .height(2.dp)
+                            .graphicsLayer(clip = false),
                         contentAlignment = Alignment.Center
                     ) {
                         if (hasUnsavedChanges) {
