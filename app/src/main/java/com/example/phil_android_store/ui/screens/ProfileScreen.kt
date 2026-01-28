@@ -1,6 +1,7 @@
 package com.example.phil_android_store.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,9 +37,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.phil_android_store.ui.components.NotificationBanner
 import com.braze.Braze
 import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeUserSync
@@ -115,6 +118,25 @@ fun ProfileScreen(
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
     var paidMembership by rememberSaveable { mutableStateOf(currentProfile?.paidMembership ?: false) }
     var isDarkMode by remember { mutableStateOf(currentProfile?.isDarkModeEnabled ?: false) }
+
+    // Last-saved values for "Profile not saved" hint (only relevant when logged in)
+    var lastSavedFirstName by remember { mutableStateOf(currentProfile?.firstName ?: "") }
+    var lastSavedLastName by remember { mutableStateOf(currentProfile?.lastName ?: "") }
+    var lastSavedEmail by remember { mutableStateOf(currentProfile?.email ?: "") }
+    var lastSavedMobile by remember { mutableStateOf(currentProfile?.mobile ?: "") }
+    var lastSavedFavoriteCategory by remember { mutableStateOf(currentProfile?.favoriteProductCategory ?: "") }
+    var lastSavedPaidMembership by remember { mutableStateOf(currentProfile?.paidMembership ?: false) }
+
+    val hasUnsavedChanges = isLoggedIn && (
+        firstName != lastSavedFirstName ||
+        lastName != lastSavedLastName ||
+        email != lastSavedEmail ||
+        mobile != lastSavedMobile ||
+        favoriteCategory != lastSavedFavoriteCategory ||
+        paidMembership != lastSavedPaidMembership
+    )
+
+    var profileUpdatedBannerMessage by remember { mutableStateOf<String?>(null) }
     
     // Load profile when component initializes or user logs in
     LaunchedEffect(isLoggedIn, currentUserId) {
@@ -127,10 +149,17 @@ fun ProfileScreen(
             favoriteCategory = profile.favoriteProductCategory
             paidMembership = profile.paidMembership
             isDarkMode = profile.isDarkModeEnabled
+            lastSavedFirstName = profile.firstName
+            lastSavedLastName = profile.lastName
+            lastSavedEmail = profile.email
+            lastSavedMobile = profile.mobile
+            lastSavedFavoriteCategory = profile.favoriteProductCategory
+            lastSavedPaidMembership = profile.paidMembership
             // Don't call onDarkModeChanged here - only trigger event when user actually toggles the switch
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -143,7 +172,7 @@ fun ProfileScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 4.dp),
+                .padding(vertical = (-4).dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -313,6 +342,15 @@ fun ProfileScreen(
                             onCheckedChange = { paidMembership = it }
                         )
                     }
+
+                    if (hasUnsavedChanges) {
+                        Text(
+                            text = "Profile not saved",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Red,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     
                     // Save button to update profile
                     Button(
@@ -328,9 +366,16 @@ fun ProfileScreen(
                                 paidMembership = paidMembership
                             )
                             profileManager.saveProfile(profile)
+                            lastSavedFirstName = firstName
+                            lastSavedLastName = lastName
+                            lastSavedEmail = email
+                            lastSavedMobile = mobile
+                            lastSavedFavoriteCategory = favoriteCategory
+                            lastSavedPaidMembership = paidMembership
                             
                             // Braze SDK: Sync updated profile to Braze
                             BrazeUserSync.syncUserToBraze(context, profile)
+                            profileUpdatedBannerMessage = "Profile Updated"
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -465,6 +510,19 @@ fun ProfileScreen(
                     }
                 }
             }
+        }
+    }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+        ) {
+            NotificationBanner(
+                message = profileUpdatedBannerMessage,
+                onDismiss = { profileUpdatedBannerMessage = null },
+                durationMillis = 2500L
+            )
         }
     }
 }
