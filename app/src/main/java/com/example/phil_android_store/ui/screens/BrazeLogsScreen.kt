@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import android.util.Log
 import com.example.phil_android_store.data.BrazeLogEntry
 import com.example.phil_android_store.data.BrazeLogManager
 import kotlinx.coroutines.launch
@@ -259,7 +258,7 @@ fun BrazeLogsScreen(
                                         snackbarHostState.showSnackbar("Log line copied")
                                     }
                                 } catch (e: Exception) {
-                                    Log.e("BrazeLogsScreen", "Error copying line: ${e.message}", e)
+                                    // Silently handle copy errors
                                 }
                             },
                             isExpanded = isExpanded,
@@ -271,7 +270,7 @@ fun BrazeLogsScreen(
                                         expandedEntries + logKey
                                     }
                                 } catch (e: Exception) {
-                                    Log.e("BrazeLogsScreen", "Error toggling expand: ${e.message}", e)
+                                    // Silently handle expand errors
                                 }
                             }
                         )
@@ -487,7 +486,7 @@ private fun LogEntryCard(
                             try {
                                 onCopyLine(fullLogLine) 
                             } catch (e: Exception) {
-                                Log.e("LogEntryCard", "Error copying line: ${e.message}", e)
+                                // Silently handle copy errors
                             }
                         },
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
@@ -551,7 +550,7 @@ private fun LogEntryCard(
                         try {
                             onToggleExpand() 
                         } catch (e: Exception) {
-                            Log.e("LogEntryCard", "Error toggling expand: ${e.message}", e)
+                            // Silently handle expand errors
                         }
                     },
                     modifier = Modifier.size(40.dp)
