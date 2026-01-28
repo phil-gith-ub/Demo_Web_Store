@@ -344,7 +344,7 @@ fun ProfileScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp),
+                            .height(2.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (hasUnsavedChanges) {
