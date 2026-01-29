@@ -290,33 +290,33 @@ object BrazeUserSync {
     
     /**
      * Log custom event: added_item_to_cart
-     * Includes product properties: product_name (lowercase with underscores), product_category, product_price
+     * Includes product properties aligned with purchase event: product_id, product_name, product_category,
+     * product_description, product_price, is_vip
      */
     fun logAddedItemToCart(context: Context, product: Product) {
         // Braze SDK: Get Braze instance
         val brazeInstance = Braze.getInstance(context)
         
-        // Convert product name to lowercase with underscores (e.g., "Wireless Headphones" -> "wireless_headphones")
-        val productNameFormatted = product.name
-            .lowercase()
-            .replace(" ", "_")
-            .replace("-", "_")
-            .replace("'", "")
-            .replace(".", "")
-            .replace(",", "")
-        
         val properties = BrazeProperties().apply {
-            addProperty("product_name", productNameFormatted)
+            addProperty("id", product.id)
+            addProperty("product_name", product.name)
             addProperty("product_category", product.category)
+            addProperty("product_description", product.description)
             addProperty("product_price", product.price)
+            if (product.isVip) {
+                addProperty("is_vip", true)
+            }
         }
         
         // Braze SDK: Log custom event
         brazeInstance.logCustomEvent("added_item_to_cart", properties)
         BrazeLogManager.logCustomEvent("added_item_to_cart", mapOf(
-            "product_name" to productNameFormatted,
+            "id" to product.id,
+            "product_name" to product.name,
             "product_category" to product.category,
-            "product_price" to product.price
+            "product_description" to product.description,
+            "product_price" to product.price,
+            "is_vip" to product.isVip
         ))
         // Braze SDK: Flush data to ensure event is sent to Braze immediately
         brazeInstance.requestImmediateDataFlush()
@@ -449,9 +449,9 @@ object BrazeUserSync {
             .replace(".", "")
             .replace(",", "")
         
-        // Create purchase properties with product details (include app product ID)
+        // Create purchase properties with product details (id aligns with Braze product catalog)
         val purchaseProperties = BrazeProperties().apply {
-            addProperty("product_id", product.id)
+            addProperty("id", product.id)
             addProperty("product_name", product.name)
             addProperty("product_category", product.category)
             addProperty("product_description", product.description)
@@ -476,7 +476,7 @@ object BrazeUserSync {
             price = product.price,
             quantity = quantity,
             properties = mapOf(
-                "product_id" to product.id,
+                "id" to product.id,
                 "product_name" to product.name,
                 "product_category" to product.category,
                 "product_description" to product.description,
