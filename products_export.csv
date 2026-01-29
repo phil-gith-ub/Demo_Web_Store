@@ -1,0 +1,11 @@
+product_id,name,price,description,category,is_vip,braze_product_id,currency
+1,Wireless Headphones,79.99,"Premium noise-cancelling wireless headphones with 30-hour battery life",Electronics,false,wireless_headphones,USD
+2,Smart Watch,249.99,"Fitness tracking smartwatch with heart rate monitor and GPS",Electronics,true,smart_watch,USD
+3,Coffee Maker,89.99,"Programmable 12-cup coffee maker with thermal carafe",Appliances,false,coffee_maker,USD
+4,Running Shoes,129.99,"Lightweight running shoes with cushioned sole for maximum comfort",Clothing,false,running_shoes,USD
+5,Backpack,59.99,"Durable waterproof backpack with laptop compartment",Accessories,false,backpack,USD
+6,Bluetooth Speaker,49.99,"Portable waterproof Bluetooth speaker with 360-degree sound",Electronics,false,bluetooth_speaker,USD
+7,Yoga Mat,34.99,"Non-slip eco-friendly yoga mat with carrying strap",Fitness,false,yoga_mat,USD
+8,Desk Lamp,39.99,"LED desk lamp with adjustable brightness and color temperature",Home & Office,false,desk_lamp,USD
+9,Premium Laptop,1299.99,"High-performance laptop with 16GB RAM and 1TB SSD",Electronics,true,premium_laptop,USD
+10,Designer Watch,599.99,"Luxury designer watch with premium materials",Accessories,true,designer_watch,USD
