@@ -449,8 +449,9 @@ object BrazeUserSync {
             .replace(".", "")
             .replace(",", "")
         
-        // Create purchase properties with product details
+        // Create purchase properties with product details (include app product ID)
         val purchaseProperties = BrazeProperties().apply {
+            addProperty("product_id", product.id)
             addProperty("product_name", product.name)
             addProperty("product_category", product.category)
             addProperty("product_description", product.description)
@@ -475,6 +476,7 @@ object BrazeUserSync {
             price = product.price,
             quantity = quantity,
             properties = mapOf(
+                "product_id" to product.id,
                 "product_name" to product.name,
                 "product_category" to product.category,
                 "product_description" to product.description,
