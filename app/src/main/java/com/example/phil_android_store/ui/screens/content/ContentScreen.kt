@@ -17,9 +17,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Dialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,11 +67,28 @@ import com.example.phil_android_store.data.BrazeContentManager
 import com.example.phil_android_store.data.BrazeLogManager
 import com.example.phil_android_store.data.BrazeSettingsManager
 import com.example.phil_android_store.data.BrazeUserSync
+import com.example.phil_android_store.data.UserProfileManager
 import com.example.phil_android_store.data.rememberCachedBanner
 import com.example.phil_android_store.data.rememberCachedContentCards
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
+
+/** Standard custom events available in the app (for Send Custom Event dropdown). */
+private val STANDARD_CUSTOM_EVENTS = listOf(
+    "enable_push",
+    "push_notification",
+    "user_action_button",
+    "added_item_to_cart",
+    "viewed_vip_products",
+    "enabled_dark_mode",
+    "logged_in",
+    "logged_out"
+)
+
+/** Snake case: only lowercase letters, numbers, underscores. */
+private fun isValidSnakeCase(s: String): Boolean =
+    s.isNotEmpty() && s.matches(Regex("^[a-z0-9_]+$"))
 
 /**
  * Content screen for demonstrating Braze Content Cards and Banners.
@@ -75,8 +99,10 @@ import androidx.compose.ui.graphics.Color
 fun ContentScreen() {
     val context = LocalContext.current
     val settingsManager = remember { BrazeSettingsManager(context) }
+    val profileManager = remember { UserProfileManager(context) }
     var notificationMessage by remember { mutableStateOf<String?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var showCustomEventDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
     LaunchedEffect(Unit) {
@@ -145,7 +171,7 @@ fun ContentScreen() {
                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                 ) {
                     Text(
-                        text = "Push Notification",
+                        text = "Send Push",
                         style = MaterialTheme.typography.labelMedium,
                         textAlign = TextAlign.Center,
                         maxLines = 2
@@ -153,13 +179,7 @@ fun ContentScreen() {
                 }
                 
                 Button(
-                    onClick = {
-                        val brazeInstance = Braze.getInstance(context)
-                        brazeInstance.logCustomEvent("user_action_button")
-                        BrazeLogManager.logCustomEvent("user_action_button")
-                        brazeInstance.requestImmediateDataFlush()
-                        notificationMessage = "Custom Event Sent"
-                    },
+                    onClick = { showCustomEventDialog = true },
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 48.dp),
@@ -246,10 +266,150 @@ fun ContentScreen() {
         }
     }
     
+    if (showCustomEventDialog) {
+        CustomEventDialog(
+            onDismiss = { showCustomEventDialog = false },
+            onSent = {
+                notificationMessage = "Custom Event Sent"
+                showCustomEventDialog = false
+            },
+            profileManager = profileManager,
+            context = context
+        )
+    }
+    
     LaunchedEffect(notificationMessage) {
         if (notificationMessage != null) {
             delay(2000L)
             notificationMessage = null
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomEventDialog(
+    onDismiss: () -> Unit,
+    onSent: () -> Unit,
+    profileManager: UserProfileManager,
+    context: android.content.Context
+) {
+    var selectedOption by remember { mutableStateOf<String?>(null) }
+    var newEventName by remember { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    val currentProfile = profileManager.getCurrentProfile()
+    val storedEvents = currentProfile?.customEvents?.filter { it !in STANDARD_CUSTOM_EVENTS } ?: emptyList()
+    val allOptions = listOf("new") + STANDARD_CUSTOM_EVENTS + storedEvents
+    val displayOptions = listOf("New Custom Event") + STANDARD_CUSTOM_EVENTS + storedEvents
+    val dropdownDisplayText = when {
+        selectedOption == null -> ""
+        selectedOption == "new" -> "New Custom Event"
+        else -> selectedOption!!
+    }
+    val isNewEvent = selectedOption == "new"
+    val newEventNameTrimmed = newEventName.trim()
+    val newEventValid = newEventNameTrimmed.isEmpty() || isValidSnakeCase(newEventNameTrimmed)
+    val canSend = when {
+        selectedOption == null -> false
+        isNewEvent -> isValidSnakeCase(newEventNameTrimmed)
+        else -> true
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                ExposedDropdownMenuBox(
+                    expanded = dropdownExpanded,
+                    onExpandedChange = { dropdownExpanded = !dropdownExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = dropdownDisplayText,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        placeholder = { Text("Select Custom Event", color = Color.Gray) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        displayOptions.forEachIndexed { index, label ->
+                            val value = allOptions[index]
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    selectedOption = value
+                                    if (value != "new") newEventName = ""
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                if (isNewEvent) {
+                    OutlinedTextField(
+                        value = newEventName,
+                        onValueChange = { newEventName = it },
+                        label = { Text("Create new custom event") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        singleLine = true,
+                        isError = !newEventValid && newEventName.isNotEmpty()
+                    )
+                    if (!newEventValid && newEventName.isNotEmpty()) {
+                        Text(
+                            text = "Only snake_case is allowed. Example: example_event",
+                            color = Color.Red,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            if (!canSend) return@Button
+                            val eventName = if (isNewEvent) newEventNameTrimmed else selectedOption!!
+                            Braze.getInstance(context).logCustomEvent(eventName)
+                            BrazeLogManager.logCustomEvent(eventName)
+                            Braze.getInstance(context).requestImmediateDataFlush()
+                            if (isNewEvent && eventName !in STANDARD_CUSTOM_EVENTS && currentProfile != null) {
+                                val existing = currentProfile.customEvents
+                                if (eventName !in existing) {
+                                    val profile = currentProfile
+                                    profile.customEvents = existing + eventName
+                                    profileManager.saveProfile(profile)
+                                }
+                            }
+                            onSent()
+                        },
+                        enabled = canSend
+                    ) {
+                        Text("Send")
+                    }
+                }
+            }
         }
     }
 }
