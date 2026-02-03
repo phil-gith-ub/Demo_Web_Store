@@ -135,6 +135,15 @@ fun ProfileScreen(
         paidMembership != lastSavedPaidMembership
     )
     
+    // "Profile Saved" confirmation: show after save, then hide after delay
+    var showProfileSavedMessage by remember { mutableStateOf(false) }
+    LaunchedEffect(showProfileSavedMessage) {
+        if (showProfileSavedMessage) {
+            delay(2000)
+            showProfileSavedMessage = false
+        }
+    }
+    
     // Load profile when component initializes or user logs in
     LaunchedEffect(isLoggedIn, currentUserId) {
         if (isLoggedIn && currentUserId != null) {
@@ -339,7 +348,15 @@ fun ProfileScreen(
                         )
                     }
 
-                    if (hasUnsavedChanges) {
+                    if (showProfileSavedMessage) {
+                        Text(
+                            text = "Profile Saved",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF2E7D32),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (hasUnsavedChanges) {
                         Text(
                             text = "Profile not saved",
                             style = MaterialTheme.typography.bodySmall,
@@ -369,6 +386,7 @@ fun ProfileScreen(
                             lastSavedMobile = mobile
                             lastSavedFavoriteCategory = favoriteCategory
                             lastSavedPaidMembership = paidMembership
+                            showProfileSavedMessage = true
                             
                             // Braze SDK: Sync updated profile to Braze
                             BrazeUserSync.syncUserToBraze(context, profile)
