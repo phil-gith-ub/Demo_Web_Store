@@ -2,6 +2,7 @@ package com.example.phil_android_store.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -113,6 +114,8 @@ class UserProfileManager(private val context: Context) {
         try {
             val jsonObject = JSONObject()
             userProfiles.forEach { (userId, profile) ->
+                val customEventsArray = JSONArray()
+                profile.customEvents.forEach { customEventsArray.put(it) }
                 val profileJson = JSONObject().apply {
                     put("userId", profile.userId)
                     put("firstName", profile.firstName)
@@ -122,6 +125,7 @@ class UserProfileManager(private val context: Context) {
                     put("favoriteProductCategory", profile.favoriteProductCategory)
                     put("isDarkModeEnabled", profile.isDarkModeEnabled)
                     put("paidMembership", profile.paidMembership)
+                    put("customEvents", customEventsArray)
                 }
                 jsonObject.put(userId, profileJson)
             }

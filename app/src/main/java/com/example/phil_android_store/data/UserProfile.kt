@@ -8,5 +8,6 @@ data class UserProfile(
     var mobile: String = "",
     var favoriteProductCategory: String = "",
     var isDarkModeEnabled: Boolean = false,
-    var paidMembership: Boolean = false
+    var paidMembership: Boolean = false,
+    var customEvents: List<String> = emptyList()
 )

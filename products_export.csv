@@ -1,4 +1,4 @@
-product_id,name,price,description,category,is_vip,braze_product_id,currency
+id,name,price,description,category,is_vip,braze_product_id,currency
 1,Wireless Headphones,79.99,"Premium noise-cancelling wireless headphones with 30-hour battery life",Electronics,false,wireless_headphones,USD
 2,Smart Watch,249.99,"Fitness tracking smartwatch with heart rate monitor and GPS",Electronics,true,smart_watch,USD
 3,Coffee Maker,89.99,"Programmable 12-cup coffee maker with thermal carafe",Appliances,false,coffee_maker,USD
