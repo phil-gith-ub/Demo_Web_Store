@@ -65,8 +65,8 @@
             </intent-filter>
         </activity>
         
-        <!-- Braze SDK installation: Firebase Messaging Service for push notifications -->
-        <service android:name="com.braze.push.BrazeFirebaseMessagingService"
+        <!-- Braze SDK: Custom Firebase Messaging Service (logs push payload to Braze logs) -->
+        <service android:name=".BrazePushMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

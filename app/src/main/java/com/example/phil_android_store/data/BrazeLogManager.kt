@@ -245,6 +245,20 @@ object BrazeLogManager {
     }
     
     /**
+     * Log push notification received (payload from FCM/Braze).
+     * Call from your Firebase Messaging Service when a push is received.
+     */
+    fun logPushNotificationReceived(payload: Map<String, Any>) {
+        addLog(BrazeLogEntry(
+            timestamp = System.currentTimeMillis(),
+            event = "Push notification received",
+            details = "click to view payload",
+            type = BrazeLogEntry.LogType.RESPONSE,
+            payload = payload
+        ))
+    }
+
+    /**
      * Log error
      */
     fun logError(message: String, error: Throwable? = null) {
