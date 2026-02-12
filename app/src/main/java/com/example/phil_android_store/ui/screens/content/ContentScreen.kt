@@ -1343,16 +1343,27 @@ fun ContentBanner(
                             }
                         }
                         
-                        class DeepLinkHandler(private val handler: (String) -> Unit) {
+                        class DeepLinkHandler(
+                            private val ctx: android.content.Context,
+                            private val handler: (String) -> Unit
+                        ) {
                             @JavascriptInterface
                             fun handleDeepLink(url: String) {
                                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                                     handler(url)
                                 }
                             }
+                            @JavascriptInterface
+                            fun logCustomEvent(eventName: String) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    Braze.getInstance(ctx).logCustomEvent(eventName)
+                                    BrazeLogManager.logCustomEvent(eventName)
+                                    Braze.getInstance(ctx).requestImmediateDataFlush()
+                                }
+                            }
                         }
                         
-                        webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                        webView.addJavascriptInterface(DeepLinkHandler(context, ::handleDeepLink), "AndroidDeepLinkHandler")
                         
                         val customWebViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
@@ -2133,17 +2144,28 @@ fun TileBanner(
                             }
                         }
                         
-                        // JavaScript interface for deep links
-                        class DeepLinkHandler(private val handler: (String) -> Unit) {
+                        // JavaScript interface for deep links + logCustomEvent
+                        class DeepLinkHandler(
+                            private val ctx: android.content.Context,
+                            private val handler: (String) -> Unit
+                        ) {
                             @android.webkit.JavascriptInterface
                             fun handleDeepLink(url: String) {
                                 android.os.Handler(android.os.Looper.getMainLooper()).post {
                                     handler(url)
                                 }
                             }
+                            @android.webkit.JavascriptInterface
+                            fun logCustomEvent(eventName: String) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    Braze.getInstance(ctx).logCustomEvent(eventName)
+                                    BrazeLogManager.logCustomEvent(eventName)
+                                    Braze.getInstance(ctx).requestImmediateDataFlush()
+                                }
+                            }
                         }
                         
-                        webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                        webView.addJavascriptInterface(DeepLinkHandler(context, ::handleDeepLink), "AndroidDeepLinkHandler")
                         
                         val customWebViewClient = object : android.webkit.WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: android.webkit.WebView?, url: String?): Boolean {

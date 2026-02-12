@@ -167,18 +167,29 @@ fun BrazeBanner(
                         }
                     }
                     
-                    // JavaScript interface to handle deep links directly from JavaScript
-                    class DeepLinkHandler(private val handler: (String) -> Unit) {
+                    // JavaScript interface: deep links + logCustomEvent for banner-seen etc.
+                    class DeepLinkHandler(
+                        private val context: android.content.Context,
+                        private val handler: (String) -> Unit
+                    ) {
                         @JavascriptInterface
                         fun handleDeepLink(url: String) {
                             android.os.Handler(android.os.Looper.getMainLooper()).post {
                                 handler(url)
                             }
                         }
+                        @JavascriptInterface
+                        fun logCustomEvent(eventName: String) {
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                Braze.getInstance(context).logCustomEvent(eventName)
+                                com.example.phil_android_store.data.BrazeLogManager.logCustomEvent(eventName)
+                                Braze.getInstance(context).requestImmediateDataFlush()
+                            }
+                        }
                     }
                     
                     // Add JavaScript interface BEFORE setting WebViewClient
-                    webView.addJavascriptInterface(DeepLinkHandler(::handleDeepLink), "AndroidDeepLinkHandler")
+                    webView.addJavascriptInterface(DeepLinkHandler(ctx, ::handleDeepLink), "AndroidDeepLinkHandler")
                     
                     // Create custom WebViewClient to handle deep links (matching in-app message handler)
                     val customWebViewClient = object : WebViewClient() {
