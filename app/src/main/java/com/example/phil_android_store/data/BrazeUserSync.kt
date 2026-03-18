@@ -535,10 +535,8 @@ object BrazeUserSync {
      * @param placementIds List of banner placement IDs to refresh
      */
     fun requestBannerRefresh(context: Context, placementIds: List<String>) {
-        // Braze SDK: Request banner refresh via current user (per Braze docs)
-        Braze.getInstance(context).getCurrentUser { user ->
-            user.requestBannersRefresh()
-        }
+        // Braze SDK: Request banner refresh (on Braze instance in SDK 41.x)
+        Braze.getInstance(context).requestBannersRefresh(placementIds)
         BrazeLogManager.logBannerRefreshRequested(placementIds)
     }
     
