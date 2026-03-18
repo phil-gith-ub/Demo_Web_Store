@@ -189,7 +189,7 @@ fun BrazeBanner(
                     }
                     
                     // Add JavaScript interface BEFORE setting WebViewClient
-                    webView.addJavascriptInterface(DeepLinkHandler(ctx, ::handleDeepLink), "AndroidDeepLinkHandler")
+                    webView.addJavascriptInterface(DeepLinkHandler(context, ::handleDeepLink), "AndroidDeepLinkHandler")
                     
                     // Create custom WebViewClient to handle deep links (matching in-app message handler)
                     val customWebViewClient = object : WebViewClient() {
