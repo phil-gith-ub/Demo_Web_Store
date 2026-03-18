@@ -535,11 +535,10 @@ object BrazeUserSync {
      * @param placementIds List of banner placement IDs to refresh
      */
     fun requestBannerRefresh(context: Context, placementIds: List<String>) {
-        // Braze SDK: Get Braze instance
-        val brazeInstance = Braze.getInstance(context)
-        // Braze SDK: Request banner refresh
-        brazeInstance.requestBannersRefresh(placementIds)
-        // Log the request
+        // Braze SDK: Request banner refresh via current user (per Braze docs)
+        Braze.getInstance(context).getCurrentUser { user ->
+            user.requestBannersRefresh()
+        }
         BrazeLogManager.logBannerRefreshRequested(placementIds)
     }
     
@@ -578,86 +577,25 @@ object BrazeUserSync {
      * @param context Android context
      */
     fun requestContentCardsRefresh(context: Context) {
-        // Braze SDK: Get Braze instance
-        val brazeInstance = Braze.getInstance(context)
-        try {
-            // Braze SDK: Use reflection to call requestContentCardsRefresh
-            val method = brazeInstance.javaClass.getMethod("requestContentCardsRefresh")
-            method.invoke(brazeInstance)
-            // Log the request
-            BrazeLogManager.logContentCardsRefreshRequested()
-        } catch (e: Exception) {
-            Log.e("BrazeUserSync", "Error requesting Content Cards refresh: ${e.message}", e)
-            BrazeLogManager.logError("Error requesting Content Cards refresh: ${e.message}", e)
-        }
+        // Braze SDK: Request Content Cards refresh (per Braze docs)
+        Braze.getInstance(context).requestContentCardsRefresh()
+        BrazeLogManager.logContentCardsRefreshRequested()
     }
     
     /**
-     * Get all Content Cards from Braze using reflection.
-     * Tries multiple methods to get Content Cards.
-     * 
+     * Get all Content Cards from Braze (cached).
+     * Per Braze docs: use getCachedContentCards() for locally cached cards.
+     *
      * @param context Android context
      * @return List of Content Card instances
      */
     fun getContentCards(context: Context): List<Any> {
-        // Braze SDK: Get Braze instance
-        val brazeInstance = Braze.getInstance(context)
         return try {
-            // Try multiple possible method names
-            val possibleMethods = listOf(
-                "getContentCards",
-                "getCachedContentCards",
-                "getAllContentCards"
-            )
-            
-            var cards: Any? = null
-            var methodFound = false
-            
-            for (methodName in possibleMethods) {
-                try {
-                    val method = brazeInstance.javaClass.getMethod(methodName)
-                    cards = method.invoke(brazeInstance)
-                    methodFound = true
-                    Log.d("BrazeUserSync", "Successfully called $methodName")
-                    break
-                } catch (e: NoSuchMethodException) {
-                    // Try next method
-                    continue
-                }
-            }
-            
-            if (!methodFound) {
-                // Try accessing through ContentCardsManager if it exists
-                try {
-                    val contentCardsManagerClass = Class.forName("com.braze.ui.contentcards.BrazeContentCardsManager")
-                    val getInstanceMethod = contentCardsManagerClass.getMethod("getInstance", Context::class.java)
-                    val manager = getInstanceMethod.invoke(null, context)
-                    val getCardsMethod = manager.javaClass.getMethod("getContentCards")
-                    cards = getCardsMethod.invoke(manager)
-                    Log.d("BrazeUserSync", "Successfully got cards through ContentCardsManager")
-                } catch (e: Exception) {
-                    Log.w("BrazeUserSync", "Could not get cards through ContentCardsManager: ${e.message}")
-                }
-            }
-            
-            // Process the result
-            when (cards) {
-                is List<*> -> {
-                    @Suppress("UNCHECKED_CAST")
-                    cards.filterNotNull() as List<Any>
-                }
-                null -> {
-                    Log.w("BrazeUserSync", "Content Cards method returned null")
-                    emptyList()
-                }
-                else -> {
-                    Log.w("BrazeUserSync", "Content Cards method returned unexpected type: ${cards.javaClass}")
-                    emptyList()
-                }
-            }
+            val cached = Braze.getInstance(context).getCachedContentCards()
+            cached?.map { it as Any } ?: emptyList()
         } catch (e: Exception) {
             Log.e("BrazeUserSync", "Error getting Content Cards: ${e.message}", e)
-            e.printStackTrace()
+            BrazeLogManager.logError("Error getting Content Cards: ${e.message}", e)
             emptyList()
         }
     }

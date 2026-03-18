@@ -7,38 +7,16 @@ import android.util.Log
 import com.braze.Braze
 import com.braze.BrazeActivityLifecycleCallbackListener
 import com.braze.configuration.BrazeConfig
-import com.example.phil_android_store.data.BrazeSettingsManager
 
 class PhilAndroidStoreApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Braze SDK installation: Get settings manager to read Sender ID
-        val settingsManager = BrazeSettingsManager(this)
-        val senderId = settingsManager.getPushSenderId()
-        
         // Braze SDK installation: Configure Braze SDK
-        val brazeConfigBuilder = BrazeConfig.Builder()
+        // FCM Sender ID is read from braze.xml (com_braze_firebase_cloud_messaging_sender_id)
+        val brazeConfig = BrazeConfig.Builder()
             .setIsInAppMessageAccessibilityExclusiveModeEnabled(false)
-        
-        // Braze SDK: Set Firebase Cloud Messaging Sender ID if available
-        // This ensures the Sender ID from Settings (SharedPreferences) is used if set
-        if (senderId.isNotEmpty()) {
-            try {
-                // Use reflection to set the Sender ID via BrazeConfig
-                val setSenderIdMethod = brazeConfigBuilder.javaClass.getMethod(
-                    "setFirebaseCloudMessagingSenderId",
-                    String::class.java
-                )
-                setSenderIdMethod.invoke(brazeConfigBuilder, senderId)
-                Log.d("BrazeConfig", "Set FCM Sender ID from settings: $senderId")
-            } catch (e: Exception) {
-                Log.w("BrazeConfig", "Could not set FCM Sender ID via BrazeConfig (may not be available in this SDK version): ${e.message}")
-                // Fallback: The Sender ID in braze.xml will be used
-            }
-        }
-        
-        val brazeConfig = brazeConfigBuilder.build()
+            .build()
         
         // Braze SDK installation: Initialize Braze SDK
         Braze.configure(this, brazeConfig)
