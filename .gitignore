@@ -1,15 +1,19 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
 local.properties
+
+# Android backup (optional local artifacts)
+Android Backup/**/build/
+Android Backup/**/.gradle/
+
+# Web / Node
+node_modules/
+dist/
+*.local
+.env
+.env.*.local
+
+# IDE
+.idea/
