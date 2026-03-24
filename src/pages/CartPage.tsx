@@ -1,8 +1,12 @@
+import { BrazeBannerSlot } from "../components/BrazeBannerSlot";
 import { useProfile } from "../context/ProfileContext";
 import { useCart } from "../context/CartContext";
-import { recordPurchase, isVip } from "../lib/purchaseStorage";
 import { useNavigate } from "react-router-dom";
-import { BrazeGhostSlot } from "../components/BrazeGhostSlot";
+import {
+  logCheckoutPurchases,
+  syncVipStatusToBraze,
+} from "../lib/brazeUserSyncWeb";
+import { recordPurchase, isVip } from "../lib/purchaseStorage";
 
 export function CartPage() {
   const { items, itemCount, removeFromCart, clearCart, totalPrice } =
@@ -12,7 +16,10 @@ export function CartPage() {
 
   const checkout = () => {
     if (!currentUserId || items.length === 0) return;
-    recordPurchase(currentUserId, items);
+    const lineItems = [...items];
+    recordPurchase(currentUserId, lineItems);
+    void logCheckoutPurchases(lineItems);
+    void syncVipStatusToBraze(currentUserId);
     clearCart();
     navigate("/profile");
   };
@@ -20,7 +27,7 @@ export function CartPage() {
   return (
     <>
       <h1 className="page-title">Cart</h1>
-      <BrazeGhostSlot title="Cart banner" placementId="cart_banner" />
+      <BrazeBannerSlot title="Cart banner" placementId="cart_banner" />
       {itemCount === 0 ? (
         <p>Your cart is empty.</p>
       ) : (

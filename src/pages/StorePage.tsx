@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { mockProducts } from "../data/mockProducts";
+import { BrazeBannerSlot } from "../components/BrazeBannerSlot";
+import { useProfile } from "../context/ProfileContext";
 import { useCart } from "../context/CartContext";
-import { BrazeGhostSlot } from "../components/BrazeGhostSlot";
+import { mockProducts } from "../data/mockProducts";
+import {
+  isVipProductsEnabled,
+  logAddedItemToCart,
+  logViewedVipProducts,
+} from "../lib/brazeUserSyncWeb";
 
 const ALL = "All";
 
 export function StorePage() {
   const { addToCart } = useCart();
+  const { currentUserId } = useProfile();
   const [searchParams] = useSearchParams();
   const [category, setCategory] = useState(ALL);
-  /** TODO: Braze feature flag `enable_vip_products` */
-  const [vipFeatureEnabled] = useState(true);
+  const [vipFeatureEnabled, setVipFeatureEnabled] = useState(true);
   const [showVipOnly, setShowVipOnly] = useState(false);
 
   useEffect(() => {
@@ -19,6 +25,31 @@ export function StorePage() {
       setShowVipOnly(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setVipFeatureEnabled(true);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      const braze = await import("@braze/web-sdk");
+      let tries = 0;
+      while (!braze.isInitialized?.() && tries++ < 50) {
+        await new Promise((r) => setTimeout(r, 100));
+        if (cancelled) return;
+      }
+      const enabled = await isVipProductsEnabled();
+      if (!cancelled) setVipFeatureEnabled(enabled);
+    };
+    void load();
+    const onReady = () => void load();
+    window.addEventListener("braze:identified-ready", onReady);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("braze:identified-ready", onReady);
+    };
+  }, [currentUserId]);
 
   const categories = useMemo(() => {
     const set = new Set(mockProducts.map((p) => p.category));
@@ -39,7 +70,7 @@ export function StorePage() {
   return (
     <>
       <h1 className="page-title">Store</h1>
-      <BrazeGhostSlot title="Store banner" placementId="store_page_banner" />
+      <BrazeBannerSlot title="Store banner" placementId="store_page_banner" />
       <div className="tabs" role="tablist">
         {categories.map((c) => (
           <button
@@ -57,7 +88,13 @@ export function StorePage() {
           <button
             type="button"
             className={"tab" + (showVipOnly ? " active" : "")}
-            onClick={() => setShowVipOnly((v) => !v)}
+            onClick={() => {
+              setShowVipOnly((v) => {
+                const next = !v;
+                if (next) void logViewedVipProducts();
+                return next;
+              });
+            }}
           >
             VIP products
           </button>
@@ -76,7 +113,10 @@ export function StorePage() {
             <button
               type="button"
               className="btn btn-primary product-add"
-              onClick={() => addToCart(product)}
+              onClick={() => {
+                addToCart(product);
+                if (currentUserId) void logAddedItemToCart(product);
+              }}
             >
               Add to cart
             </button>

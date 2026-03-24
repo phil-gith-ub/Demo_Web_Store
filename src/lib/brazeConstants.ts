@@ -12,6 +12,11 @@ export const BANNER_PLACEMENTS = [
   { label: "Content (tile)", id: "tile_banner" },
 ] as const;
 
+/** Pass to `requestBannersRefresh` (same placements as Android `BrazeContentManager`). */
+export const ALL_BANNER_PLACEMENT_IDS: string[] = BANNER_PLACEMENTS.map(
+  (b) => b.id,
+);
+
 /** Target card extras: `location`, `position_id`, or `card_id` (per Braze card KVP). */
 export const CONTENT_CARD_SLOTS = [
   {

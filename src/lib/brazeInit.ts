@@ -1,6 +1,9 @@
+import { ALL_BANNER_PLACEMENT_IDS } from "./brazeConstants";
 import { getBrazeSettings, normalizeBrazeBaseUrl } from "./brazeSettings";
+import { completeIdentifiedUserAfterChangeUser, brazePreLogout } from "./brazeUserSyncWeb";
 
 let lastIdentifiedUserId: string | null = null;
+let brazeSubscriptionsRegistered = false;
 
 export type BrazeIdentifiedInitResult =
   | { success: true }
@@ -11,9 +14,21 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
+function registerBrazeSubscriptionsOnce(braze: typeof import("@braze/web-sdk")) {
+  if (brazeSubscriptionsRegistered) return;
+  braze.subscribeToBannersUpdates?.(() => {
+    window.dispatchEvent(new CustomEvent("braze:banners"));
+  });
+  braze.subscribeToContentCardsUpdates?.(() => {
+    window.dispatchEvent(new CustomEvent("braze:content-cards"));
+  });
+  brazeSubscriptionsRegistered = true;
+}
+
 /**
  * Start the Braze Web SDK for an identified user only.
- * Order: `initialize` (if needed) → `changeUser` → IAM → `openSession`.
+ * Order (per Web SDK types): `initialize` → `changeUser` → subscribe to banners/cards **before** `openSession`,
+ * then IAM, refresh requests, then `openSession` last.
  */
 export async function initBrazeForIdentifiedUser(
   userId: string,
@@ -48,6 +63,7 @@ export async function initBrazeForIdentifiedUser(
       braze.initialize(key, {
         baseUrl: host,
         enableLogging: true,
+        allowUserSuppliedJavascript: true,
       });
     }
 
@@ -59,12 +75,19 @@ export async function initBrazeForIdentifiedUser(
       };
     }
 
-    if (lastIdentifiedUserId === id && braze.isInitialized?.()) {
+    if (lastIdentifiedUserId === id) {
       return { success: true };
     }
 
     braze.changeUser(id);
+    registerBrazeSubscriptionsOnce(braze);
     braze.automaticallyShowInAppMessages();
+
+    await completeIdentifiedUserAfterChangeUser(id);
+
+    braze.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
+    braze.requestContentCardsRefresh();
+
     braze.openSession();
     lastIdentifiedUserId = id;
     return { success: true };
@@ -79,13 +102,14 @@ export async function initBrazeForIdentifiedUser(
 }
 
 /**
- * Tear down Braze on logout so the next login can call `initialize` cleanly.
- * Prefer `destroy()` over `wipeData()` here: after `wipeData()`, a subsequent
- * init with Vite’s lazy chunks can throw "Class extends value undefined".
+ * Flush logout attributes/events, then tear down Braze so the next login can re-init cleanly.
  */
-export async function brazeOnLogout(): Promise<void> {
+export async function brazeOnLogout(previousUserId: string | null): Promise<void> {
   try {
     const braze = await import("@braze/web-sdk");
+    if (braze.isInitialized?.() && previousUserId) {
+      await brazePreLogout(previousUserId);
+    }
     if (braze.isInitialized?.()) {
       braze.destroy();
     }
@@ -93,6 +117,7 @@ export async function brazeOnLogout(): Promise<void> {
     /* SDK never loaded */
   } finally {
     lastIdentifiedUserId = null;
+    brazeSubscriptionsRegistered = false;
   }
 }
 

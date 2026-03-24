@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { useBrazeLogs } from "./context/BrazeLogContext";
 import { useProfile } from "./context/ProfileContext";
+import { registerBrazeAppLogSink } from "./lib/brazeAppLog";
 import { brazeOnLogout, initBrazeForIdentifiedUser } from "./lib/brazeInit";
 import { BrazeLogsPage } from "./pages/BrazeLogsPage";
 import { CartPage } from "./pages/CartPage";
@@ -34,6 +35,11 @@ function BrazeIdentifiedSync() {
   const prevUser = useRef<string | null>(null);
 
   useEffect(() => {
+    registerBrazeAppLogSink(pushLog);
+    return () => registerBrazeAppLogSink(null);
+  }, [pushLog]);
+
+  useEffect(() => {
     if (currentUserId) {
       introLogged.current = true;
       const id = currentUserId;
@@ -41,8 +47,9 @@ function BrazeIdentifiedSync() {
         if (result.success) {
           pushLog({
             type: "info",
-            message: `Braze Web SDK initialized; changeUser("${id}")`,
+            message: `Braze Web SDK initialized; changeUser("${id}"), openSession`,
           });
+          window.dispatchEvent(new CustomEvent("braze:identified-ready"));
         } else {
           pushLog({
             type: "error",
@@ -55,10 +62,12 @@ function BrazeIdentifiedSync() {
     }
 
     if (prevUser.current !== null) {
-      void brazeOnLogout();
+      const leaving = prevUser.current;
+      void brazeOnLogout(leaving);
       pushLog({
         type: "info",
-        message: "Logged out — Braze SDK destroyed (ready for a clean re-init on next login).",
+        message:
+          "Logged out — Braze logged_out flushed, SDK destroyed (clean re-init on next login).",
       });
       prevUser.current = null;
       return;
