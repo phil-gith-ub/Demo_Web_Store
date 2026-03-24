@@ -5,18 +5,25 @@ import { useProfile } from "../context/ProfileContext";
 import {
   BANNER_PLACEMENTS,
   BRAZE_FEATURE_FLAG_VIP,
-  BRAZE_WEB_SDK_RANGE,
   CONTENT_CARD_SLOTS,
   DEEPLINK_REFERENCE,
 } from "../lib/brazeConstants";
 import {
-  brazeOnLogout,
+  brazeDestroyForReconnect,
   initBrazeForIdentifiedUser,
 } from "../lib/brazeInit";
 import {
   getBrazeSettings,
   saveBrazeSettings,
 } from "../lib/brazeSettings";
+
+/*
+  Braze (not shown in UI):
+  - Package: @braze/web-sdk (see brazeConstants BRAZE_WEB_SDK_RANGE). Credentials in localStorage.
+  - SDK starts after Profile login; if already logged in, Save runs destroy() then saves then initBrazeForIdentifiedUser.
+  - Use Web app SDK key + SDK endpoint from Braze (Manage Settings → Apps → Web). Android/REST-only keys often fail.
+  - Banner / card / flag / deep link sections below are reference IDs for dashboard setup.
+*/
 
 function copyValue(value: string, label: string) {
   void navigator.clipboard.writeText(value);
@@ -41,7 +48,7 @@ export function SettingsPage() {
     setSaveBusy(true);
     try {
       if (currentUserId) {
-        await brazeOnLogout();
+        await brazeDestroyForReconnect();
         saveBrazeSettings({ apiKey, baseUrl });
         const result = await initBrazeForIdentifiedUser(currentUserId);
         if (result.success) {
@@ -91,19 +98,6 @@ export function SettingsPage() {
       <div className="settings-grid">
         <section className="settings-card">
           <h2>Braze Web SDK</h2>
-          <p className="product-meta">
-            npm <code>@braze/web-sdk</code> {BRAZE_WEB_SDK_RANGE}. Values are
-            stored in this browser (localStorage). The SDK initializes only
-            after you log in with a user ID; if you are logged in, saving
-            runs <code>destroy()</code> on the current SDK instance, then saves
-            credentials again, then reconnects (so your key is not lost).
-          </p>
-          <p className="product-meta">
-            Use the <strong>Web</strong> integration’s SDK key and{" "}
-            <strong>SDK endpoint</strong> from Braze (Manage Settings → Apps →
-            your Web app). Android keys or REST-only keys often will not work
-            here.
-          </p>
           <div className="stack tight">
             <div className="form-row">
               <label htmlFor="bk">Web API key</label>
@@ -138,14 +132,10 @@ export function SettingsPage() {
 
         <section className="settings-card">
           <h2>Banner placement IDs</h2>
-          <p className="product-meta">
-            Use these placement IDs in Braze for banners on Store, Cart, and
-            Content.
-          </p>
           <ul className="settings-ref-list">
             {BANNER_PLACEMENTS.map((row) => (
               <li key={row.id}>
-                <div>
+                <div className="settings-ref-body">
                   <strong>{row.label}</strong>
                   <code>{row.id}</code>
                 </div>
@@ -165,18 +155,12 @@ export function SettingsPage() {
 
         <section className="settings-card">
           <h2>Content card slots</h2>
-          <p className="product-meta">
-            Cards are matched using extras keys such as{" "}
-            <code>location</code>, <code>position_id</code>, or{" "}
-            <code>card_id</code>.
-          </p>
           <ul className="settings-ref-list">
             {CONTENT_CARD_SLOTS.map((row) => (
               <li key={row.id}>
-                <div>
+                <div className="settings-ref-body">
                   <strong>{row.label}</strong>
                   <code>{row.id}</code>
-                  <span className="product-meta">{row.hint}</span>
                 </div>
                 <button
                   type="button"
@@ -192,10 +176,9 @@ export function SettingsPage() {
 
         <section className="settings-card">
           <h2>Feature flag (VIP tab)</h2>
-          <p className="product-meta">
-            Store VIP tab can be gated with Braze feature flag{" "}
-            <code>{BRAZE_FEATURE_FLAG_VIP}</code> (wire on Store when ready).
-          </p>
+          <div className="settings-ref-body settings-ref-body--solo">
+            <code>{BRAZE_FEATURE_FLAG_VIP}</code>
+          </div>
           <button
             type="button"
             className="btn btn-ghost btn-small"
@@ -209,10 +192,6 @@ export function SettingsPage() {
 
         <section className="settings-card">
           <h2>Deep links</h2>
-          <p className="product-meta">
-            Custom scheme for deep links; this site uses the paths below (full
-            URL includes your current origin).
-          </p>
           <ul className="settings-ref-list">
             {DEEPLINK_REFERENCE.map((row) => {
               const full =
@@ -221,7 +200,7 @@ export function SettingsPage() {
                   : row.webPath;
               return (
                 <li key={row.appUri}>
-                  <div>
+                  <div className="settings-ref-body">
                     <strong>{row.label}</strong>
                     <code className="block">{row.appUri}</code>
                     <code className="block muted">{full}</code>
@@ -250,14 +229,6 @@ export function SettingsPage() {
               );
             })}
           </ul>
-        </section>
-
-        <section className="settings-card">
-          <h2>Web push</h2>
-          <p className="product-meta">
-            Browser push uses the Web SDK with HTTPS, a service worker, and
-            dashboard configuration.
-          </p>
         </section>
       </div>
     </>

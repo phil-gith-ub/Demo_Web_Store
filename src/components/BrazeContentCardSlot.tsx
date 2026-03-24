@@ -3,10 +3,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { findContentCardForSlot } from "../lib/brazeUserSyncWeb";
 import { BrazeGhostSlot } from "./BrazeGhostSlot";
 
+export type BrazeContentCardVariant = "wide" | "square";
+
 type Props = {
   title: string;
   slotId: string;
   hint?: string;
+  /** `wide` = tile_1 (2:1, image left / text right). `square` = tile_2 (1:1). */
+  variant: BrazeContentCardVariant;
 };
 
 function cardTitle(card: Card, fallback: string): string {
@@ -40,7 +44,7 @@ function cardUrl(card: Card): string | undefined {
 /**
  * Picks a card by extras `position_id`, `location`, or `card_id` (Android parity), logs impressions/clicks.
  */
-export function BrazeContentCardSlot({ title, slotId, hint }: Props) {
+export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
   const [card, setCard] = useState<Card | null>(null);
   const impressionLogged = useRef<string | undefined>(undefined);
 
@@ -72,8 +76,20 @@ export function BrazeContentCardSlot({ title, slotId, hint }: Props) {
     });
   }, [card, slotId]);
 
+  const ghostClass =
+    variant === "wide"
+      ? "ghost-slot--fill-card-21"
+      : "ghost-slot--fill-card-square";
+
   if (!card) {
-    return <BrazeGhostSlot title={title} placementId={slotId} hint={hint} />;
+    return (
+      <BrazeGhostSlot
+        title={title}
+        placementId={slotId}
+        hint={hint}
+        className={ghostClass}
+      />
+    );
   }
 
   const img = cardImageUrl(card);
@@ -88,9 +104,19 @@ export function BrazeContentCardSlot({ title, slotId, hint }: Props) {
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const wideWithImage = variant === "wide" && !!img;
+
   return (
     <article
-      className="ghost-slot content-card-slot"
+      className={[
+        "content-card-slot",
+        variant === "wide" && "content-card-slot--wide",
+        variant === "square" && "content-card-slot--square",
+        wideWithImage && "content-card-slot--wide-row",
+        url ? "content-card-slot--clickable" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-slot-id={slotId}
       role={url ? "link" : undefined}
       tabIndex={url ? 0 : undefined}
@@ -107,15 +133,19 @@ export function BrazeContentCardSlot({ title, slotId, hint }: Props) {
       }
     >
       {img ? (
-        <img className="content-card-slot-image" src={img} alt="" loading="lazy" />
+        <div className="content-card-slot-media">
+          <img src={img} alt="" loading="lazy" />
+        </div>
       ) : null}
-      <span className="ghost-slot-label">{ttl}</span>
-      {desc ? <p className="content-card-slot-desc">{desc}</p> : null}
-      {url ? (
-        <span className="ghost-slot-meta">Open link</span>
-      ) : (
-        <code className="ghost-slot-code">{slotId}</code>
-      )}
+      <div className="content-card-slot-body">
+        <span className="content-card-slot-title">{ttl}</span>
+        {desc ? <p className="content-card-slot-desc">{desc}</p> : null}
+        {url ? (
+          <span className="content-card-slot-cta">Open link</span>
+        ) : (
+          <code className="ghost-slot-code content-card-slot-code">{slotId}</code>
+        )}
+      </div>
     </article>
   );
 }

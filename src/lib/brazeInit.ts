@@ -121,6 +121,23 @@ export async function brazeOnLogout(previousUserId: string | null): Promise<void
   }
 }
 
+/**
+ * Destroy SDK and reset local init state without `logged_out` (e.g. Settings → save new API key, same user).
+ */
+export async function brazeDestroyForReconnect(): Promise<void> {
+  try {
+    const braze = await import("@braze/web-sdk");
+    if (braze.isInitialized?.()) {
+      braze.destroy();
+    }
+  } catch {
+    /* SDK never loaded */
+  } finally {
+    lastIdentifiedUserId = null;
+    brazeSubscriptionsRegistered = false;
+  }
+}
+
 export async function isBrazeReady(): Promise<boolean> {
   try {
     const braze = await import("@braze/web-sdk");

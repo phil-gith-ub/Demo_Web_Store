@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrazeGhostSlot } from "./BrazeGhostSlot";
 
+export type BrazeBannerVariant = "default" | "wide" | "square";
+
 type Props = {
   title: string;
   placementId: string;
+  /**
+   * `wide` = 2:1 (Android content_banner). `square` = 1:1 (Android tile_banner).
+   * `default` = flexible height for Store/Cart.
+   */
+  variant?: BrazeBannerVariant;
 };
 
 /**
  * Renders a Braze banner via `insertBanner` when available; otherwise shows the dashed placeholder.
  * `allowUserSuppliedJavascript: true` is set in `brazeInit` (required for `insertBanner`).
  */
-export function BrazeBannerSlot({ title, placementId }: Props) {
+export function BrazeBannerSlot({
+  title,
+  placementId,
+  variant = "default",
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"empty" | "control" | "live">("empty");
 
@@ -40,19 +51,40 @@ export function BrazeBannerSlot({ title, placementId }: Props) {
     return () => window.removeEventListener("braze:banners", onBanners);
   }, [run]);
 
+  const sized = variant === "wide" || variant === "square";
+  const slotClass = [
+    "braze-banner-slot",
+    variant === "wide" && "braze-banner-slot--21",
+    variant === "square" && "braze-banner-slot--square",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const ghostClass =
+    variant === "wide"
+      ? "ghost-slot--fill-banner-21"
+      : variant === "square"
+        ? "ghost-slot--fill-banner-square"
+        : undefined;
+
   return (
-    <div className="braze-banner-slot">
+    <div className={slotClass}>
       <div
         ref={ref}
-        className={
-          mode === "live" ? "braze-banner-mount braze-banner-mount--active" : "braze-banner-mount"
-        }
+        className={[
+          "braze-banner-mount",
+          mode === "live" ? "braze-banner-mount--active" : "",
+          sized && mode === "live" ? "braze-banner-mount--fill" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       />
       {mode !== "live" ? (
         <BrazeGhostSlot
           title={title}
           placementId={placementId}
           hint={mode === "control" ? "Control banner (no creative)" : undefined}
+          className={ghostClass}
         />
       ) : null}
     </div>

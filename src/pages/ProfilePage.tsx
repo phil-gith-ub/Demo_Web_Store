@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useProfile } from "../context/ProfileContext";
+import { PROFILE_FAVORITE_CATEGORIES } from "../data/productCategories";
+import { logEnabledDarkMode, syncUserToBraze } from "../lib/brazeUserSyncWeb";
 import { isVip } from "../lib/purchaseStorage";
 
 type GuestFields = {
@@ -39,6 +41,16 @@ export function ProfilePage() {
   }, [currentUserId]);
 
   const p = profile;
+
+  const favoriteCategoryValue =
+    currentUserId && p ? p.favoriteProductCategory : guest.favoriteProductCategory;
+  const legacyCategory =
+    favoriteCategoryValue.trim() &&
+    !PROFILE_FAVORITE_CATEGORIES.includes(
+      favoriteCategoryValue as (typeof PROFILE_FAVORITE_CATEGORIES)[number],
+    )
+      ? favoriteCategoryValue
+      : null;
 
   return (
     <>
@@ -137,14 +149,10 @@ export function ProfilePage() {
           />
         </div>
         <div className="form-row">
-          <label htmlFor="cat">Favorite category</label>
-          <input
+          <label htmlFor="cat">Favorite product category</label>
+          <select
             id="cat"
-            value={
-              currentUserId && p
-                ? p.favoriteProductCategory
-                : guest.favoriteProductCategory
-            }
+            value={favoriteCategoryValue}
             onChange={(e) => {
               const v = e.target.value;
               if (currentUserId && p) {
@@ -153,7 +161,19 @@ export function ProfilePage() {
                 setGuest((g) => ({ ...g, favoriteProductCategory: v }));
               }
             }}
-          />
+          >
+            <option value="">—</option>
+            {legacyCategory ? (
+              <option value={legacyCategory}>
+                {legacyCategory} (not in list)
+              </option>
+            ) : null}
+            {PROFILE_FAVORITE_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
 
         <label className="toggle-row">
@@ -179,6 +199,7 @@ export function ProfilePage() {
               const v = e.target.checked;
               if (currentUserId && p) {
                 updateProfile({ isDarkModeEnabled: v });
+                if (v) void logEnabledDarkMode();
               } else {
                 setGuestDarkMode(v);
               }
@@ -186,6 +207,19 @@ export function ProfilePage() {
           />
           <span>Dark mode</span>
         </label>
+
+        {/* syncUserToBraze sends only changed profile fields (delta), like Android Save profile. */}
+        {currentUserId && p ? (
+          <div className="profile-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void syncUserToBraze(p)}
+            >
+              Save profile to Braze
+            </button>
+          </div>
+        ) : null}
 
         <Link className="profile-history-link" to="/purchase-history">
           Purchase history →
