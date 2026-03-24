@@ -37,16 +37,16 @@ function BrazeIdentifiedSync() {
     if (currentUserId) {
       introLogged.current = true;
       const id = currentUserId;
-      void initBrazeForIdentifiedUser(id).then((ok) => {
-        if (ok) {
+      void initBrazeForIdentifiedUser(id).then((result) => {
+        if (result.success) {
           pushLog({
             type: "info",
             message: `Braze Web SDK initialized; changeUser("${id}")`,
           });
         } else {
           pushLog({
-            type: "info",
-            message: `Braze not started for "${id}" — add Web API key and SDK hostname in Settings.`,
+            type: "error",
+            message: result.message,
           });
         }
       });
@@ -58,7 +58,7 @@ function BrazeIdentifiedSync() {
       void brazeOnLogout();
       pushLog({
         type: "info",
-        message: "Logged out — Braze local data cleared (wipeData).",
+        message: "Logged out — Braze SDK destroyed (ready for a clean re-init on next login).",
       });
       prevUser.current = null;
       return;

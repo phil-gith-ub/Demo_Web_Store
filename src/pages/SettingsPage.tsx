@@ -38,13 +38,13 @@ export function SettingsPage() {
   };
 
   const saveCredentials = async () => {
-    saveBrazeSettings({ apiKey, baseUrl });
     setSaveBusy(true);
     try {
       if (currentUserId) {
         await brazeOnLogout();
-        const ok = await initBrazeForIdentifiedUser(currentUserId);
-        if (ok) {
+        saveBrazeSettings({ apiKey, baseUrl });
+        const result = await initBrazeForIdentifiedUser(currentUserId);
+        if (result.success) {
           pushLog({
             type: "info",
             message: `Credentials saved; Braze restarted for user "${currentUserId}".`,
@@ -52,17 +52,13 @@ export function SettingsPage() {
           showToast("Saved and Braze reconnected for your account.");
         } else {
           pushLog({
-            type: "info",
-            message:
-              "Credentials saved but Braze failed to start — check key, endpoint, and console.",
+            type: "error",
+            message: `Credentials saved but Braze did not start: ${result.message}`,
           });
-          showToast(
-            apiKey.trim() && baseUrl.trim()
-              ? "Saved; Braze failed to start (see console)."
-              : "Saved. Add key and endpoint.",
-          );
+          showToast("Saved locally. See Logs for the Braze error detail.");
         }
       } else {
+        saveBrazeSettings({ apiKey, baseUrl });
         pushLog({
           type: "info",
           message:
@@ -99,7 +95,14 @@ export function SettingsPage() {
             npm <code>@braze/web-sdk</code> {BRAZE_WEB_SDK_RANGE}. Values are
             stored in this browser (localStorage). The SDK initializes only
             after you log in with a user ID; if you are logged in, saving
-            reapplies credentials and reconnects Braze.
+            runs <code>destroy()</code> on the current SDK instance, then saves
+            credentials again, then reconnects (so your key is not lost).
+          </p>
+          <p className="product-meta">
+            Use the <strong>Web</strong> integration’s SDK key and{" "}
+            <strong>SDK endpoint</strong> from Braze (Manage Settings → Apps →
+            your Web app). Android keys or REST-only keys often will not work
+            here.
           </p>
           <div className="stack tight">
             <div className="form-row">

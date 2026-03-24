@@ -9,6 +9,8 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react-router-dom", "@braze/web-sdk"],
+    include: ["react", "react-dom", "react-router-dom"],
+    /** Avoid pre-bundling Braze with Vite (reduces odd chunk + re-init issues). */
+    exclude: ["@braze/web-sdk"],
   },
 });

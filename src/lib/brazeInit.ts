@@ -1,25 +1,44 @@
 import { getBrazeSettings, normalizeBrazeBaseUrl } from "./brazeSettings";
 
-/**
- * Tracks which user we last ran `changeUser` for this tab (avoids duplicate
- * openSession noise when React re-runs effects).
- */
 let lastIdentifiedUserId: string | null = null;
+
+export type BrazeIdentifiedInitResult =
+  | { success: true }
+  | { success: false; message: string };
+
+function errMsg(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return String(e);
+}
 
 /**
  * Start the Braze Web SDK for an identified user only.
- * Per Braze Web SDK flow: `initialize` → `changeUser` → IAM → `openSession`
- * (see Braze docs / Context7 samples).
+ * Order: `initialize` (if needed) → `changeUser` → IAM → `openSession`.
  */
-export async function initBrazeForIdentifiedUser(userId: string): Promise<boolean> {
+export async function initBrazeForIdentifiedUser(
+  userId: string,
+): Promise<BrazeIdentifiedInitResult> {
   const id = userId.trim();
-  if (!id) return false;
+  if (!id) {
+    return { success: false, message: "User ID is empty." };
+  }
 
   const { apiKey, baseUrl } = getBrazeSettings();
   const key = apiKey.trim();
   const host = normalizeBrazeBaseUrl(baseUrl);
-  if (!key || !host) {
-    return false;
+  if (!key) {
+    return {
+      success: false,
+      message:
+        "No Web API key in Settings. Use the Web channel SDK key from Braze (not the Android or REST-only key unless your workspace uses one key for both).",
+    };
+  }
+  if (!host) {
+    return {
+      success: false,
+      message:
+        "No SDK endpoint hostname in Settings. Paste only the host (e.g. sdk.fra-02.braze.eu or sondheim.braze.com), no https:// or paths.",
+    };
   }
 
   try {
@@ -32,30 +51,43 @@ export async function initBrazeForIdentifiedUser(userId: string): Promise<boolea
       });
     }
 
+    if (!braze.isInitialized?.()) {
+      return {
+        success: false,
+        message:
+          "initialize() ran but SDK reports not initialized — check API key and endpoint match your Braze workspace (Web).",
+      };
+    }
+
     if (lastIdentifiedUserId === id && braze.isInitialized?.()) {
-      return true;
+      return { success: true };
     }
 
     braze.changeUser(id);
     braze.automaticallyShowInAppMessages();
     braze.openSession();
     lastIdentifiedUserId = id;
-    return true;
+    return { success: true };
   } catch (e) {
+    const detail = errMsg(e);
     console.warn("Braze init for identified user failed:", e);
-    return false;
+    return {
+      success: false,
+      message: `SDK threw: ${detail}`,
+    };
   }
 }
 
 /**
- * Clear Braze data on logout so anonymous browsing does not keep the prior
- * user’s SDK state. Uses `wipeData` from the Web SDK (see Braze advanced APIs).
+ * Tear down Braze on logout so the next login can call `initialize` cleanly.
+ * Prefer `destroy()` over `wipeData()` here: after `wipeData()`, a subsequent
+ * init with Vite’s lazy chunks can throw "Class extends value undefined".
  */
 export async function brazeOnLogout(): Promise<void> {
   try {
     const braze = await import("@braze/web-sdk");
     if (braze.isInitialized?.()) {
-      braze.wipeData();
+      braze.destroy();
     }
   } catch {
     /* SDK never loaded */

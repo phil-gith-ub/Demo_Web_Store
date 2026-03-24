@@ -20,11 +20,23 @@ export function saveBrazeSettings(settings: BrazeSettings): void {
   localStorage.setItem(KEYS.baseUrl, settings.baseUrl);
 }
 
-/** Normalize host: strip protocol and trailing slash for Braze Web SDK `baseUrl`. */
+/**
+ * Braze Web SDK `baseUrl` must be a hostname only (no protocol, no path).
+ * Accepts pasted URLs and strips to host.
+ */
 export function normalizeBrazeBaseUrl(input: string): string {
-  let s = input.trim();
-  if (!s) return "";
-  s = s.replace(/^https?:\/\//i, "");
-  s = s.replace(/\/$/, "");
-  return s;
+  const raw = input.trim();
+  if (!raw) return "";
+
+  try {
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const u = new URL(withProto);
+    return u.hostname || "";
+  } catch {
+    const s = raw
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .trim();
+    return s;
+  }
 }
