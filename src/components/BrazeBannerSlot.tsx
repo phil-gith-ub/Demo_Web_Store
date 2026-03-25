@@ -52,10 +52,13 @@ export function BrazeBannerSlot({
   }, [run]);
 
   const sized = variant === "wide" || variant === "square";
+  /** Forced 2:1 / 1:1 is for placeholders; live HTML creatives may be shorter — collapse to content. */
+  const intrinsicLiveHeight = mode === "live" && sized;
   const slotClass = [
     "braze-banner-slot",
     variant === "wide" && "braze-banner-slot--21",
     variant === "square" && "braze-banner-slot--square",
+    intrinsicLiveHeight && "braze-banner-slot--intrinsic-height",
   ]
     .filter(Boolean)
     .join(" ");

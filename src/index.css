@@ -416,6 +416,20 @@ textarea {
   aspect-ratio: 1 / 1;
 }
 
+/* Live wide/square: no fixed aspect box — removes empty space under short Braze HTML */
+.braze-banner-slot--21.braze-banner-slot--intrinsic-height,
+.braze-banner-slot--square.braze-banner-slot--intrinsic-height {
+  aspect-ratio: auto;
+  align-self: start;
+}
+
+.braze-banner-slot--21.braze-banner-slot--intrinsic-height .braze-banner-mount--active,
+.braze-banner-slot--square.braze-banner-slot--intrinsic-height .braze-banner-mount--active {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+}
+
 .braze-banner-slot--21 .braze-banner-mount,
 .braze-banner-slot--square .braze-banner-mount {
   display: none;

@@ -52,7 +52,7 @@ export async function refreshBrazeBannersAndCards(): Promise<void> {
 }
 
 /**
- * After `changeUser`: active_member, logged_in, VIP attribute, feature flags (Android `loginUserToBraze` + `logLoggedIn`).
+ * After `changeUser`: active_member, logged_in, `vip_member` only if user qualifies (never false), feature flags.
  */
 export async function completeIdentifiedUserAfterChangeUser(
   userId: string,
@@ -166,20 +166,32 @@ export async function syncUserToBraze(profile: UserProfile): Promise<void> {
   brazeAppLog({ type: "event", message: "syncUserToBraze — profile deltas flushed" });
 }
 
+/**
+ * Sets `vip_member=true` in Braze once the user qualifies. Never sets `false` (VIP is permanent in Braze;
+ * non-VIP / new profiles omit the attribute). Clears legacy local `vipMember: false` without sending.
+ */
 export async function syncVipStatusToBraze(userId: string): Promise<void> {
   const braze = await import("@braze/web-sdk");
   if (!braze.isInitialized?.()) return;
 
   const vip = isVip(userId);
   const last = loadBrazeLastSent(userId);
-  if (last.vipMember === vip) return;
+
+  if (!vip) {
+    if (last.vipMember === false) {
+      mergeBrazeLastSent(userId, { vipMember: null });
+    }
+    return;
+  }
+
+  if (last.vipMember === true) return;
 
   const user = braze.getUser();
-  user?.setCustomUserAttribute("vip_member", vip);
-  mergeBrazeLastSent(userId, { vipMember: vip });
+  user?.setCustomUserAttribute("vip_member", true);
+  mergeBrazeLastSent(userId, { vipMember: true });
   brazeAppLog({
     type: "event",
-    message: `setCustomUserAttribute("vip_member", ${vip})`,
+    message: 'setCustomUserAttribute("vip_member", true)',
   });
 }
 
