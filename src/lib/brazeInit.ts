@@ -86,6 +86,16 @@ export async function initBrazeForIdentifiedUser(
       rk !== lastBrazeInitRefreshKey;
 
     if (lastIdentifiedUserId === id && !sameUserRelogin) {
+      /* Still ask the SDK for fresh banners/cards — short-circuit skips the block below that normally refreshes. */
+      try {
+        const b = await import("@braze/web-sdk");
+        if (b.isInitialized?.()) {
+          b.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
+          b.requestContentCardsRefresh();
+        }
+      } catch {
+        /* ignore */
+      }
       return { success: true };
     }
 
