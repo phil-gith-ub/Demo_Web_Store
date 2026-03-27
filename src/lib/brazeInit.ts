@@ -119,6 +119,11 @@ export async function initBrazeForIdentifiedUser(
         baseUrl: host,
         enableLogging: true,
         allowUserSuppliedJavascript: true,
+        /**
+         * Vite serves `public/service-worker.js` at `/service-worker.js` (site root).
+         * HTTPS required for push in production; localhost OK for dev.
+         */
+        serviceWorkerLocation: "/service-worker.js",
       });
     }
 
