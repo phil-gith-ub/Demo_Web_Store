@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BrazeWebPushPanel } from "../components/BrazeWebPushPanel";
-import { useBrazeLogs } from "../context/BrazeLogContext";
 import { useProfile } from "../context/ProfileContext";
 import { PROFILE_FAVORITE_CATEGORIES } from "../data/productCategories";
-import {
-  fetchBrazeUserProfileRest,
-  isBrazeRestImportConfigured,
-} from "../lib/brazeRestProfile";
 import { logEnabledDarkMode, syncUserToBraze } from "../lib/brazeUserSyncWeb";
-import { isVip } from "../lib/purchaseStorage";
+import { isVip, subscribeSpendUpdated } from "../lib/purchaseStorage";
 
 type GuestFields = {
   firstName: string;
@@ -36,11 +31,9 @@ export function ProfilePage() {
     login,
     logout,
     updateProfile,
-    refreshKey,
     guestDarkMode,
     setGuestDarkMode,
   } = useProfile();
-  const { pushLog } = useBrazeLogs();
   const [userIdInput, setUserIdInput] = useState(currentUserId ?? "");
   const [guest, setGuest] = useState<GuestFields>(emptyGuest);
 
@@ -48,26 +41,12 @@ export function ProfilePage() {
     setUserIdInput(currentUserId ?? "");
   }, [currentUserId]);
 
-  /** After login, pull standard + custom profile fields from Braze REST (`/users/export/ids`). */
+  const [, spendBump] = useState(0);
   useEffect(() => {
-    if (!currentUserId) return;
-    if (!isBrazeRestImportConfigured()) return;
-    const ac = new AbortController();
-    void (async () => {
-      const r = await fetchBrazeUserProfileRest(currentUserId, ac.signal);
-      if (ac.signal.aborted) return;
-      if (!r.ok) {
-        pushLog({ type: "error", message: `Braze REST import: ${r.message}` });
-        return;
-      }
-      updateProfile(r.patch);
-      pushLog({
-        type: "info",
-        message: "Profile fields loaded from Braze (REST).",
-      });
-    })();
-    return () => ac.abort();
-  }, [currentUserId, refreshKey, pushLog, updateProfile]);
+    return subscribeSpendUpdated((id) => {
+      if (id === currentUserId) spendBump((n) => n + 1);
+    });
+  }, [currentUserId]);
 
   const p = profile;
   const userIdLocked = Boolean(currentUserId && p);

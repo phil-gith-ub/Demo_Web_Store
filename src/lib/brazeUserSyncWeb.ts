@@ -73,7 +73,7 @@ export async function completeIdentifiedUserAfterChangeUser(
   braze.logFeatureFlagImpression?.(BRAZE_FEATURE_FLAG_VIP);
 
   braze.requestImmediateDataFlush();
-  /* Banners/cards refresh runs in `initBrazeForIdentifiedUser` before `openSession`. */
+  /* Banners refresh + `requestContentCardsRefresh` run in `initBrazeForIdentifiedUser` (cards after `openSession`). */
 }
 
 export async function brazePreLogout(userId: string): Promise<void> {
@@ -279,14 +279,13 @@ export async function isVipProductsEnabled(): Promise<boolean> {
 }
 
 export function findContentCardForSlot(cards: Card[], slotId: string): Card | null {
+  const want = slotId.trim();
+  if (!want) return null;
   for (const card of cards) {
     if (card.isControl) continue;
     const ex = card.extras ?? {};
-    if (
-      ex.position_id === slotId ||
-      ex.location === slotId ||
-      ex.card_id === slotId
-    ) {
+    const loc = ex.location;
+    if (loc != null && String(loc).trim() === want) {
       return card;
     }
   }

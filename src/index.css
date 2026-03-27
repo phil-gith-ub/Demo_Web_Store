@@ -351,6 +351,43 @@ textarea {
   font-size: 0.75rem;
 }
 
+.log-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.log-item-expand {
+  flex-shrink: 0;
+}
+
+.log-item-preview {
+  word-break: break-word;
+}
+
+.log-item-payload {
+  margin: 0.35rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 65%, var(--border));
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  max-height: min(55vh, 28rem);
+  overflow: auto;
+}
+
+.log-item-payload--detail {
+  margin-top: 0.5rem;
+  max-height: min(40vh, 20rem);
+}
+
 .badge {
   display: inline-block;
   background: var(--primary);
@@ -410,6 +447,22 @@ textarea {
 
 .braze-banner-slot {
   margin-bottom: 1rem;
+}
+
+/* Store/Cart: reserve ~live min-height while SDK resolves (no dashed ghost flash). */
+.braze-banner-slot--pending-default {
+  min-height: 48px;
+}
+
+/* Invisible flex child: same footprint as ghost for 2:1 / 1:1 slots while mode is pending. */
+.braze-banner-slot--21 .braze-banner-pending-fill,
+.braze-banner-slot--square .braze-banner-pending-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .braze-banner-mount--active {

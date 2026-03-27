@@ -44,7 +44,7 @@ function cardUrl(card: Card): string | undefined {
 }
 
 /**
- * Picks a card by extras `position_id`, `location`, or `card_id` (Android parity), logs impressions/clicks.
+ * Picks a card when extras `location` equals `slotId`; logs impressions/clicks.
  */
 export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
   const navigate = useNavigate();

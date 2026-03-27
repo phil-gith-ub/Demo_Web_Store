@@ -1,4 +1,5 @@
 import { ALL_BANNER_PLACEMENT_IDS } from "./brazeConstants";
+import { brazeAppLog } from "./brazeAppLog";
 import { DEMOSTORE_DOM_SCAN_EVENT } from "./demostoreDeepLink";
 import { getBrazeSettings, normalizeBrazeBaseUrl } from "./brazeSettings";
 import { completeIdentifiedUserAfterChangeUser, brazePreLogout } from "./brazeUserSyncWeb";
@@ -45,8 +46,11 @@ function registerInAppMessagesOnce(braze: typeof import("@braze/web-sdk")) {
 
 /**
  * Start the Braze Web SDK for an identified user only.
- * Order (per Web SDK types): `initialize` → `changeUser` → subscribe to banners/cards **before** `openSession`,
- * then IAM, refresh requests, then `openSession` last.
+ * Order (per Braze Web docs): `initialize` → `changeUser` → `subscribeToContentCardsUpdates` /
+ * `subscribeToBannersUpdates` **before** `openSession` (required for session-start refreshes). IAM subscription
+ * before `openSession`. Then `openSession` last among session lifecycle calls; **`requestContentCardsRefresh`
+ * runs after `openSession`** so the feed request happens after the session exists server-side (session-start
+ * Canvas/Campaign Content Card steps can appear on this session, not only after a manual refresh).
  *
  * @param refreshKey Profile `refreshKey` — increments on every Log in; same user + new key destroys and re-inits
  *   so `changeUser` runs again (SDK no-ops if user id unchanged without a fresh init).
@@ -135,6 +139,39 @@ export async function initBrazeForIdentifiedUser(
       };
     }
 
+    /**
+     * Route Braze SDK debug strings into the in-app Logs page (`brazeAppLog` → `registerBrazeAppLogSink`).
+     * `enableLogging` alone only prints to the browser console; Android-style “everything in one log” needs this.
+     * @see https://github.com/braze-inc/braze-web-sdk — `setLogger`
+     */
+    braze.setLogger((message: string) => {
+      if (import.meta.env.DEV) {
+        console.debug(message);
+      }
+      const lower = message.toLowerCase();
+      let type: "info" | "request" | "response" | "event" | "error" = "info";
+      /* SDK skips cards it cannot parse — usually dashboard/Web mismatch, not an app crash. */
+      if (/ignoring card with unknown type/i.test(message)) {
+        type = "info";
+      } else if (
+        /\berror\b|\bfail(ed)?\b|\bexception\b/i.test(message) &&
+        !/did not match/i.test(lower)
+      ) {
+        type = "error";
+      } else if (/requesting|fetching|connecting to real-time/i.test(lower)) {
+        type = "request";
+      } else if (/received|initialized for the braze backend/i.test(lower)) {
+        type = "response";
+      } else if (
+        /trigger|logcustom|logged custom|firing templated|session start/i.test(
+          lower,
+        )
+      ) {
+        type = "event";
+      }
+      brazeAppLog({ type, message });
+    });
+
     braze.changeUser(id);
     registerBrazeSubscriptionsOnce(braze);
     registerInAppMessagesOnce(braze);
@@ -142,9 +179,11 @@ export async function initBrazeForIdentifiedUser(
     await completeIdentifiedUserAfterChangeUser(id);
 
     braze.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
-    braze.requestContentCardsRefresh();
 
     braze.openSession();
+    /* SDK also refreshes content cards on session start when subscribed above; this explicit refresh runs after
+       the session is opened so server-side “session start” eligibility (e.g. Canvas Content Card steps) is included. */
+    braze.requestContentCardsRefresh();
     lastIdentifiedUserId = id;
     lastBrazeInitRefreshKey = rk;
     return { success: true };
