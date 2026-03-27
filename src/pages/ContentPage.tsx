@@ -79,7 +79,6 @@ export function ContentPage() {
               title={b.label}
               placementId={b.id}
               variant={b.id === "content_banner" ? "wide" : "square"}
-              lockSquareAspect={b.id === "tile_banner"}
             />
           </div>
         ))}

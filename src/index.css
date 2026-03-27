@@ -492,6 +492,20 @@ textarea {
   margin-bottom: 0;
 }
 
+/*
+ * Tile sits in one grid column (half the row under the full-width hero). Fill that column — do not
+ * shrink again with an inner max-width (that made the tile ~25% of the row). Scale images to column.
+ */
+.content-ghost-grid--paired
+  > div:not(.content-grid-span-2)
+  .braze-banner-slot--square
+  .braze-banner-mount--active
+  img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* Content cards — Android Tile1 2:1 row (image | text), Tile2 1:1 column */
 .content-card-slot {
   border: 1px solid var(--border);
