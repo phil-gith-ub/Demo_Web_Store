@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { BrazeWebPushPanel } from "../components/BrazeWebPushPanel";
 import { useBrazeLogs } from "../context/BrazeLogContext";
 import { useProfile } from "../context/ProfileContext";
 import { PROFILE_FAVORITE_CATEGORIES } from "../data/productCategories";
@@ -278,6 +279,8 @@ export function ProfilePage() {
         <Link className="profile-history-link" to="/purchase-history">
           Purchase history →
         </Link>
+
+        <BrazeWebPushPanel />
       </div>
     </>
   );
