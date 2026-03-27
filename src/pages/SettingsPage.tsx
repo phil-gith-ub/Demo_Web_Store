@@ -22,6 +22,8 @@ import {
   - Package: @braze/web-sdk (see brazeConstants BRAZE_WEB_SDK_RANGE). Credentials in localStorage.
   - SDK starts after Profile login; if already logged in, Save runs destroy() then saves then initBrazeForIdentifiedUser.
   - Use Web app SDK key + SDK endpoint from Braze (Manage Settings → Apps → Web). Android/REST-only keys often fail.
+  - REST API key + instance URL: Profile import uses POST /users/export/ids (see brazeRestProfile.ts). In dev, Vite proxies
+    /braze-rest → BRAZE_REST_PROXY_TARGET (default todd.braze.com demo); set .env to override.
   - Banner / card / flag / deep link sections below are reference IDs for dashboard setup.
 */
 
@@ -33,9 +35,15 @@ function copyValue(value: string, label: string) {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { pushLog } = useBrazeLogs();
-  const { currentUserId } = useProfile();
+  const { currentUserId, refreshKey } = useProfile();
   const [apiKey, setApiKey] = useState(() => getBrazeSettings().apiKey);
   const [baseUrl, setBaseUrl] = useState(() => getBrazeSettings().baseUrl);
+  const [restApiKey, setRestApiKey] = useState(
+    () => getBrazeSettings().restApiKey,
+  );
+  const [restEndpoint, setRestEndpoint] = useState(
+    () => getBrazeSettings().restEndpoint || "https://todd.braze.com",
+  );
   const [toast, setToast] = useState<string | null>(null);
   const [saveBusy, setSaveBusy] = useState(false);
 
@@ -49,8 +57,11 @@ export function SettingsPage() {
     try {
       if (currentUserId) {
         await brazeDestroyForReconnect();
-        saveBrazeSettings({ apiKey, baseUrl });
-        const result = await initBrazeForIdentifiedUser(currentUserId);
+        saveBrazeSettings({ apiKey, baseUrl, restApiKey, restEndpoint });
+        const result = await initBrazeForIdentifiedUser(
+          currentUserId,
+          refreshKey,
+        );
         if (result.success) {
           pushLog({
             type: "info",
@@ -65,7 +76,7 @@ export function SettingsPage() {
           showToast("Saved locally. See Logs for the Braze error detail.");
         }
       } else {
-        saveBrazeSettings({ apiKey, baseUrl });
+        saveBrazeSettings({ apiKey, baseUrl, restApiKey, restEndpoint });
         pushLog({
           type: "info",
           message:
@@ -97,8 +108,13 @@ export function SettingsPage() {
 
       <div className="settings-grid">
         <section className="settings-card">
-          <h2>Braze Web SDK</h2>
+          <h2>Braze credentials</h2>
           <div className="stack tight">
+            <h3 className="settings-subh">Web SDK</h3>
+            <p className="product-meta">
+              Web app key and SDK endpoint (Manage Settings → Apps → Web). Android/REST-only keys often fail
+              initialization.
+            </p>
             <div className="form-row">
               <label htmlFor="bk">Web API key</label>
               <input
@@ -119,9 +135,44 @@ export function SettingsPage() {
                 spellCheck={false}
               />
             </div>
+
+            <h3 className="settings-subh">REST API (profile import, optional)</h3>
+            <p className="product-meta">
+              Loads name, email, phone, and custom attributes into Profile via{" "}
+              <code>POST /users/export/ids</code>. Use a key with{" "}
+              <strong>users.export.ids</strong> — not the Web SDK key. REST base URL is in Braze API docs (e.g.{" "}
+              <code>https://todd.braze.com</code> for the Braze demo environment).
+            </p>
+            <p className="product-meta">
+              <strong>Local dev:</strong> <code>/braze-rest</code> proxies to{" "}
+              <code>https://todd.braze.com</code> by default; set <code>BRAZE_REST_PROXY_TARGET</code> in{" "}
+              <code>.env</code> to override. <strong>Production:</strong> browsers may block direct REST calls
+              without a same-origin proxy.
+            </p>
+            <div className="form-row">
+              <label htmlFor="brk">REST API key</label>
+              <input
+                id="brk"
+                value={restApiKey}
+                onChange={(e) => setRestApiKey(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+            <div className="form-row">
+              <label htmlFor="re">REST instance URL</label>
+              <input
+                id="re"
+                value={restEndpoint}
+                onChange={(e) => setRestEndpoint(e.target.value)}
+                placeholder="https://todd.braze.com"
+                spellCheck={false}
+              />
+            </div>
+
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary settings-save-creds"
               disabled={saveBusy}
               onClick={() => void saveCredentials()}
             >
@@ -192,6 +243,11 @@ export function SettingsPage() {
 
         <section className="settings-card">
           <h2>Deep links</h2>
+          <p className="product-meta" style={{ marginBottom: "0.75rem" }}>
+            For <strong>web</strong> campaigns, prefer the HTTPS <strong>Web URL</strong> below (same paths as this
+            site). <code>demostore://</code> is handled in-app when possible; Universal Links / App Links are for
+            opening your <em>native</em> app from an <code>https://</code> URL, not a substitute for web routing.
+          </p>
           <ul className="settings-ref-list">
             {DEEPLINK_REFERENCE.map((row) => {
               const full =

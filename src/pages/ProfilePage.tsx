@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useBrazeLogs } from "../context/BrazeLogContext";
 import { useProfile } from "../context/ProfileContext";
 import { PROFILE_FAVORITE_CATEGORIES } from "../data/productCategories";
+import {
+  fetchBrazeUserProfileRest,
+  isBrazeRestImportConfigured,
+} from "../lib/brazeRestProfile";
 import { logEnabledDarkMode, syncUserToBraze } from "../lib/brazeUserSyncWeb";
 import { isVip } from "../lib/purchaseStorage";
 
@@ -30,9 +35,11 @@ export function ProfilePage() {
     login,
     logout,
     updateProfile,
+    refreshKey,
     guestDarkMode,
     setGuestDarkMode,
   } = useProfile();
+  const { pushLog } = useBrazeLogs();
   const [userIdInput, setUserIdInput] = useState(currentUserId ?? "");
   const [guest, setGuest] = useState<GuestFields>(emptyGuest);
 
@@ -40,7 +47,29 @@ export function ProfilePage() {
     setUserIdInput(currentUserId ?? "");
   }, [currentUserId]);
 
+  /** After login, pull standard + custom profile fields from Braze REST (`/users/export/ids`). */
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (!isBrazeRestImportConfigured()) return;
+    const ac = new AbortController();
+    void (async () => {
+      const r = await fetchBrazeUserProfileRest(currentUserId, ac.signal);
+      if (ac.signal.aborted) return;
+      if (!r.ok) {
+        pushLog({ type: "error", message: `Braze REST import: ${r.message}` });
+        return;
+      }
+      updateProfile(r.patch);
+      pushLog({
+        type: "info",
+        message: "Profile fields loaded from Braze (REST).",
+      });
+    })();
+    return () => ac.abort();
+  }, [currentUserId, refreshKey, pushLog, updateProfile]);
+
   const p = profile;
+  const userIdLocked = Boolean(currentUserId && p);
 
   const favoriteCategoryValue =
     currentUserId && p ? p.favoriteProductCategory : guest.favoriteProductCategory;
@@ -60,7 +89,15 @@ export function ProfilePage() {
           <label htmlFor="login-id">User ID</label>
           <input
             id="login-id"
+            className={userIdLocked ? "profile-user-id--locked" : undefined}
             value={userIdInput}
+            readOnly={userIdLocked}
+            autoComplete={userIdLocked ? "off" : "username"}
+            title={
+              userIdLocked
+                ? "Log out to change your user ID"
+                : undefined
+            }
             onChange={(e) => setUserIdInput(e.target.value)}
             placeholder="Enter user id to log in"
           />
@@ -87,17 +124,12 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {currentUserId ? (
-          <p className="product-meta">
-            VIP status: {isVip(currentUserId) ? "yes" : "no"} (total spent
-            &gt; $1000)
-          </p>
-        ) : (
+        {!currentUserId ? (
           <p className="product-meta">
             Log in to persist profile and use checkout. You can still edit fields
             below (stored locally until you log in).
           </p>
-        )}
+        ) : null}
 
         <div className="form-row">
           <label htmlFor="fn">First name</label>
@@ -218,6 +250,28 @@ export function ProfilePage() {
             >
               Save profile to Braze
             </button>
+          </div>
+        ) : null}
+
+        {currentUserId ? (
+          <div
+            className={`profile-vip-status${isVip(currentUserId) ? " profile-vip-status--active" : ""}`}
+            role="status"
+            aria-label="VIP membership status"
+          >
+            <span className="profile-vip-status__badge">VIP</span>
+            <div className="profile-vip-status__body">
+              <span className="profile-vip-status__title">
+                {isVip(currentUserId)
+                  ? "VIP access active"
+                  : "Not a VIP yet"}
+              </span>
+              {!isVip(currentUserId) ? (
+                <p className="profile-vip-status__hint">
+                  Spend over $1,000 in total to unlock VIP products and offers.
+                </p>
+              ) : null}
+            </div>
           </div>
         ) : null}
 

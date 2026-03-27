@@ -258,6 +258,16 @@ export async function logCheckoutPurchases(products: Product[]): Promise<void> {
   await refreshBrazeBannersAndCards();
 }
 
+/** Log a custom event and flush (Content page demo actions, etc.). */
+export async function logBrazeCustomEvent(eventName: string): Promise<boolean> {
+  const braze = await import("@braze/web-sdk");
+  if (!braze.isInitialized?.()) return false;
+  braze.logCustomEvent(eventName);
+  brazeAppLog({ type: "event", message: `logCustomEvent("${eventName}")` });
+  braze.requestImmediateDataFlush();
+  return true;
+}
+
 /** Mirrors Android `isVipProductsEnabled` (impression + enabled). */
 export async function isVipProductsEnabled(): Promise<boolean> {
   const braze = await import("@braze/web-sdk");

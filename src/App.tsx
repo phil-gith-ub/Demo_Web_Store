@@ -12,6 +12,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { PurchaseHistoryPage } from "./pages/PurchaseHistoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StorePage } from "./pages/StorePage";
+import { DemostoreLinkInterceptor } from "./components/DemostoreLinkInterceptor";
 
 function ThemeSync() {
   const { profile, currentUserId, guestDarkMode } = useProfile();
@@ -29,7 +30,7 @@ function ThemeSync() {
  * After login: `initialize` (if needed) → `changeUser` → `automaticallyShowInAppMessages` → `openSession` (Braze Web SDK pattern).
  */
 function BrazeIdentifiedSync() {
-  const { currentUserId } = useProfile();
+  const { currentUserId, refreshKey } = useProfile();
   const { pushLog } = useBrazeLogs();
   const introLogged = useRef(false);
   const prevUser = useRef<string | null>(null);
@@ -43,7 +44,7 @@ function BrazeIdentifiedSync() {
     if (currentUserId) {
       introLogged.current = true;
       const id = currentUserId;
-      void initBrazeForIdentifiedUser(id).then((result) => {
+      void initBrazeForIdentifiedUser(id, refreshKey).then((result) => {
         if (result.success) {
           pushLog({
             type: "info",
@@ -81,7 +82,7 @@ function BrazeIdentifiedSync() {
           "Braze Web SDK runs only after you log in with a user ID. Add credentials in Settings, then use Profile → Log in.",
       });
     }
-  }, [currentUserId, pushLog]);
+  }, [currentUserId, refreshKey, pushLog]);
 
   return null;
 }
@@ -91,6 +92,7 @@ export default function App() {
     <>
       <ThemeSync />
       <BrazeIdentifiedSync />
+      <DemostoreLinkInterceptor />
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/store" replace />} />

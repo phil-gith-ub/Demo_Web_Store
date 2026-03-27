@@ -27,7 +27,9 @@ export function CartPage() {
   return (
     <>
       <h1 className="page-title">Cart</h1>
-      <BrazeBannerSlot title="Cart banner" placementId="cart_banner" />
+      <div className="cart-banner-wrap">
+        <BrazeBannerSlot title="Cart banner" placementId="cart_banner" />
+      </div>
       {itemCount === 0 ? (
         <p>Your cart is empty.</p>
       ) : (

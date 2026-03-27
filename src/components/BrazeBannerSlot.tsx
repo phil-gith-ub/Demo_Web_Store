@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEMOSTORE_DOM_SCAN_EVENT } from "../lib/demostoreDeepLink";
 import { BrazeGhostSlot } from "./BrazeGhostSlot";
 
 export type BrazeBannerVariant = "default" | "wide" | "square";
@@ -11,6 +12,11 @@ type Props = {
    * `default` = flexible height for Store/Cart.
    */
   variant?: BrazeBannerVariant;
+  /**
+   * When `variant` is `square`, keep a strict 1:1 box: height follows width as the layout resizes.
+   * Use for `tile_banner`; omit for square placeholders that should shrink to short live HTML.
+   */
+  lockSquareAspect?: boolean;
 };
 
 /**
@@ -21,6 +27,7 @@ export function BrazeBannerSlot({
   title,
   placementId,
   variant = "default",
+  lockSquareAspect = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"empty" | "control" | "live">("empty");
@@ -51,13 +58,22 @@ export function BrazeBannerSlot({
     return () => window.removeEventListener("braze:banners", onBanners);
   }, [run]);
 
+  useEffect(() => {
+    if (mode !== "live") return;
+    queueMicrotask(() => {
+      window.dispatchEvent(new Event(DEMOSTORE_DOM_SCAN_EVENT));
+    });
+  }, [mode, placementId]);
+
   const sized = variant === "wide" || variant === "square";
-  /** Forced 2:1 / 1:1 is for placeholders; live HTML creatives may be shorter — collapse to content. */
-  const intrinsicLiveHeight = mode === "live" && sized;
+  /** Wide/square live: collapse to content height unless square aspect is locked (tile_banner). */
+  const intrinsicLiveHeight =
+    mode === "live" && sized && !(variant === "square" && lockSquareAspect);
   const slotClass = [
     "braze-banner-slot",
     variant === "wide" && "braze-banner-slot--21",
     variant === "square" && "braze-banner-slot--square",
+    lockSquareAspect && "braze-banner-slot--square-locked",
     intrinsicLiveHeight && "braze-banner-slot--intrinsic-height",
   ]
     .filter(Boolean)

@@ -1,9 +1,13 @@
 import { ALL_BANNER_PLACEMENT_IDS } from "./brazeConstants";
+import { DEMOSTORE_DOM_SCAN_EVENT } from "./demostoreDeepLink";
 import { getBrazeSettings, normalizeBrazeBaseUrl } from "./brazeSettings";
 import { completeIdentifiedUserAfterChangeUser, brazePreLogout } from "./brazeUserSyncWeb";
 
 let lastIdentifiedUserId: string | null = null;
+/** Last `refreshKey` we ran init with (Profile login bumps key even when user id unchanged). */
+let lastBrazeInitRefreshKey: number | null = null;
 let brazeSubscriptionsRegistered = false;
+let inAppMessageHandlerRegistered = false;
 
 export type BrazeIdentifiedInitResult =
   | { success: true }
@@ -25,13 +29,31 @@ function registerBrazeSubscriptionsOnce(braze: typeof import("@braze/web-sdk")) 
   brazeSubscriptionsRegistered = true;
 }
 
+function registerInAppMessagesOnce(braze: typeof import("@braze/web-sdk")) {
+  if (inAppMessageHandlerRegistered) return;
+  const subId = braze.subscribeToInAppMessage?.((message) => {
+    braze.showInAppMessage?.(message);
+    queueMicrotask(() => {
+      window.dispatchEvent(new Event(DEMOSTORE_DOM_SCAN_EVENT));
+    });
+  });
+  if (subId === undefined) {
+    braze.automaticallyShowInAppMessages?.();
+  }
+  inAppMessageHandlerRegistered = true;
+}
+
 /**
  * Start the Braze Web SDK for an identified user only.
  * Order (per Web SDK types): `initialize` → `changeUser` → subscribe to banners/cards **before** `openSession`,
  * then IAM, refresh requests, then `openSession` last.
+ *
+ * @param refreshKey Profile `refreshKey` — increments on every Log in; same user + new key destroys and re-inits
+ *   so `changeUser` runs again (SDK no-ops if user id unchanged without a fresh init).
  */
 export async function initBrazeForIdentifiedUser(
   userId: string,
+  refreshKey?: number,
 ): Promise<BrazeIdentifiedInitResult> {
   const id = userId.trim();
   if (!id) {
@@ -57,6 +79,29 @@ export async function initBrazeForIdentifiedUser(
   }
 
   try {
+    const rk = refreshKey ?? 0;
+    const sameUserRelogin =
+      lastIdentifiedUserId === id &&
+      lastBrazeInitRefreshKey !== null &&
+      rk !== lastBrazeInitRefreshKey;
+
+    if (lastIdentifiedUserId === id && !sameUserRelogin) {
+      return { success: true };
+    }
+
+    if (sameUserRelogin) {
+      try {
+        const b = await import("@braze/web-sdk");
+        if (b.isInitialized?.()) b.destroy();
+      } catch {
+        /* ignore */
+      }
+      lastIdentifiedUserId = null;
+      lastBrazeInitRefreshKey = null;
+      brazeSubscriptionsRegistered = false;
+      inAppMessageHandlerRegistered = false;
+    }
+
     const braze = await import("@braze/web-sdk");
 
     if (!braze.isInitialized?.()) {
@@ -75,13 +120,9 @@ export async function initBrazeForIdentifiedUser(
       };
     }
 
-    if (lastIdentifiedUserId === id) {
-      return { success: true };
-    }
-
     braze.changeUser(id);
     registerBrazeSubscriptionsOnce(braze);
-    braze.automaticallyShowInAppMessages();
+    registerInAppMessagesOnce(braze);
 
     await completeIdentifiedUserAfterChangeUser(id);
 
@@ -90,6 +131,7 @@ export async function initBrazeForIdentifiedUser(
 
     braze.openSession();
     lastIdentifiedUserId = id;
+    lastBrazeInitRefreshKey = rk;
     return { success: true };
   } catch (e) {
     const detail = errMsg(e);
@@ -117,7 +159,9 @@ export async function brazeOnLogout(previousUserId: string | null): Promise<void
     /* SDK never loaded */
   } finally {
     lastIdentifiedUserId = null;
+    lastBrazeInitRefreshKey = null;
     brazeSubscriptionsRegistered = false;
+    inAppMessageHandlerRegistered = false;
   }
 }
 
@@ -134,7 +178,9 @@ export async function brazeDestroyForReconnect(): Promise<void> {
     /* SDK never loaded */
   } finally {
     lastIdentifiedUserId = null;
+    lastBrazeInitRefreshKey = null;
     brazeSubscriptionsRegistered = false;
+    inAppMessageHandlerRegistered = false;
   }
 }
 

@@ -1,5 +1,7 @@
 import type { Card } from "@braze/web-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { demostoreUriToWebPath } from "../lib/demostoreDeepLink";
 import { findContentCardForSlot } from "../lib/brazeUserSyncWeb";
 import { BrazeGhostSlot } from "./BrazeGhostSlot";
 
@@ -45,6 +47,7 @@ function cardUrl(card: Card): string | undefined {
  * Picks a card by extras `position_id`, `location`, or `card_id` (Android parity), logs impressions/clicks.
  */
 export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
+  const navigate = useNavigate();
   const [card, setCard] = useState<Card | null>(null);
   const impressionLogged = useRef<string | undefined>(undefined);
 
@@ -101,7 +104,13 @@ export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
     void import("@braze/web-sdk").then((braze) => {
       if (braze.isInitialized?.()) braze.logContentCardClick(card);
     });
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    if (!url) return;
+    const webPath = demostoreUriToWebPath(url);
+    if (webPath) {
+      navigate(webPath);
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const wideWithImage = variant === "wide" && !!img;

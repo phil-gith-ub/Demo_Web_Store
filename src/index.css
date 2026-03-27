@@ -12,6 +12,10 @@
   --radius: 10px;
   --sidebar-w: 220px;
   --header-h: 56px;
+  /* Locked Profile user id (avoids autofill washing out dark theme) */
+  --profile-input-locked-bg: #e4e4e9;
+  --profile-input-locked-fg: #52525b;
+  --profile-input-locked-border: #d4d4d8;
 }
 
 .dark {
@@ -24,6 +28,9 @@
   --border: #27272a;
   --banner: #5b21b6;
   --banner-text: #faf5ff;
+  --profile-input-locked-bg: #27272a;
+  --profile-input-locked-fg: #a1a1aa;
+  --profile-input-locked-border: #3f3f46;
 }
 
 *,
@@ -198,6 +205,17 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.cart-banner-wrap {
+  max-width: 50%;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .cart-banner-wrap {
+    max-width: 100%;
+  }
 }
 
 .product-card.cart-line {
@@ -416,6 +434,18 @@ textarea {
   aspect-ratio: 1 / 1;
 }
 
+/* tile_banner: always a square; width drives height via aspect-ratio as the grid/viewport changes */
+.braze-banner-slot--square-locked {
+  overflow: hidden;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.braze-banner-slot--square-locked .braze-banner-mount--active {
+  overflow: hidden;
+  height: 100%;
+}
+
 /* Live wide/square: no fixed aspect box — removes empty space under short Braze HTML */
 .braze-banner-slot--21.braze-banner-slot--intrinsic-height,
 .braze-banner-slot--square.braze-banner-slot--intrinsic-height {
@@ -617,6 +647,22 @@ textarea {
   font-size: 1.05rem;
 }
 
+.settings-subh {
+  margin: 0.85rem 0 0.25rem;
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.settings-subh:first-child {
+  margin-top: 0;
+}
+
+.settings-save-creds {
+  margin-top: 0.35rem;
+  align-self: flex-start;
+}
+
 .settings-toast {
   margin: 0 0 1rem;
   font-weight: 600;
@@ -693,6 +739,132 @@ textarea {
   width: 100%;
 }
 
+@media (max-width: 900px) {
+  .content-page {
+    max-width: 100%;
+  }
+}
+
+.content-action-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.content-action-row .btn {
+  flex: 1 1 120px;
+  min-height: 48px;
+}
+
+.content-page-toast {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 20%, var(--surface));
+  border: 1px solid var(--border);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.content-page-block {
+  margin-top: 1.5rem;
+}
+
+.content-page-block--hero {
+  margin-top: 1rem;
+}
+
+.content-tile-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 559px) {
+  .content-tile-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.content-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.content-dialog {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.content-dialog-title {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.content-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.content-dialog-error {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: #c62828;
+}
+
+/* Store: tabs size to content (one row when space allows), wrap when narrow — width is measured for banner + grid */
+.store-tabs {
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.store-tabs .tab {
+  flex: 0 0 auto;
+}
+
+.store-page-aligned-block {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.vip-empty-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+.vip-empty-card-text {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
 .content-section-title {
   font-size: 1.05rem;
   margin: 1.25rem 0 0.5rem;
@@ -704,7 +876,7 @@ textarea {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
-/* Content page: hero row full width (2 cols), next row one half-width tile */
+/* Content page banners: hero spans 2 cols; tile sits in one column unless span class added */
 .content-ghost-grid.content-ghost-grid--paired {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -729,6 +901,81 @@ textarea {
 
 .profile-stack {
   max-width: 440px;
+}
+
+input.profile-user-id--locked {
+  cursor: default;
+  color: var(--profile-input-locked-fg);
+  background-color: var(--profile-input-locked-bg) !important;
+  background-image: none !important;
+  border-color: var(--profile-input-locked-border);
+  -webkit-text-fill-color: var(--profile-input-locked-fg) !important;
+}
+
+input.profile-user-id--locked:-webkit-autofill,
+input.profile-user-id--locked:-webkit-autofill:hover,
+input.profile-user-id--locked:-webkit-autofill:focus,
+input.profile-user-id--locked:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--profile-input-locked-fg) !important;
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--profile-input-locked-bg) inset !important;
+  border-color: var(--profile-input-locked-border) !important;
+  transition: background-color 99999s ease-out;
+}
+
+.profile-vip-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  max-width: 440px;
+}
+
+.profile-vip-status--active {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  background: var(--primary-muted);
+}
+
+.profile-vip-status__badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  line-height: 1;
+  background: var(--border);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.profile-vip-status--active .profile-vip-status__badge {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.profile-vip-status__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.profile-vip-status__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.profile-vip-status__hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0;
 }
 
 .profile-actions {
