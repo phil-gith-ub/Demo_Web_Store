@@ -24,6 +24,17 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
+/** Lets DevTools use `braze.changeUser(...)` like script-tag integrations; cleared on destroy/logout. */
+export function exposeBrazeModuleForDevTools(
+  braze: typeof import("@braze/web-sdk"),
+): void {
+  window.braze = braze;
+}
+
+export function clearBrazeModuleFromDevTools(): void {
+  delete window.braze;
+}
+
 function registerBrazeSubscriptionsOnce(braze: typeof import("@braze/web-sdk")) {
   if (brazeSubscriptionsRegistered) return;
   braze.subscribeToBannersUpdates?.(() => {
@@ -59,8 +70,9 @@ export function resetBrazeSdkHookRegistrationState(): void {
  */
 export function attachBrazeAppSdkLogger(braze: typeof import("@braze/web-sdk")) {
   braze.setLogger((message: string) => {
+    /* Default console level hides console.debug (Verbose); use info so DevTools shows SDK traffic. */
     if (import.meta.env.DEV) {
-      console.debug(message);
+      console.info("[braze]", message);
     }
     const lower = message.toLowerCase();
     let type: "info" | "request" | "response" | "event" | "error" = "info";
@@ -196,6 +208,7 @@ export async function initBrazeForIdentifiedUser(
       try {
         const b = await import("@braze/web-sdk");
         if (b.isInitialized?.()) {
+          exposeBrazeModuleForDevTools(b);
           b.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
           b.requestContentCardsRefresh(() => dispatchCachedContentCardsDetail(b));
         }
@@ -212,6 +225,7 @@ export async function initBrazeForIdentifiedUser(
       } catch {
         /* ignore */
       }
+      clearBrazeModuleFromDevTools();
       lastIdentifiedUserId = null;
       lastBrazeInitRefreshKey = null;
       resetBrazeSdkHookRegistrationState();
@@ -253,6 +267,7 @@ export async function initBrazeForIdentifiedUser(
 
     /* Session is opened by the SDK as part of `changeUser` when the user id changes; no explicit `openSession()`. */
     braze.requestContentCardsRefresh(() => dispatchCachedContentCardsDetail(braze));
+    exposeBrazeModuleForDevTools(braze);
     lastIdentifiedUserId = id;
     lastBrazeInitRefreshKey = rk;
     return { success: true };
@@ -281,6 +296,7 @@ export async function brazeOnLogout(previousUserId: string | null): Promise<void
   } catch {
     /* SDK never loaded */
   } finally {
+    clearBrazeModuleFromDevTools();
     lastIdentifiedUserId = null;
     lastBrazeInitRefreshKey = null;
     resetBrazeSdkHookRegistrationState();
@@ -299,6 +315,7 @@ export async function brazeDestroyForReconnect(): Promise<void> {
   } catch {
     /* SDK never loaded */
   } finally {
+    clearBrazeModuleFromDevTools();
     lastIdentifiedUserId = null;
     lastBrazeInitRefreshKey = null;
     resetBrazeSdkHookRegistrationState();
