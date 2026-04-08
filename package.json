@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:static-html": "tsc --noEmit && vite build --config vite.config.static-html.ts && node scripts/write-static-html-readme.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

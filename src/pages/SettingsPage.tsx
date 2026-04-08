@@ -13,6 +13,10 @@ import {
   initBrazeForIdentifiedUser,
 } from "../lib/brazeInit";
 import {
+  getAllowUserSuppliedJavascriptForInit,
+  setAllowUserSuppliedJavascriptForInit,
+} from "../lib/brazeDemoSdkPrefs";
+import {
   getBrazeSettings,
   saveBrazeSettings,
 } from "../lib/brazeSettings";
@@ -46,6 +50,9 @@ export function SettingsPage() {
   );
   const [toast, setToast] = useState<string | null>(null);
   const [saveBusy, setSaveBusy] = useState(false);
+  const [allowUserJsForLogin, setAllowUserJsForLogin] = useState(
+    () => getAllowUserSuppliedJavascriptForInit(),
+  );
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -61,6 +68,7 @@ export function SettingsPage() {
         const result = await initBrazeForIdentifiedUser(
           currentUserId,
           refreshKey,
+          { logLoginEvent: false },
         );
         if (result.success) {
           pushLog({
@@ -135,6 +143,31 @@ export function SettingsPage() {
                 spellCheck={false}
               />
             </div>
+            <div className="form-row form-row--checkbox">
+              <label className="settings-checkbox-label" htmlFor="allow-user-js">
+                <input
+                  id="allow-user-js"
+                  type="checkbox"
+                  checked={allowUserJsForLogin}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setAllowUserJsForLogin(on);
+                    setAllowUserSuppliedJavascriptForInit(on);
+                    pushLog({
+                      type: "info",
+                      message: `Web SDK init (Profile login): allowUserSuppliedJavascript = ${on}`,
+                    });
+                  }}
+                />
+                <span>
+                  Allow user-supplied JavaScript in SDK init (default for Profile login)
+                </span>
+              </label>
+            </div>
+            <p className="product-meta">
+              Matches Braze <code>InitializationOptions.allowUserSuppliedJavascript</code>. Uncheck for stricter
+              Content Cards / HTML IAM behavior; the Braze sidebar “copy init” script uses this same setting.
+            </p>
 
             <h3 className="settings-subh">REST API (profile import, optional)</h3>
             <p className="product-meta">

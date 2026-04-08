@@ -16,6 +16,9 @@
   --profile-input-locked-bg: #e4e4e9;
   --profile-input-locked-fg: #52525b;
   --profile-input-locked-border: #d4d4d8;
+  --scrollbar-track: var(--bg);
+  --scrollbar-thumb: #c4c4cc;
+  --scrollbar-thumb-hover: #a1a1aa;
 }
 
 .dark {
@@ -31,6 +34,9 @@
   --profile-input-locked-bg: #27272a;
   --profile-input-locked-fg: #a1a1aa;
   --profile-input-locked-border: #3f3f46;
+  --scrollbar-track: #18181b;
+  --scrollbar-thumb: #3f3f46;
+  --scrollbar-thumb-hover: #52525b;
 }
 
 *,
@@ -46,7 +52,14 @@ body,
   margin: 0;
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 body {
+  overflow: hidden;
   font-family:
     system-ui,
     -apple-system,
@@ -93,11 +106,15 @@ textarea {
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .app-header {
   flex: 0 0 var(--header-h);
+  flex-shrink: 0;
   background: var(--banner);
   color: var(--banner-text);
   display: flex;
@@ -139,16 +156,36 @@ textarea {
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .app-sidebar {
   flex: 0 0 var(--sidebar-w);
+  flex-shrink: 0;
+  align-self: stretch;
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1rem 0;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-sidebar-nav {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   gap: 0.25rem;
+}
+
+.app-sidebar-braze {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .nav-link {
@@ -178,10 +215,316 @@ textarea {
   background: var(--primary-muted);
 }
 
+.braze-sidebar-block {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.braze-sidebar-toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.braze-sidebar-toggle:hover {
+  background: var(--primary-muted);
+}
+
+.braze-sidebar-chevron {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  transition: transform 0.15s ease;
+}
+
+.braze-sidebar-chevron[data-open="true"] {
+  transform: rotate(-180deg);
+}
+
+.braze-sidebar-tools {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0.35rem 0.75rem 1.25rem;
+  margin-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.braze-sidebar-tools::-webkit-scrollbar {
+  width: 8px;
+}
+
+.braze-sidebar-tools::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 4px;
+}
+
+.braze-sidebar-tools::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.braze-sidebar-tools::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.braze-manual-init {
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.braze-manual-top {
+  align-items: flex-start;
+}
+
+.braze-manual-top-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.braze-manual-details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.braze-manual-details-summary {
+  cursor: pointer;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+}
+
+.braze-manual-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.braze-manual-details-summary::before {
+  content: "▸ ";
+  display: inline-block;
+  margin-right: 0.2rem;
+  opacity: 0.65;
+  transition: transform 0.12s ease;
+}
+
+.braze-manual-details[open] .braze-manual-details-summary::before {
+  transform: rotate(90deg);
+}
+
+.braze-manual-details-body {
+  padding: 0.45rem 0.55rem 0.55rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.braze-manual-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.braze-manual-check input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.braze-manual-sw-label {
+  font-size: 0.68rem;
+  opacity: 0.85;
+  margin-top: 0.15rem;
+}
+
+.braze-manual-post-title {
+  margin: 0.25rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.braze-manual-run-hint {
+  font-size: 0.65rem;
+  opacity: 0.75;
+  line-height: 1.35;
+}
+
+.braze-sidebar-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 0.68rem;
+  word-break: break-all;
+}
+
+.braze-tool-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.braze-tool-row--code {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.braze-tool-row--code .braze-sidebar-code {
+  flex: 1;
+  min-width: 0;
+  padding-right: 0.35rem;
+}
+
+.braze-tool-row--field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.braze-tool-row .braze-sidebar-code {
+  display: block;
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+.braze-tool-select,
+.braze-tool-input {
+  box-sizing: border-box;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.braze-tool-inline .braze-tool-select {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.braze-tool-input--sm {
+  font-size: 0.72rem;
+}
+
+.braze-tool-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.braze-tool-icon:hover {
+  background: var(--primary-muted);
+}
+
+.braze-tool-icon--danger {
+  border-color: rgba(214, 48, 49, 0.4);
+  color: #d63031;
+}
+
+.braze-tool-icon--danger:hover {
+  background: rgba(214, 48, 49, 0.12);
+}
+
+.dark .braze-tool-icon--danger {
+  color: #ff7675;
+}
+
+.dark .braze-tool-icon--danger:hover {
+  background: rgba(255, 118, 117, 0.12);
+}
+
+.braze-tool-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.braze-tool-inline .braze-tool-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.braze-sidebar-send {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
 .app-main {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   padding: 1.5rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.app-main::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 5px;
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+}
+
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .page-title {
@@ -327,6 +670,24 @@ textarea {
   flex-direction: column;
   gap: 0.35rem;
   max-width: 420px;
+}
+
+.form-row--checkbox {
+  max-width: 32rem;
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.settings-checkbox-label input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
 }
 
 .log-list {
@@ -683,6 +1044,154 @@ textarea {
 
 .content-card-slot-code {
   margin-top: 0.1rem;
+}
+
+/* Custom Content Cards inbox + default Braze feed host */
+.braze-cc-inbox-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.braze-cc-inbox-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.braze-cc-inbox-badge {
+  margin-left: 0;
+}
+
+.braze-cc-inbox-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+  line-height: 1.4;
+}
+
+.braze-cc-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.braze-cc-inbox-row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--muted));
+  overflow: hidden;
+}
+
+.braze-cc-inbox-row--pinned {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+
+.braze-cc-inbox-row-inner {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.braze-cc-inbox-media {
+  flex: 0 0 120px;
+  min-height: 88px;
+  background: var(--surface);
+}
+
+.braze-cc-inbox-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.braze-cc-inbox-body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.braze-cc-inbox-kind {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.braze-cc-inbox-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.braze-cc-inbox-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.braze-cc-inbox-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.braze-cc-inbox-viewed,
+.braze-cc-inbox-unviewed,
+.braze-cc-inbox-pinned,
+.braze-cc-inbox-locked {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.braze-cc-inbox-unviewed {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.braze-cc-inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.braze-cc-default-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.braze-cc-feed-host {
+  position: relative;
+  min-height: 120px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--muted));
+}
+
+/* Default Braze Content Cards UI — scoped overrides */
+.braze-cc-feed-host .ab-feed {
+  border-radius: 10px;
+  max-height: min(360px, 50vh);
+  overflow: auto;
+  font-family: inherit;
 }
 
 .ghost-slot--fill-card-21 {
@@ -1074,6 +1583,19 @@ input.profile-user-id--locked:-webkit-autofill:active {
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .app-sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+  }
+
+  .app-sidebar-braze {
+    flex: 1 1 100%;
+    min-height: 0;
+    max-height: min(42vh, 280px);
   }
 
   .nav-link {

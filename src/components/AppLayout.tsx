@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { BrazeSidebarPanel } from "./BrazeSidebarPanel";
 import { TopBanner } from "./TopBanner";
 import {
   IconArticle,
@@ -30,24 +31,29 @@ export function AppLayout() {
       ) : (
         <div className="app-body">
           <nav className="app-sidebar" aria-label="Main">
-            {nav.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  "nav-link" + (isActive ? " active" : "")
-                }
-                end={to === "/store"}
-              >
-                <Icon />
-                <span className="nav-link-text">
-                  {label}
-                  {to === "/cart" && itemCount > 0 ? (
-                    <span className="badge">{itemCount}</span>
-                  ) : null}
-                </span>
-              </NavLink>
-            ))}
+            <div className="app-sidebar-nav">
+              {nav.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    "nav-link" + (isActive ? " active" : "")
+                  }
+                  end={to === "/store"}
+                >
+                  <Icon />
+                  <span className="nav-link-text">
+                    {label}
+                    {to === "/cart" && itemCount > 0 ? (
+                      <span className="badge">{itemCount}</span>
+                    ) : null}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
+            <div className="app-sidebar-braze">
+              <BrazeSidebarPanel />
+            </div>
           </nav>
           <main className="app-main">
             <Outlet />

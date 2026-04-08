@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, HashRouter } from "react-router-dom";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BrazeLogProvider } from "./context/BrazeLogContext";
@@ -14,10 +14,15 @@ const routerBasename =
     ? rawBase.slice(0, -1)
     : rawBase;
 
+const useHashRouter = import.meta.env.VITE_HASH_ROUTER === "true";
+const Router = useHashRouter ? HashRouter : BrowserRouter;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
-      <BrowserRouter basename={routerBasename}>
+      <Router
+        {...(useHashRouter ? {} : { basename: routerBasename })}
+      >
         <BrazeLogProvider>
           <ProfileProvider>
             <CartProvider>
@@ -25,7 +30,7 @@ createRoot(document.getElementById("root")!).render(
             </CartProvider>
           </ProfileProvider>
         </BrazeLogProvider>
-      </BrowserRouter>
+      </Router>
     </ErrorBoundary>
   </StrictMode>,
 );
