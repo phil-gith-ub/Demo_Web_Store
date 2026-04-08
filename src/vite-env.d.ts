@@ -9,3 +9,12 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** DevTools: same `@braze/web-sdk` namespace the app uses (script-tag demos often set `window.braze`). */
+declare global {
+  interface Window {
+    braze?: typeof import("@braze/web-sdk");
+  }
+}
+
+export {};

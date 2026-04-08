@@ -1,6 +1,6 @@
 import type { InitializationOptions } from "@braze/web-sdk";
 import { ALL_BANNER_PLACEMENT_IDS } from "./brazeConstants";
-import { wrapBrazeConsoleSnippet } from "./brazeClipboardSnippets";
+import { wrapBrazeForConsolePaste } from "./brazeClipboardSnippets";
 
 export type ManualBrazeInitFlags = {
   destroyFirst: boolean;
@@ -52,9 +52,6 @@ export function buildManualInitClipboardScript(
     lines.push("if (braze.isInitialized?.()) {");
     lines.push("  braze.destroy();");
     lines.push("}");
-    lines.push(
-      "// If this app’s Braze UI stops updating after destroy, refresh the page.",
-    );
   }
 
   const initOpts = buildManualInitializationOptions(host, flags);
@@ -95,5 +92,5 @@ export function buildManualInitClipboardScript(
     );
   }
 
-  return wrapBrazeConsoleSnippet(lines);
+  return wrapBrazeForConsolePaste(lines);
 }

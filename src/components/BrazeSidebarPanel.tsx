@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { brazeAppLog } from "../lib/brazeAppLog";
-import { wrapBrazeConsoleSnippet } from "../lib/brazeClipboardSnippets";
+import { wrapBrazeForConsolePaste } from "../lib/brazeClipboardSnippets";
 import {
   ALL_BANNER_PLACEMENT_IDS,
   BANNER_PLACEMENTS,
@@ -21,14 +21,6 @@ async function copyPlainText(text: string, logLabel: string) {
       type: "event",
       message: `[Braze clipboard] ${logLabel}`,
     });
-    const preview = text.length > 240 ? `${text.slice(0, 240)}…` : text;
-    console.info(
-      "%c[Braze clipboard]%c Copied (%d chars)\n%s",
-      "font-weight:700;color:#74b9ff",
-      "color:inherit",
-      text.length,
-      preview,
-    );
   } catch (e) {
     brazeAppLog({
       type: "error",
@@ -38,19 +30,44 @@ async function copyPlainText(text: string, logLabel: string) {
   }
 }
 
-function copyWrappedLines(lines: string[], logLabel: string) {
-  void copyPlainText(wrapBrazeConsoleSnippet(lines), logLabel);
+function copyRawSnippet(lines: string[], logLabel: string) {
+  void copyPlainText(wrapBrazeForConsolePaste(lines), logLabel);
 }
 
 function CodeLabel({ children }: { children: string }) {
   return <code className="braze-sidebar-code">{children}</code>;
 }
 
-function ClipboardIcon() {
+function CopyIcon() {
   return (
-    <span className="braze-sidebar-send" aria-hidden>
-      📋
-    </span>
+    <svg
+      className="braze-copy-icon"
+      viewBox="0 0 24 24"
+      width={16}
+      height={16}
+      aria-hidden
+    >
+      <rect
+        x="4"
+        y="4"
+        width="12"
+        height="12"
+        rx="1.25"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <rect
+        x="8"
+        y="8"
+        width="12"
+        height="12"
+        rx="1.25"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
   );
 }
 
@@ -73,7 +90,7 @@ function CopySnippetButton({
       aria-label={title}
       onClick={onClick}
     >
-      <ClipboardIcon />
+      <CopyIcon />
     </button>
   );
 }
@@ -183,12 +200,6 @@ export function BrazeSidebarPanel() {
             <div className="braze-tool-row braze-tool-row--code braze-manual-top">
               <div className="braze-manual-top-text">
                 <CodeLabel>braze.initialize(apiKey, options)</CodeLabel>
-                <span className="braze-manual-run-hint">
-                  Copies one console script: optional destroy, initialize with
-                  your Settings key/host, then checked post-init steps. The
-                  initialize options use allowUserSuppliedJavascript from
-                  Settings (Web SDK section).
-                </span>
               </div>
               <CopySnippetButton
                 title="Copy full init script to clipboard"
@@ -272,7 +283,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy requestContentCardsRefresh snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   ["braze.requestContentCardsRefresh();"],
                   "requestContentCardsRefresh()",
                 )
@@ -302,7 +313,7 @@ export function BrazeSidebarPanel() {
                     bannerRefreshTarget === "__all__"
                       ? ALL_BANNER_PLACEMENT_IDS
                       : [bannerRefreshTarget];
-                  copyWrappedLines(
+                  copyRawSnippet(
                     [`braze.requestBannersRefresh(${JSON.stringify(ids)});`],
                     `requestBannersRefresh(${JSON.stringify(ids)})`,
                   );
@@ -328,7 +339,7 @@ export function BrazeSidebarPanel() {
               <CopySnippetButton
                 title="Copy getBanner snippet"
                 onClick={() =>
-                  copyWrappedLines(
+                  copyRawSnippet(
                     [
                       `console.log(braze.getBanner?.(${JSON.stringify(bannerGetId)}));`,
                     ],
@@ -344,7 +355,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy requestImmediateDataFlush snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   ["braze.requestImmediateDataFlush();"],
                   "requestImmediateDataFlush()",
                 )
@@ -357,7 +368,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy refreshFeatureFlags snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   ["braze.refreshFeatureFlags?.();"],
                   "refreshFeatureFlags()",
                 )
@@ -389,7 +400,7 @@ export function BrazeSidebarPanel() {
                 title="Copy getFeatureFlag snippet"
                 onClick={() => {
                   const id = getFeatureFlagId.trim() || BRAZE_FEATURE_FLAG_VIP;
-                  copyWrappedLines(
+                  copyRawSnippet(
                     [`console.log(braze.getFeatureFlag?.(${JSON.stringify(id)}));`],
                     `getFeatureFlag(${JSON.stringify(id)})`,
                   );
@@ -429,7 +440,7 @@ export function BrazeSidebarPanel() {
                     );
                     return;
                   }
-                  copyWrappedLines(
+                  copyRawSnippet(
                     [`braze.changeUser(${JSON.stringify(id)});`],
                     `changeUser(${JSON.stringify(id)})`,
                   );
@@ -469,7 +480,7 @@ export function BrazeSidebarPanel() {
                     );
                     return;
                   }
-                  copyWrappedLines(
+                  copyRawSnippet(
                     [`braze.logCustomEvent(${JSON.stringify(name)});`],
                     `logCustomEvent(${JSON.stringify(name)})`,
                   );
@@ -483,7 +494,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy openSession snippet"
               onClick={() =>
-                copyWrappedLines(["braze.openSession?.();"], "openSession()")
+                copyRawSnippet(["braze.openSession?.();"], "openSession()")
               }
             />
           </div>
@@ -493,7 +504,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy requestPushPermission snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   [
                     `braze.requestPushPermission?.(() => console.log("[braze] push: ok"), () => console.warn("[braze] push: denied"));`,
                   ],
@@ -508,7 +519,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy getUser().getUserId() snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   [
                     `console.log(braze.getUser?.()?.getUserId?.());`,
                   ],
@@ -523,7 +534,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy getCachedContentCards snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   [`console.log(braze.getCachedContentCards?.());`],
                   "getCachedContentCards()",
                 )
@@ -536,7 +547,7 @@ export function BrazeSidebarPanel() {
             <CopySnippetButton
               title="Copy isInitialized snippet"
               onClick={() =>
-                copyWrappedLines(
+                copyRawSnippet(
                   [`console.log(braze.isInitialized?.());`],
                   "isInitialized()",
                 )
@@ -550,7 +561,7 @@ export function BrazeSidebarPanel() {
               danger
               title="Copy destroy snippet"
               onClick={() =>
-                copyWrappedLines(["braze.destroy();"], "destroy()")
+                copyRawSnippet(["braze.destroy();"], "destroy()")
               }
             />
           </div>
@@ -561,7 +572,7 @@ export function BrazeSidebarPanel() {
               danger
               title="Copy wipeData snippet"
               onClick={() =>
-                copyWrappedLines(["braze.wipeData?.();"], "wipeData()")
+                copyRawSnippet(["braze.wipeData?.();"], "wipeData()")
               }
             />
           </div>

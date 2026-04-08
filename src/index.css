@@ -380,12 +380,6 @@ textarea {
   opacity: 0.9;
 }
 
-.braze-manual-run-hint {
-  font-size: 0.65rem;
-  opacity: 0.75;
-  line-height: 1.35;
-}
-
 .braze-sidebar-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   font-size: 0.68rem;
@@ -492,9 +486,9 @@ textarea {
   min-width: 0;
 }
 
-.braze-sidebar-send {
-  font-size: 0.85rem;
-  line-height: 1;
+.braze-copy-icon {
+  display: block;
+  flex-shrink: 0;
 }
 
 .app-main {
