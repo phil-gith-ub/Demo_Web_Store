@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
+import { useProfile } from "../context/ProfileContext";
 import { BrazeBannerSlot } from "../components/BrazeBannerSlot";
+import {
+  BrazeContentCardInbox,
+  BrazeDefaultContentCardsFeed,
+} from "../components/BrazeContentCardInbox";
 import { BrazeContentCardSlot } from "../components/BrazeContentCardSlot";
 import { ContentCustomEventDialog } from "../components/ContentCustomEventDialog";
 import {
@@ -13,11 +18,22 @@ const contentBannerPlacements = BANNER_PLACEMENTS.filter(
 );
 
 /**
- * Demo actions (Android-style) at top; below that, Banners + Content cards sections with headings.
+ * Demo actions at top; Banners; placement Content card slots; then full inbox + default Braze feed at bottom.
  */
 export function ContentPage() {
+  const { currentUserId, refreshKey } = useProfile();
   const [toast, setToast] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  /* Re-run on login/logout/user switch (`refreshKey`): first paint may have an empty cache before the new user’s feed returns. */
+  useEffect(() => {
+    if (!currentUserId) return;
+    void import("@braze/web-sdk").then((b) => {
+      if (!b.isInitialized?.()) return;
+      const cc = b.getCachedContentCards();
+      if (!cc?.cards?.length) b.requestContentCardsRefresh();
+    });
+  }, [currentUserId, refreshKey]);
 
   useEffect(() => {
     if (!toast) return;
@@ -84,7 +100,7 @@ export function ContentPage() {
         ))}
       </div>
 
-      <h2 className="content-section-title">Content cards</h2>
+      <h2 className="content-section-title">Content cards (placement slots)</h2>
       <div className="content-ghost-grid content-ghost-grid--paired">
         {CONTENT_CARD_SLOTS.map((c) => (
           <div
@@ -102,6 +118,9 @@ export function ContentPage() {
           </div>
         ))}
       </div>
+
+      <BrazeContentCardInbox />
+      <BrazeDefaultContentCardsFeed />
 
       <ContentCustomEventDialog
         open={dialogOpen}

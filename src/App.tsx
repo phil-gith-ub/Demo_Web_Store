@@ -33,7 +33,7 @@ function ThemeSync() {
 
 /**
  * Delayed Braze setup: no SDK for anonymous visitors.
- * After login: `initialize` (if needed) → `changeUser` → `automaticallyShowInAppMessages` → `openSession` (Braze Web SDK pattern).
+ * After login: `initialize` (if needed) → subscribe (IAM / content cards / banners) → `changeUser` (SDK opens session).
  */
 function BrazeIdentifiedSync() {
   const { currentUserId, refreshKey } = useProfile();
@@ -50,11 +50,14 @@ function BrazeIdentifiedSync() {
     if (currentUserId) {
       introLogged.current = true;
       const id = currentUserId;
-      void initBrazeForIdentifiedUser(id, refreshKey).then((result) => {
+      void initBrazeForIdentifiedUser(id, refreshKey, {
+        /* `refreshKey` resets to 0 on page load — only >0 after an in-app login/logout cycle, so not on session restore. */
+        logLoginEvent: refreshKey > 0,
+      }).then((result) => {
         if (result.success) {
           pushLog({
             type: "info",
-            message: `Braze Web SDK initialized; changeUser("${id}"), openSession`,
+            message: `Braze Web SDK initialized; changeUser("${id}") (session via SDK)`,
           });
           window.dispatchEvent(new CustomEvent("braze:identified-ready"));
         } else {
