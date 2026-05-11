@@ -501,6 +501,15 @@ textarea {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.page-center {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .app-main::-webkit-scrollbar {

@@ -26,7 +26,9 @@ export function AppLayout() {
       {!overlay && <TopBanner />}
       {overlay ? (
         <main className="app-main">
-          <Outlet />
+          <div className="page-center">
+            <Outlet />
+          </div>
         </main>
       ) : (
         <div className="app-body">
@@ -56,7 +58,9 @@ export function AppLayout() {
             </div>
           </nav>
           <main className="app-main">
-            <Outlet />
+            <div className="page-center">
+              <Outlet />
+            </div>
           </main>
         </div>
       )}
