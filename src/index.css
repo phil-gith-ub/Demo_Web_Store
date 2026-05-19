@@ -129,11 +129,17 @@ textarea {
   font-size: 1.15rem;
   font-weight: 700;
   flex: 1;
-  text-align: center;
+  text-align: left;
 }
 
-.app-header-actions {
+.app-header-nav, .app-header-actions {
   display: flex;
+}
+.app-header-nav {
+  justify-content: flex-start;
+}
+.app-header-actions {
+  justify-content: flex-end;
   gap: 0.25rem;
 }
 
@@ -554,7 +560,6 @@ textarea {
 }
 
 .cart-banner-wrap {
-  max-width: 50%;
   width: 100%;
 }
 
@@ -672,7 +677,6 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-width: 420px;
 }
 
 .form-row--checkbox {
@@ -1314,7 +1318,6 @@ textarea {
 }
 
 .content-page {
-  max-width: 50%;
   width: 100%;
 }
 
@@ -1479,7 +1482,7 @@ textarea {
 }
 
 .profile-stack {
-  max-width: 440px;
+  width: 100%;
 }
 
 input.profile-user-id--locked {

@@ -5,15 +5,17 @@ export function TopBanner() {
 
   return (
     <header className="app-header">
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label="Braze SDK logs"
-        onClick={() => navigate("/logs")}
-        title="Logs"
-      >
-        ☰
-      </button>
+      <div className="app-header-nav">
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Braze SDK logs"
+          onClick={() => navigate("/logs")}
+          title="Logs"
+        >
+          ☰
+        </button>
+      </div>
       <h1>Demo Store</h1>
       <div className="app-header-actions">
         <button
