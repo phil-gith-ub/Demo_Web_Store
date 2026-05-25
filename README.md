@@ -10,7 +10,12 @@ All Braze credentials (Web API key, SDK endpoint, and optional REST key) are con
 
 ---
 
-## 🚀 Quick Setup & Run
+## 🚀 Quick Start
+
+### Download the index.html file from the static-html-site directory and open it in your browser.
+
+
+## Setup & Run
 
 ### 1. Install Dependencies
 ```bash
