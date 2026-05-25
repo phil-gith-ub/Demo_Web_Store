@@ -445,6 +445,8 @@ textarea {
   cursor: pointer;
   color: var(--text);
   transition: opacity 0.15s ease;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .braze-manual-check:hover {
