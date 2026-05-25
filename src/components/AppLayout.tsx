@@ -1,11 +1,11 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { BrazeSidebarPanel } from "./BrazeSidebarPanel";
 import { TopBanner } from "./TopBanner";
 import {
   IconArticle,
   IconCart,
   IconStore,
   IconUser,
+  IconConsole,
 } from "./NavIcons";
 import { useCart } from "../context/CartContext";
 
@@ -14,6 +14,7 @@ const nav = [
   { to: "/cart", label: "Cart", Icon: IconCart },
   { to: "/content", label: "Content", Icon: IconArticle },
   { to: "/profile", label: "Profile", Icon: IconUser },
+  { to: "/console", label: "Console", Icon: IconConsole },
 ] as const;
 
 export function AppLayout() {
@@ -52,9 +53,6 @@ export function AppLayout() {
                   </span>
                 </NavLink>
               ))}
-            </div>
-            <div className="app-sidebar-braze">
-              <BrazeSidebarPanel />
             </div>
           </nav>
           <main className="app-main">

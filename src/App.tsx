@@ -18,7 +18,9 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { PurchaseHistoryPage } from "./pages/PurchaseHistoryPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StorePage } from "./pages/StorePage";
+import { ConsolePage } from "./pages/ConsolePage";
 import { DemostoreLinkInterceptor } from "./components/DemostoreLinkInterceptor";
+
 
 function ThemeSync() {
   const { profile, currentUserId, guestDarkMode } = useProfile();
@@ -155,6 +157,7 @@ export default function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/logs" element={<BrazeLogsPage />} />
           <Route path="/purchase-history" element={<PurchaseHistoryPage />} />
+          <Route path="/console" element={<ConsolePage />} />
         </Route>
       </Routes>
     </>
