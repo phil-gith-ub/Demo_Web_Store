@@ -9,7 +9,7 @@ import {
   logAddedItemToCart,
   logViewedVipProducts,
 } from "../lib/brazeUserSyncWeb";
-import { isVip } from "../lib/purchaseStorage";
+import { isVip, subscribeSpendUpdated } from "../lib/purchaseStorage";
 
 const TAB_ALL = "ALL";
 const TAB_VIP = "VIP";
@@ -63,9 +63,13 @@ export function StorePage() {
     void load();
     const onReady = () => void load();
     window.addEventListener("braze:identified-ready", onReady);
+    const unsubSpend = subscribeSpendUpdated((id) => {
+      if (id === currentUserId) setIsVipUser(isVip(currentUserId));
+    });
     return () => {
       cancelled = true;
       window.removeEventListener("braze:identified-ready", onReady);
+      unsubSpend();
     };
   }, [currentUserId, refreshKey]);
 

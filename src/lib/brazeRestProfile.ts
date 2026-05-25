@@ -13,6 +13,7 @@ const FIELDS_TO_EXPORT = [
   "first_name",
   "last_name",
   "phone",
+  "total_revenue",
   "custom_attributes",
 ] as const;
 
@@ -23,6 +24,7 @@ type BrazeExportUser = {
   last_name?: string | null;
   phone?: string | null;
   phone_number?: string | null;
+  total_revenue?: number | string | null;
   custom_attributes?: Record<string, unknown> | null;
 };
 
@@ -65,6 +67,18 @@ function boolFromCustom(v: unknown): boolean | undefined {
   return undefined;
 }
 
+/** Braze user export `total_revenue` (USD). */
+function totalRevenueUsdFromRow(row: BrazeExportUser): number | undefined {
+  const v = row.total_revenue;
+  if (v == null) return undefined;
+  if (typeof v === "number" && Number.isFinite(v)) return v >= 0 ? v : undefined;
+  if (typeof v === "string") {
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  }
+  return undefined;
+}
+
 export function mapBrazeExportToProfilePatch(
   row: BrazeExportUser,
   userId: string,
@@ -104,7 +118,7 @@ function syncLastSentAfterImport(userId: string, patch: Partial<UserProfile>) {
 }
 
 export type BrazeRestImportResult =
-  | { ok: true; patch: Partial<UserProfile> }
+  | { ok: true; patch: Partial<UserProfile>; totalRevenueUsd?: number }
   | { ok: false; message: string };
 
 /**
@@ -208,11 +222,16 @@ export async function fetchBrazeUserProfileRest(
   const row = users[0];
   const patch = mapBrazeExportToProfilePatch(row, id);
   syncLastSentAfterImport(id, patch);
+  const totalRevenueUsd = totalRevenueUsdFromRow(row);
 
   brazeAppLog({
     type: "info",
     message: `REST import: loaded profile fields for "${id}" from Braze.`,
   });
 
-  return { ok: true, patch };
+  return {
+    ok: true,
+    patch,
+    ...(totalRevenueUsd != null ? { totalRevenueUsd } : {}),
+  };
 }

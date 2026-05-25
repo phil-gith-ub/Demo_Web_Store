@@ -17,17 +17,17 @@ export const ALL_BANNER_PLACEMENT_IDS: string[] = BANNER_PLACEMENTS.map(
   (b) => b.id,
 );
 
-/** Target card extras: `location`, `position_id`, or `card_id` (per Braze card KVP). */
+/** Target card extras: KVP `location` must equal this slot id (placement). */
 export const CONTENT_CARD_SLOTS = [
   {
     label: "Tile 1",
     id: "tile_1",
-    hint: "Match extras: location or position_id / card_id for tile_1",
+    hint: "Set extras key location=tile_1",
   },
   {
     label: "Tile 2",
     id: "tile_2",
-    hint: "Match extras: location or position_id / card_id for tile_2",
+    hint: "Set extras key location=tile_2",
   },
 ] as const;
 
