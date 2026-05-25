@@ -11,6 +11,9 @@ Android Backup/**/.gradle/
 # Web / Node
 node_modules/
 dist/
+# Static bundle output (regenerate with npm run build:static-html); keep README tracked
+static-html-site/*
+!static-html-site/README.txt
 *.local
 .env
 .env.*.local

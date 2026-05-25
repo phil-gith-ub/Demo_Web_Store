@@ -1,7 +1,13 @@
 import { ALL_BANNER_PLACEMENT_IDS } from "./brazeConstants";
+import { brazeAppLog } from "./brazeAppLog";
+import { getAllowUserSuppliedJavascriptForInit } from "./brazeDemoSdkPrefs";
 import { DEMOSTORE_DOM_SCAN_EVENT } from "./demostoreDeepLink";
 import { getBrazeSettings, normalizeBrazeBaseUrl } from "./brazeSettings";
-import { completeIdentifiedUserAfterChangeUser, brazePreLogout } from "./brazeUserSyncWeb";
+import {
+  brazePreLogout,
+  completeIdentifiedUserAfterChangeUser,
+  type CompleteIdentifiedUserOptions,
+} from "./brazeUserSyncWeb";
 
 let lastIdentifiedUserId: string | null = null;
 /** Last `refreshKey` we ran init with (Profile login bumps key even when user id unchanged). */
@@ -18,42 +24,154 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
+/** Lets DevTools use `braze.changeUser(...)` like script-tag integrations; cleared on destroy/logout. */
+export function exposeBrazeModuleForDevTools(
+  braze: typeof import("@braze/web-sdk"),
+): void {
+  window.braze = braze;
+}
+
+export function clearBrazeModuleFromDevTools(): void {
+  delete window.braze;
+}
+
 function registerBrazeSubscriptionsOnce(braze: typeof import("@braze/web-sdk")) {
   if (brazeSubscriptionsRegistered) return;
   braze.subscribeToBannersUpdates?.(() => {
     window.dispatchEvent(new CustomEvent("braze:banners"));
   });
-  braze.subscribeToContentCardsUpdates?.(() => {
-    window.dispatchEvent(new CustomEvent("braze:content-cards"));
+  braze.subscribeToContentCardsUpdates?.((updates) => {
+    window.dispatchEvent(
+      new CustomEvent("braze:content-cards", { detail: updates }),
+    );
   });
   brazeSubscriptionsRegistered = true;
+}
+
+/** Push current `getCachedContentCards()` to the same bus as `subscribeToContentCardsUpdates` (after refresh completes). */
+export function dispatchCachedContentCardsDetail(
+  braze: typeof import("@braze/web-sdk"),
+) {
+  const cc = braze.getCachedContentCards?.();
+  if (cc) {
+    window.dispatchEvent(new CustomEvent("braze:content-cards", { detail: cc }));
+  }
+}
+
+/** After `destroy()`, allow banners/cards/IAM hooks to register again. */
+export function resetBrazeSdkHookRegistrationState(): void {
+  brazeSubscriptionsRegistered = false;
+  inAppMessageHandlerRegistered = false;
+}
+
+/**
+ * Route Braze SDK debug strings into the in-app Logs page (`brazeAppLog` → `registerBrazeAppLogSink`).
+ * @see https://github.com/braze-inc/braze-web-sdk — `setLogger`
+ */
+export function attachBrazeAppSdkLogger(braze: typeof import("@braze/web-sdk")) {
+  braze.setLogger((message: string) => {
+    /* Default console level hides console.debug (Verbose); use info so DevTools shows SDK traffic. */
+    if (import.meta.env.DEV) {
+      console.info("[braze]", message);
+    }
+    const lower = message.toLowerCase();
+    let type: "info" | "request" | "response" | "event" | "error" = "info";
+    if (/ignoring card with unknown type/i.test(message)) {
+      type = "info";
+    } else if (
+      /\berror\b|\bfail(ed)?\b|\bexception\b/i.test(message) &&
+      !/did not match/i.test(lower)
+    ) {
+      type = "error";
+    } else if (/requesting|fetching|connecting to real-time/i.test(lower)) {
+      type = "request";
+    } else if (/received|initialized for the braze backend/i.test(lower)) {
+      type = "response";
+    } else if (
+      /trigger|logcustom|logged custom|firing templated|session start/i.test(
+        lower,
+      )
+    ) {
+      type = "event";
+    }
+    brazeAppLog({ type, message });
+  });
+}
+
+export function registerBrazeBannersAndContentCardsSubscribers(
+  braze: typeof import("@braze/web-sdk"),
+) {
+  registerBrazeSubscriptionsOnce(braze);
+}
+
+export function registerBrazeInAppMessageHandler(
+  braze: typeof import("@braze/web-sdk"),
+) {
+  registerInAppMessagesOnce(braze);
+}
+
+function inAppMessageLogSummary(message: {
+  isControl?: boolean;
+  triggerId?: string;
+  constructor?: { name?: string };
+}): string {
+  if (message.isControl === true) {
+    return `ControlMessage triggerId=${message.triggerId ?? "(none)"}`;
+  }
+  const kind = message.constructor?.name ?? "InAppMessage";
+  return `${kind} triggerId=${message.triggerId ?? "(none)"}`;
 }
 
 function registerInAppMessagesOnce(braze: typeof import("@braze/web-sdk")) {
   if (inAppMessageHandlerRegistered) return;
   const subId = braze.subscribeToInAppMessage?.((message) => {
-    braze.showInAppMessage?.(message);
+    brazeAppLog({
+      type: "event",
+      message: `subscribeToInAppMessage callback: ${inAppMessageLogSummary(message)}`,
+    });
+    const displayed = braze.showInAppMessage?.(message);
+    brazeAppLog({
+      type: "info",
+      message: `showInAppMessage → ${String(displayed)} (${inAppMessageLogSummary(message)})`,
+    });
+    if (import.meta.env.DEV) {
+      console.debug("[braze IAM]", inAppMessageLogSummary(message), "displayed=", displayed);
+    }
     queueMicrotask(() => {
       window.dispatchEvent(new Event(DEMOSTORE_DOM_SCAN_EVENT));
     });
   });
-  if (subId === undefined) {
+  if (subId !== undefined) {
+    brazeAppLog({
+      type: "info",
+      message: `subscribeToInAppMessage registered (before changeUser / session) — id=${subId}`,
+    });
+  } else {
+    brazeAppLog({
+      type: "error",
+      message:
+        "subscribeToInAppMessage returned undefined — using automaticallyShowInAppMessages fallback (check isInitialized)",
+    });
     braze.automaticallyShowInAppMessages?.();
   }
   inAppMessageHandlerRegistered = true;
 }
 
 /**
- * Start the Braze Web SDK for an identified user only.
- * Order (per Web SDK types): `initialize` → `changeUser` → subscribe to banners/cards **before** `openSession`,
- * then IAM, refresh requests, then `openSession` last.
+ * Start the Braze Web SDK for an identified user only (no init until login — no anonymous Braze usage).
+ * Order: `initialize` → register **`subscribeToInAppMessage` / `subscribeToContentCardsUpdates` /
+ * `subscribeToBannersUpdates`** → **`changeUser`**. We do **not** call `openSession()` here; the SDK starts a
+ * session when `changeUser` applies a new user id (see Web SDK request controller). Then
+ * `requestBannersRefresh` / `requestContentCardsRefresh` for feeds after identification.
  *
- * @param refreshKey Profile `refreshKey` — increments on every Log in; same user + new key destroys and re-inits
- *   so `changeUser` runs again (SDK no-ops if user id unchanged without a fresh init).
+ * @param refreshKey Profile `refreshKey` — increments on every Log in / Log out; resets to 0 on full page load.
+ * @param initOptions Optional; set `logLoginEvent: true` only when init is due to Profile **Log in** this session
+ *   (e.g. `refreshKey > 0`). Session restore after refresh and Settings reconnect should use `logLoginEvent: false`.
  */
 export async function initBrazeForIdentifiedUser(
   userId: string,
   refreshKey?: number,
+  initOptions?: CompleteIdentifiedUserOptions,
 ): Promise<BrazeIdentifiedInitResult> {
   const id = userId.trim();
   if (!id) {
@@ -90,8 +208,9 @@ export async function initBrazeForIdentifiedUser(
       try {
         const b = await import("@braze/web-sdk");
         if (b.isInitialized?.()) {
+          exposeBrazeModuleForDevTools(b);
           b.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
-          b.requestContentCardsRefresh();
+          b.requestContentCardsRefresh(() => dispatchCachedContentCardsDetail(b));
         }
       } catch {
         /* ignore */
@@ -106,10 +225,10 @@ export async function initBrazeForIdentifiedUser(
       } catch {
         /* ignore */
       }
+      clearBrazeModuleFromDevTools();
       lastIdentifiedUserId = null;
       lastBrazeInitRefreshKey = null;
-      brazeSubscriptionsRegistered = false;
-      inAppMessageHandlerRegistered = false;
+      resetBrazeSdkHookRegistrationState();
     }
 
     const braze = await import("@braze/web-sdk");
@@ -118,7 +237,12 @@ export async function initBrazeForIdentifiedUser(
       braze.initialize(key, {
         baseUrl: host,
         enableLogging: true,
-        allowUserSuppliedJavascript: true,
+        allowUserSuppliedJavascript: getAllowUserSuppliedJavascriptForInit(),
+        /**
+         * Vite serves `public/service-worker.js` at `/service-worker.js` (site root).
+         * HTTPS required for push in production; localhost OK for dev.
+         */
+        serviceWorkerLocation: "/service-worker.js",
       });
     }
 
@@ -130,16 +254,20 @@ export async function initBrazeForIdentifiedUser(
       };
     }
 
-    braze.changeUser(id);
+    attachBrazeAppSdkLogger(braze);
+
     registerBrazeSubscriptionsOnce(braze);
     registerInAppMessagesOnce(braze);
 
-    await completeIdentifiedUserAfterChangeUser(id);
+    braze.changeUser(id);
+
+    await completeIdentifiedUserAfterChangeUser(id, initOptions);
 
     braze.requestBannersRefresh(ALL_BANNER_PLACEMENT_IDS);
-    braze.requestContentCardsRefresh();
 
-    braze.openSession();
+    /* Session is opened by the SDK as part of `changeUser` when the user id changes; no explicit `openSession()`. */
+    braze.requestContentCardsRefresh(() => dispatchCachedContentCardsDetail(braze));
+    exposeBrazeModuleForDevTools(braze);
     lastIdentifiedUserId = id;
     lastBrazeInitRefreshKey = rk;
     return { success: true };
@@ -168,10 +296,10 @@ export async function brazeOnLogout(previousUserId: string | null): Promise<void
   } catch {
     /* SDK never loaded */
   } finally {
+    clearBrazeModuleFromDevTools();
     lastIdentifiedUserId = null;
     lastBrazeInitRefreshKey = null;
-    brazeSubscriptionsRegistered = false;
-    inAppMessageHandlerRegistered = false;
+    resetBrazeSdkHookRegistrationState();
   }
 }
 
@@ -187,10 +315,10 @@ export async function brazeDestroyForReconnect(): Promise<void> {
   } catch {
     /* SDK never loaded */
   } finally {
+    clearBrazeModuleFromDevTools();
     lastIdentifiedUserId = null;
     lastBrazeInitRefreshKey = null;
-    brazeSubscriptionsRegistered = false;
-    inAppMessageHandlerRegistered = false;
+    resetBrazeSdkHookRegistrationState();
   }
 }
 

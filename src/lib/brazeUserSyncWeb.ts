@@ -51,11 +51,21 @@ export async function refreshBrazeBannersAndCards(): Promise<void> {
   braze.requestContentCardsRefresh();
 }
 
+export type CompleteIdentifiedUserOptions = {
+  /**
+   * When true, sends `logCustomEvent("logged_in")` after `changeUser`.
+   * Use only for an explicit Profile login in this SPA session (`refreshKey > 0` after `login()`);
+   * omit or false for session restore (page refresh) or Settings → reconnect so IAM is not re-triggered.
+   */
+  logLoginEvent?: boolean;
+};
+
 /**
- * After `changeUser`: active_member, logged_in, `vip_member` only if user qualifies (never false), feature flags.
+ * After `changeUser`: `active_member`, optional `logged_in`, `vip_member` if user qualifies (never false), feature flags.
  */
 export async function completeIdentifiedUserAfterChangeUser(
   userId: string,
+  options?: CompleteIdentifiedUserOptions,
 ): Promise<void> {
   const braze = await import("@braze/web-sdk");
   if (!braze.isInitialized?.()) return;
@@ -64,8 +74,10 @@ export async function completeIdentifiedUserAfterChangeUser(
   user?.setCustomUserAttribute("active_member", true);
   mergeBrazeLastSent(userId, { activeMember: true });
 
-  braze.logCustomEvent("logged_in");
-  brazeAppLog({ type: "event", message: 'logCustomEvent("logged_in")' });
+  if (options?.logLoginEvent) {
+    braze.logCustomEvent("logged_in");
+    brazeAppLog({ type: "event", message: 'logCustomEvent("logged_in")' });
+  }
 
   await syncVipStatusToBraze(userId);
 
@@ -73,7 +85,7 @@ export async function completeIdentifiedUserAfterChangeUser(
   braze.logFeatureFlagImpression?.(BRAZE_FEATURE_FLAG_VIP);
 
   braze.requestImmediateDataFlush();
-  /* Banners/cards refresh runs in `initBrazeForIdentifiedUser` before `openSession`. */
+  /* Banners refresh + `requestContentCardsRefresh` run in `initBrazeForIdentifiedUser` after `changeUser`. */
 }
 
 export async function brazePreLogout(userId: string): Promise<void> {
@@ -279,14 +291,13 @@ export async function isVipProductsEnabled(): Promise<boolean> {
 }
 
 export function findContentCardForSlot(cards: Card[], slotId: string): Card | null {
+  const want = slotId.trim();
+  if (!want) return null;
   for (const card of cards) {
     if (card.isControl) continue;
     const ex = card.extras ?? {};
-    if (
-      ex.position_id === slotId ||
-      ex.location === slotId ||
-      ex.card_id === slotId
-    ) {
+    const loc = ex.location;
+    if (loc != null && String(loc).trim() === want) {
       return card;
     }
   }

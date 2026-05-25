@@ -16,6 +16,9 @@
   --profile-input-locked-bg: #e4e4e9;
   --profile-input-locked-fg: #52525b;
   --profile-input-locked-border: #d4d4d8;
+  --scrollbar-track: var(--bg);
+  --scrollbar-thumb: #c4c4cc;
+  --scrollbar-thumb-hover: #a1a1aa;
 }
 
 .dark {
@@ -31,6 +34,9 @@
   --profile-input-locked-bg: #27272a;
   --profile-input-locked-fg: #a1a1aa;
   --profile-input-locked-border: #3f3f46;
+  --scrollbar-track: #18181b;
+  --scrollbar-thumb: #3f3f46;
+  --scrollbar-thumb-hover: #52525b;
 }
 
 *,
@@ -46,7 +52,14 @@ body,
   margin: 0;
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 body {
+  overflow: hidden;
   font-family:
     system-ui,
     -apple-system,
@@ -93,11 +106,15 @@ textarea {
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .app-header {
   flex: 0 0 var(--header-h);
+  flex-shrink: 0;
   background: var(--banner);
   color: var(--banner-text);
   display: flex;
@@ -112,11 +129,17 @@ textarea {
   font-size: 1.15rem;
   font-weight: 700;
   flex: 1;
-  text-align: center;
+  text-align: left;
 }
 
-.app-header-actions {
+.app-header-nav, .app-header-actions {
   display: flex;
+}
+.app-header-nav {
+  justify-content: flex-start;
+}
+.app-header-actions {
+  justify-content: flex-end;
   gap: 0.25rem;
 }
 
@@ -139,16 +162,36 @@ textarea {
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .app-sidebar {
   flex: 0 0 var(--sidebar-w);
+  flex-shrink: 0;
+  align-self: stretch;
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1rem 0;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-sidebar-nav {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   gap: 0.25rem;
+}
+
+.app-sidebar-braze {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .nav-link {
@@ -178,10 +221,358 @@ textarea {
   background: var(--primary-muted);
 }
 
+.braze-tool-select,
+.braze-tool-input {
+  box-sizing: border-box;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.braze-tool-select:focus,
+.braze-tool-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.15);
+}
+
+.braze-tool-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.braze-tool-inline .braze-tool-select,
+.braze-tool-inline .braze-tool-input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.braze-tool-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.braze-tool-icon:hover {
+  background: var(--primary-muted);
+  border-color: var(--primary);
+}
+
+.braze-tool-icon--danger {
+  border-color: rgba(214, 48, 49, 0.4);
+  color: #d63031;
+}
+
+.braze-tool-icon--danger:hover {
+  background: rgba(214, 48, 49, 0.1);
+  border-color: #d63031;
+}
+
+.dark .braze-tool-icon--danger {
+  color: #ff7675;
+}
+
+.dark .braze-tool-icon--danger:hover {
+  background: rgba(255, 118, 117, 0.1);
+  border-color: #ff7675;
+}
+
+.braze-copy-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Console Page Styling */
+.console-back-nav {
+  margin-bottom: 1.5rem;
+}
+
+.console-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.console-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.console-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.dark .console-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.console-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.console-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.console-card--full {
+  width: 100%;
+}
+
+.console-card--danger {
+  border: 1px solid rgba(214, 48, 49, 0.35);
+  background: color-mix(in srgb, var(--surface) 96%, #d63031);
+}
+
+.console-card--danger h2 {
+  color: #d63031;
+}
+
+.dark .console-card--danger {
+  border: 1px solid rgba(255, 118, 117, 0.3);
+  background: color-mix(in srgb, var(--surface) 97%, #ff7675);
+}
+
+.dark .console-card--danger h2 {
+  color: #ff7675;
+}
+
+.console-manual-init-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .console-manual-init-grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+.console-manual-init-left,
+.console-manual-init-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.console-manual-init-left {
+  border-right: 0;
+  padding-right: 0;
+}
+
+@media (min-width: 768px) {
+  .console-manual-init-left {
+    border-right: 1px solid var(--border);
+    padding-right: 1.5rem;
+  }
+}
+
+.console-manual-checks-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--bg);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.console-checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 480px) {
+  .console-checkbox-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.console-checkbox-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: var(--bg);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.braze-manual-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--text);
+  transition: opacity 0.15s ease;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.braze-manual-check:hover {
+  opacity: 0.85;
+}
+
+.braze-manual-check input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.braze-manual-sw-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.console-sw-input-row {
+  margin-top: 0.25rem;
+}
+
+.console-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .console-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.console-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  flex: 1;
+}
+
+.braze-console-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+  background: var(--bg);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.braze-tool-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.braze-tool-row--code {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.braze-tool-row--code .console-cmd-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.braze-tool-row--field {
+  gap: 0.5rem;
+}
+
+.console-cmd-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.console-cmd-meta .product-meta {
+  font-size: 0.78rem;
+}
+
 .app-main {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   padding: 1.5rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.page-center {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.app-main::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 5px;
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+}
+
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .page-title {
@@ -208,7 +599,6 @@ textarea {
 }
 
 .cart-banner-wrap {
-  max-width: 50%;
   width: 100%;
 }
 
@@ -326,7 +716,24 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-width: 420px;
+}
+
+.form-row--checkbox {
+  max-width: 32rem;
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.settings-checkbox-label input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
 }
 
 .log-list {
@@ -349,6 +756,43 @@ textarea {
 .log-item time {
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+.log-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.log-item-expand {
+  flex-shrink: 0;
+}
+
+.log-item-preview {
+  word-break: break-word;
+}
+
+.log-item-payload {
+  margin: 0.35rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 65%, var(--border));
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  max-height: min(55vh, 28rem);
+  overflow: auto;
+}
+
+.log-item-payload--detail {
+  margin-top: 0.5rem;
+  max-height: min(40vh, 20rem);
 }
 
 .badge {
@@ -410,6 +854,22 @@ textarea {
 
 .braze-banner-slot {
   margin-bottom: 1rem;
+}
+
+/* Store/Cart: reserve ~live min-height while SDK resolves (no dashed ghost flash). */
+.braze-banner-slot--pending-default {
+  min-height: 48px;
+}
+
+/* Invisible flex child: same footprint as ghost for 2:1 / 1:1 slots while mode is pending. */
+.braze-banner-slot--21 .braze-banner-pending-fill,
+.braze-banner-slot--square .braze-banner-pending-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .braze-banner-mount--active {
@@ -632,6 +1092,154 @@ textarea {
   margin-top: 0.1rem;
 }
 
+/* Custom Content Cards inbox + default Braze feed host */
+.braze-cc-inbox-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.braze-cc-inbox-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.braze-cc-inbox-badge {
+  margin-left: 0;
+}
+
+.braze-cc-inbox-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+  line-height: 1.4;
+}
+
+.braze-cc-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.braze-cc-inbox-row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--muted));
+  overflow: hidden;
+}
+
+.braze-cc-inbox-row--pinned {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+
+.braze-cc-inbox-row-inner {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.braze-cc-inbox-media {
+  flex: 0 0 120px;
+  min-height: 88px;
+  background: var(--surface);
+}
+
+.braze-cc-inbox-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.braze-cc-inbox-body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.braze-cc-inbox-kind {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.braze-cc-inbox-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.braze-cc-inbox-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.braze-cc-inbox-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.braze-cc-inbox-viewed,
+.braze-cc-inbox-unviewed,
+.braze-cc-inbox-pinned,
+.braze-cc-inbox-locked {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.braze-cc-inbox-unviewed {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+.braze-cc-inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.braze-cc-default-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.braze-cc-feed-host {
+  position: relative;
+  min-height: 120px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--muted));
+}
+
+/* Default Braze Content Cards UI — scoped overrides */
+.braze-cc-feed-host .ab-feed {
+  border-radius: 10px;
+  max-height: min(360px, 50vh);
+  overflow: auto;
+  font-family: inherit;
+}
+
 .ghost-slot--fill-card-21 {
   aspect-ratio: 2 / 1;
   margin-bottom: 0;
@@ -749,7 +1357,6 @@ textarea {
 }
 
 .content-page {
-  max-width: 50%;
   width: 100%;
 }
 
@@ -914,7 +1521,7 @@ textarea {
 }
 
 .profile-stack {
-  max-width: 440px;
+  width: 100%;
 }
 
 input.profile-user-id--locked {
@@ -1021,6 +1628,19 @@ input.profile-user-id--locked:-webkit-autofill:active {
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .app-sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+  }
+
+  .app-sidebar-braze {
+    flex: 1 1 100%;
+    min-height: 0;
+    max-height: min(42vh, 280px);
   }
 
   .nav-link {

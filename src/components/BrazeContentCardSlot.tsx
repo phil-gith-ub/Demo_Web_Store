@@ -1,6 +1,8 @@
-import type { Card } from "@braze/web-sdk";
+import type { Card, ContentCards } from "@braze/web-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useProfile } from "../context/ProfileContext";
+import { attachContentCardImpressionObserver } from "../lib/brazeContentCards";
 import { demostoreUriToWebPath } from "../lib/demostoreDeepLink";
 import { findContentCardForSlot } from "../lib/brazeUserSyncWeb";
 import { BrazeGhostSlot } from "./BrazeGhostSlot";
@@ -44,12 +46,15 @@ function cardUrl(card: Card): string | undefined {
 }
 
 /**
- * Picks a card by extras `position_id`, `location`, or `card_id` (Android parity), logs impressions/clicks.
+ * Picks a card when extras `location` equals `slotId`; logs impressions only when visibly on-screen
+ * (see `attachContentCardImpressionObserver`); logs clicks on activate.
  */
 export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
   const navigate = useNavigate();
+  const { currentUserId, refreshKey } = useProfile();
   const [card, setCard] = useState<Card | null>(null);
-  const impressionLogged = useRef<string | undefined>(undefined);
+  const impressionLogged = useRef<Set<string>>(new Set());
+  const articleRef = useRef<HTMLElement | null>(null);
 
   const sync = useCallback(async () => {
     const braze = await import("@braze/web-sdk");
@@ -63,21 +68,61 @@ export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
   }, [slotId]);
 
   useEffect(() => {
+    impressionLogged.current = new Set();
+    if (!currentUserId) {
+      setCard(null);
+      return;
+    }
     void sync();
-    const onCc = () => void sync();
-    window.addEventListener("braze:content-cards", onCc);
-    return () => window.removeEventListener("braze:content-cards", onCc);
-  }, [sync]);
+  }, [currentUserId, refreshKey, sync]);
 
   useEffect(() => {
-    if (!card) return;
-    const stableId = card.id ?? card.extras?.card_id ?? slotId;
-    if (impressionLogged.current === stableId) return;
-    impressionLogged.current = stableId;
+    void sync();
+    const onContentCards = (ev: Event) => {
+      try {
+        const detail = (ev as CustomEvent<ContentCards>).detail;
+        const list = detail != null ? (detail as { cards?: unknown }).cards : undefined;
+        if (detail != null && Array.isArray(list)) {
+          setCard(findContentCardForSlot(list, slotId));
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+      void sync();
+    };
+    const onIdentifiedReady = () => void sync();
+    window.addEventListener("braze:content-cards", onContentCards);
+    window.addEventListener("braze:identified-ready", onIdentifiedReady);
+    return () => {
+      window.removeEventListener("braze:content-cards", onContentCards);
+      window.removeEventListener("braze:identified-ready", onIdentifiedReady);
+    };
+  }, [sync, slotId]);
+
+  useEffect(() => {
+    if (!card || card.isControl) return;
+    const node = articleRef.current;
+    if (!node) return;
+    let detach: (() => void) | undefined;
+    let cancelled = false;
     void import("@braze/web-sdk").then((braze) => {
-      if (braze.isInitialized?.()) braze.logContentCardImpressions([card]);
+      if (cancelled || !braze.isInitialized?.()) return;
+      const el = articleRef.current;
+      if (!el) return;
+      detach = attachContentCardImpressionObserver(el, card, {
+        loggedIds: impressionLogged.current,
+        threshold: 0.5,
+        onImpression: (toLog) => {
+          braze.logContentCardImpressions(toLog);
+        },
+      });
     });
-  }, [card, slotId]);
+    return () => {
+      cancelled = true;
+      detach?.();
+    };
+  }, [card]);
 
   const ghostClass =
     variant === "wide"
@@ -117,6 +162,7 @@ export function BrazeContentCardSlot({ title, slotId, hint, variant }: Props) {
 
   return (
     <article
+      ref={articleRef}
       className={[
         "content-card-slot",
         variant === "wide" && "content-card-slot--wide",

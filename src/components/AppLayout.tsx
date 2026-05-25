@@ -5,6 +5,7 @@ import {
   IconCart,
   IconStore,
   IconUser,
+  IconConsole,
 } from "./NavIcons";
 import { useCart } from "../context/CartContext";
 
@@ -13,6 +14,7 @@ const nav = [
   { to: "/cart", label: "Cart", Icon: IconCart },
   { to: "/content", label: "Content", Icon: IconArticle },
   { to: "/profile", label: "Profile", Icon: IconUser },
+  { to: "/console", label: "Console", Icon: IconConsole },
 ] as const;
 
 export function AppLayout() {
@@ -25,32 +27,38 @@ export function AppLayout() {
       {!overlay && <TopBanner />}
       {overlay ? (
         <main className="app-main">
-          <Outlet />
+          <div className="page-center">
+            <Outlet />
+          </div>
         </main>
       ) : (
         <div className="app-body">
           <nav className="app-sidebar" aria-label="Main">
-            {nav.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  "nav-link" + (isActive ? " active" : "")
-                }
-                end={to === "/store"}
-              >
-                <Icon />
-                <span className="nav-link-text">
-                  {label}
-                  {to === "/cart" && itemCount > 0 ? (
-                    <span className="badge">{itemCount}</span>
-                  ) : null}
-                </span>
-              </NavLink>
-            ))}
+            <div className="app-sidebar-nav">
+              {nav.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    "nav-link" + (isActive ? " active" : "")
+                  }
+                  end={to === "/store"}
+                >
+                  <Icon />
+                  <span className="nav-link-text">
+                    {label}
+                    {to === "/cart" && itemCount > 0 ? (
+                      <span className="badge">{itemCount}</span>
+                    ) : null}
+                  </span>
+                </NavLink>
+              ))}
+            </div>
           </nav>
           <main className="app-main">
-            <Outlet />
+            <div className="page-center">
+              <Outlet />
+            </div>
           </main>
         </div>
       )}

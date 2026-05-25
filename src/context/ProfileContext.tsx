@@ -70,6 +70,7 @@ type ProfileContextValue = {
   login: (userId: string) => void;
   logout: () => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
+  /** Increments on each `login()` / `logout()`; resets to 0 on full page reload (used to distinguish session restore vs explicit login for Braze `logged_in`). */
   refreshKey: number;
   /** Used when logged out (persists in localStorage). */
   guestDarkMode: boolean;
