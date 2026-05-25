@@ -1,6 +1,6 @@
 # Demo Store — Braze Web SDK Integration App
 
-An interactive, modern storefront application built to test, demonstrate, and debug the **Braze Web SDK** in real time. 
+An interactive storefront application built to test, demonstrate, and debug the **Braze Web SDK** in real time. 
 
 ---
 
