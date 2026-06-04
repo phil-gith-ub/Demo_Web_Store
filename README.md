@@ -14,8 +14,11 @@ All Braze credentials (Web API key, SDK endpoint, and optional REST key) are con
 
 Download the **index.html** file from the **static-html-site** directory and open it in your browser.
 
+## Setup & Run Android App
 
-## Setup & Run
+Open the Android App folder in Android Studio to install
+
+## Setup & Run Web App
 
 ### 1. Install Dependencies
 ```bash
