@@ -3,10 +3,7 @@
 An interactive storefront application built to test, demonstrate, and debug the **Braze Web SDK** in real time. 
 
 ---
-
-## 🔒 Security First: No Hardcoded Secrets
-This codebase contains **zero hardcoded API keys or secrets**. 
-All Braze credentials (Web API key, SDK endpoint, and optional REST key) are configured dynamically through the in-app **Settings** UI and stored securely in your browser's local storage (`localStorage`). This makes it perfectly safe to share and publish on GitHub.
+All Braze credentials (Web API key, SDK endpoint, and optional REST key) are configured dynamically through the in-app **Settings** UI and stored securely in your browser's local storage.
 
 ---
 
@@ -14,8 +11,11 @@ All Braze credentials (Web API key, SDK endpoint, and optional REST key) are con
 
 Download the **index.html** file from the **static-html-site** directory and open it in your browser.
 
+## Setup & Run Android App
 
-## Setup & Run
+Open the Android App folder in Android Studio to install
+
+## Setup & Run Web App
 
 ### 1. Install Dependencies
 ```bash
