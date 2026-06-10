@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { TopBanner } from "./TopBanner";
+import { BrazeNotificationPanel } from "./BrazeNotificationPanel";
 import {
   IconArticle,
   IconCart,
@@ -8,6 +10,7 @@ import {
   IconConsole,
 } from "./NavIcons";
 import { useCart } from "../context/CartContext";
+import type { ContentCards } from "@braze/web-sdk";
 
 const nav = [
   { to: "/store", label: "Store", Icon: IconStore },
@@ -22,9 +25,46 @@ export function AppLayout() {
   const { itemCount } = useCart();
   const overlay = pathname === "/settings" || pathname === "/logs";
 
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unviewedCount, setUnviewedCount] = useState(0);
+
+  useEffect(() => {
+    const syncCount = async () => {
+      const braze = await import("@braze/web-sdk");
+      if (braze.isInitialized?.()) {
+        const cc = braze.getCachedContentCards();
+        setUnviewedCount(cc?.getUnviewedCardCount() ?? 0);
+      }
+    };
+    void syncCount();
+    const onContentCards = (ev: Event) => {
+      try {
+        const detail = (ev as CustomEvent<ContentCards>).detail;
+        if (detail && typeof detail.getUnviewedCardCount === "function") {
+          setUnviewedCount(detail.getUnviewedCardCount());
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      void syncCount();
+    };
+    window.addEventListener("braze:content-cards", onContentCards);
+    window.addEventListener("braze:identified-ready", syncCount);
+    return () => {
+      window.removeEventListener("braze:content-cards", onContentCards);
+      window.removeEventListener("braze:identified-ready", syncCount);
+    };
+  }, []);
+
   return (
     <div className="app-shell">
-      {!overlay && <TopBanner />}
+      {!overlay && (
+        <TopBanner
+          unviewedCount={unviewedCount}
+          onNotificationClick={() => setIsNotificationOpen((prev) => !prev)}
+        />
+      )}
       {overlay ? (
         <main className="app-main">
           <div className="page-center">
@@ -62,6 +102,11 @@ export function AppLayout() {
           </main>
         </div>
       )}
+      <BrazeNotificationPanel
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+      />
     </div>
   );
 }
+
