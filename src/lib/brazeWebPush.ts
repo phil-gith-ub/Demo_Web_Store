@@ -1,5 +1,5 @@
 /**
- * Braze Web push helpers (@braze/web-sdk 6.6).
+ * Braze Web push helpers (@braze/web-sdk 6.8).
  * Docs: Context7 `/braze-inc/braze-web-sdk` — initialize `serviceWorkerLocation`, `requestPushPermission`,
  * `isPushSupported` / `isPushBlocked` / `isPushPermissionGranted`, `User.setPushNotificationSubscriptionType`, `requestImmediateDataFlush`.
  */
